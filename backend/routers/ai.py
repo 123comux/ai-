@@ -13,8 +13,8 @@ class TutorRequest(BaseModel):
     """AI tutor chat request."""
     question: str = Field(..., min_length=1, max_length=2000)
     system_prompt: Optional[str] = None
-    max_new_tokens: int = Field(512, ge=50, le=2048)
-    temperature: float = Field(0.7, ge=0.0, le=2.0)
+    max_new_tokens: int = Field(220, ge=50, le=2048)
+    temperature: float = Field(0.0, ge=0.0, le=2.0)
 
 
 class TutorResponse(BaseModel):

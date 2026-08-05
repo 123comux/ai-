@@ -6,6 +6,17 @@
   padding: $spacing-lg;
 }
 
+.navBar {
+  padding: 20rpx 0;
+  margin-bottom: $spacing-sm;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
 .startContent {
   display: flex;
   flex-direction: column;

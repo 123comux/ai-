@@ -16,9 +16,10 @@ const API_BASE = 'http://localhost:8000';
 // 延迟模拟 API 调用
 const delay = (ms: number = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function apiGet<T>(path: string, fallback: () => T | Promise<T>, extract?: string): Promise<T> {
+/** GET 辅助函数（支持自定义超时） */
+async function apiGet<T>(path: string, fallback: () => T | Promise<T>, extract?: string, timeoutMs: number = 15000): Promise<T> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     // 如果后端返回的是包裹对象（如 {"topics": [...]}），提取指定字段
@@ -148,14 +149,14 @@ export interface CourseRecommendation {
   score: number;
 }
 
-/** POST 辅助函数 */
-async function apiPost<T>(path: string, body: Record<string, unknown>, fallback: () => T | Promise<T>): Promise<T> {
+/** POST 辅助函数（支持自定义超时） */
+async function apiPost<T>(path: string, body: Record<string, unknown>, fallback: () => T | Promise<T>, timeoutMs: number = 30000): Promise<T> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()) as T;
@@ -165,17 +166,43 @@ async function apiPost<T>(path: string, body: Record<string, unknown>, fallback:
   }
 }
 
-/** AI 导师问答 */
+/** AI 导师问答 — 首字生成需要预热，超时 120 秒 */
 export const askTutor = async (question: string): Promise<TutorResponse> => {
-  return apiPost<TutorResponse>('/api/tutor/chat', { question }, async () => {
-    await delay(500);
+  // 不用 AbortSignal.timeout，改用 AbortController + setTimeout，兼容性更高
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  if (controller) {
+    timeoutId = setTimeout(() => controller.abort(), 120000);
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/tutor/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+      signal: controller?.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as TutorResponse;
+  } catch (err: any) {
+    const msg = err?.message || String(err) || 'unknown error';
+    const isAbort = err?.name === 'AbortError' || /abort|timeout/i.test(msg);
+    console.warn(`[API] askTutor failed:`, err);
+    // 把错误详情写到回复里，方便定位到底是 CORS / 超时 / 网络
+    await delay(200);
     return {
       question,
-      answer: 'AI 导师模型正在加载中，请稍后再试。当前为离线回复。',
+      answer:
+        `[接口调用失败，错误: ${msg}]` +
+        (isAbort ? '\n(请求超时，请确认后端是否在 localhost:8000 运行)' : '') +
+        (/Failed to fetch|CORS|cors|NetworkError/i.test(msg)
+          ? '\n(浏览器跨域拦截，请确认后端CORS白名单已生效并重启后端)'
+          : ''),
       model: 'fallback',
       tokens_generated: 0,
     };
-  });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 };
 
 /** AI 能力分析 */

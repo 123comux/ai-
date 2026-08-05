@@ -36,6 +36,9 @@ const JobMatchingPage: React.FC = () => {
 
   return (
     <ScrollView className={styles.page} scrollY>
+      <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
+        <Text className={styles.navBack}>← 返回</Text>
+      </View>
       {/* 输入区域 */}
       <View className={styles.inputSection}>
         <Text className={styles.inputLabel}>输入目标岗位描述</Text>

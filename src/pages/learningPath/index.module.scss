@@ -5,6 +5,16 @@
   background: $gradient-page;
 }
 
+.navBar {
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
 .loadingText {
   text-align: center;
   padding: 200rpx 0;

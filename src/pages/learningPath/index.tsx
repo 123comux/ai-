@@ -58,7 +58,10 @@ const LearningPathPage: React.FC = () => {
 
   return (
     <ScrollView className={styles.page} scrollY>
-      <View className={styles.header}>
+      <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
+        <Text className={styles.navBack}>← 返回</Text>
+      </View>
+      <View className={styles.section}>
         <View className={styles.headerInfo}>
           <Text className={styles.direction}>{currentPath.direction}</Text>
           <Text className={styles.title}>{currentPath.title}</Text>

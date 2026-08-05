@@ -27,11 +27,17 @@ QVAC_GENESIS_MAX_ROWS = 5000
 
 STUDYCHAT_MAX_ROWS = 16851  # Full dataset
 
-# CORS (allow Taro dev server)
+# CORS (allow Taro dev server + Web Preview + Cloud IDE + any port)
 CORS_ORIGINS = [
+    "null",
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:57434",
+    "http://localhost:8000",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:57434",
+    "http://127.0.0.1:8000",
     "https://trae.mobile.volcapp.com",
 ]
+CORS_ORIGIN_REGEX = r"https://.*\.(mobile\.volcapp\.com|volceapi\.com|apigateway.*\.volceapi\.com)"

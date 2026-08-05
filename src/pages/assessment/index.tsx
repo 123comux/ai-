@@ -138,6 +138,9 @@ const AssessmentPage: React.FC = () => {
 
   return (
     <View className={styles.page}>
+      <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
+        <Text className={styles.navBack}>← 返回</Text>
+      </View>
       <View className={styles.startContent}>
         <Text className={styles.startIcon}>🧠</Text>
         <Text className={styles.startTitle}>AI 能力测评</Text>

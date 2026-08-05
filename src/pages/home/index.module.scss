@@ -1,5 +1,10 @@
 @use '@/styles/variables.scss' as *;
 
+.pageContainer {
+  position: relative;
+  min-height: 100vh;
+}
+
 .page {
   min-height: 100vh;
   background: $gradient-page;
@@ -282,27 +287,23 @@
   display: block;
 }
 
-// AI 导师对话弹窗
 .chatOverlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  background: $color-bg-card;
+  z-index: 99999;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
 .chatContainer {
-  width: 100%;
-  height: 75vh;
-  background: $color-bg-card;
-  border-radius: $radius-xl $radius-xl 0 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: none;
 }
 
 .chatHeader {
@@ -326,6 +327,7 @@
 
 .chatMessages {
   flex: 1;
+  min-height: 0;
   padding: $spacing-md $spacing-lg;
 }
 
@@ -369,10 +371,12 @@
 }
 
 .chatInputBar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-sm $spacing-lg;
+  padding: $spacing-md $spacing-lg;
+  min-height: 120rpx;
   border-top: 1px solid $color-border;
   background: $color-bg-card;
 }

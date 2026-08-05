@@ -1,6 +1,7 @@
 """AI tutor service using fine-tuned Qwen2.5-1.5B model."""
 
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -26,9 +27,9 @@ def _load_model():
     if not model_dir.exists():
         raise FileNotFoundError(f"Tutor model not found: {model_dir}. Run training first.")
 
-    # 4-bit quantization requires CUDA
+    # Requires CUDA GPU
     if not torch.cuda.is_available():
-        raise RuntimeError("Tutor model requires CUDA (GPU) for 4-bit quantization inference.")
+        raise RuntimeError("Tutor model requires CUDA (GPU).")
 
     base_model_name = "Qwen/Qwen2.5-1.5B-Instruct"
 
@@ -37,27 +38,20 @@ def _load_model():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # Load base model with 4bit quantization
-    from transformers import BitsAndBytesConfig
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-    )
-
+    # Load base model in float16 (faster inference than 4-bit on RTX 4060)
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_name,
-        quantization_config=bnb_config,
+        torch_dtype=torch.float16,
         trust_remote_code=True,
         device_map="auto",
     )
 
-    # Load LoRA adapter
+    # Load LoRA adapter and merge
     model = PeftModel.from_pretrained(base_model, str(model_dir))
+    model = model.merge_and_unload()
     model.eval()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
 
     _model_cache = {
         "tokenizer": tokenizer,
@@ -67,13 +61,50 @@ def _load_model():
     return _model_cache
 
 
+def _cleanup_response(text: str) -> str:
+    """Post-process model output: remove redundancy, collapse whitespace, strip Markdown decoration."""
+    if not text:
+        return text
+
+    # 1) Remove Markdown heading/emphasis markers (##, **, __, >) but keep content
+    text = re.sub(r"^\s*#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"__(.*?)__", r"\1", text)
+    text = re.sub(r"^\s*>\s?", "", text, flags=re.MULTILINE)
+
+    # 2) Standardize list markers: keep "1. 2. 3." and "- " only, collapse others
+    #    Replace bullets such as •/·/★ with "- "
+    text = re.sub(r"^\s*[•·●○★▪▫➢➤➔▶→]\s*", "- ", text, flags=re.MULTILINE)
+
+    # 3) Collapse blank lines (3+ newlines -> 2) and trim trailing spaces per line
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ \t]+$", "", text, flags=re.MULTILINE)
+
+    # 4) Merge repeated punctuation (。。。->。, ？？？->？, ，，，->，)
+    text = re.sub(r"([，。！？；：,.!?;:])\1{2,}", r"\1", text)
+
+    # 5) Merge duplicate consecutive short sentences (within 30 chars, repeat exactly)
+    seen = set()
+    out_lines = []
+    for line in text.splitlines():
+        key = line.strip()
+        if len(key) <= 30 and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        out_lines.append(line)
+    text = "\n".join(out_lines)
+
+    return text.strip()
+
+
 def chat(
     question: str,
     system_prompt: Optional[str] = None,
-    max_new_tokens: int = 512,
-    temperature: float = 0.7,
+    max_new_tokens: int = 220,
+    temperature: float = 0.0,
 ) -> dict:
-    """Generate AI tutor response.
+    """Generate concise AI tutor response.
 
     Args:
         question: Student's question
@@ -90,8 +121,10 @@ def chat(
 
     if system_prompt is None:
         system_prompt = (
-            "You are a helpful AI tutor specialized in machine learning, "
-            "deep learning, and data science. Answer questions clearly and concisely."
+            "你是一位 AI 学习导师，请用中文直接作答。"
+            "只保留核心要点，去掉铺垫、重复和客套。"
+            "分点回答时仅使用 1. 2. 3.，不要 Markdown 符号。"
+            "控制在 4 行以内，每点一句话结论。"
         )
 
     messages = [
@@ -108,15 +141,18 @@ def chat(
 
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
 
-    # Generate
-    with torch.no_grad():
+    # Generate (concise: greedy + repeat penalty + hard stop)
+    with torch.inference_mode():
         outputs = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            do_sample=temperature > 0,
-            top_p=0.9,
+            do_sample=False,
+            temperature=0.0,
+            repetition_penalty=1.15,
             pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+            use_cache=True,
+            num_beams=1,
         )
 
     # Decode only the new tokens
@@ -125,9 +161,11 @@ def chat(
         skip_special_tokens=True,
     )
 
+    response = _cleanup_response(response)
+
     return {
         "question": question,
-        "answer": response.strip(),
+        "answer": response,
         "model": "Qwen2.5-1.5B-Instruct (LoRA)",
         "tokens_generated": outputs.shape[1] - inputs["input_ids"].shape[1],
     }

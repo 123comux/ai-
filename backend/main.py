@@ -13,10 +13,13 @@ Usage:
     uvicorn backend.main:app --reload           # Start API server
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
-from config import CORS_ORIGINS, HOST, PORT
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, HOST, PORT
 from routers import knowledge, assessment, courses, projects, learning_paths, ai
 
 app = FastAPI(
@@ -30,10 +33,19 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Debug: log Origin header of all requests
+@app.middleware("http")
+async def log_origin(request: Request, call_next):
+    origin = request.headers.get("origin", "NONE")
+    logging.info(f"Request: {request.method} {request.url.path} Origin={origin}")
+    response = await call_next(request)
+    return response
 
 # Register routers
 app.include_router(knowledge.router)

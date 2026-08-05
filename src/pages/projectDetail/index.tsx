@@ -55,6 +55,9 @@ const ProjectDetailPage: React.FC = () => {
 
   return (
     <ScrollView className={styles.page} scrollY>
+      <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
+        <Text className={styles.navBack}>← 返回</Text>
+      </View>
       <Image className={styles.cover} src={project.coverImg} mode="aspectFill" />
       <View className={styles.body}>
         <Text className={styles.title}>{project.title}</Text>

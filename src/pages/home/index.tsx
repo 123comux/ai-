@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, Swiper, SwiperItem, Image, Input, Button } from '@tarojs/components';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Swiper, SwiperItem, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import AssessmentCard from '@/components/AssessmentCard';
 import PathCard from '@/components/PathCard';
@@ -7,7 +7,7 @@ import CourseCard from '@/components/CourseCard';
 import ProjectCard from '@/components/ProjectCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
-import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects, askTutor } from '@/services/api';
+import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects } from '@/services/api';
 import { mockDirections } from '@/data/assessment';
 import { formatDuration } from '@/utils/index';
 import type { Course, Project } from '@/types/index';
@@ -24,15 +24,6 @@ const HomePage: React.FC = () => {
 
   const [courses, setLocalCourses] = useState<Course[]>([]);
   const [projects, setLocalProjects] = useState<Project[]>([]);
-
-  // AI 导师对话状态
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
-    { role: 'ai', content: '你好！我是你的 AI 学习导师，有什么问题可以问我～' },
-  ]);
-  const [chatInput, setChatInput] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -55,22 +46,6 @@ const HomePage: React.FC = () => {
     };
     loadData();
   }, []);
-
-  const handleSendMessage = async () => {
-    const text = chatInput.trim();
-    if (!text || chatLoading) return;
-    setChatInput('');
-    setChatMessages((prev) => [...prev, { role: 'user', content: text }]);
-    setChatLoading(true);
-    try {
-      const res = await askTutor(text);
-      setChatMessages((prev) => [...prev, { role: 'ai', content: res.answer }]);
-    } catch {
-      setChatMessages((prev) => [...prev, { role: 'ai', content: '抱歉，我暂时无法回答，请稍后再试。' }]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
 
   const handleStartAssessment = () => {
     Taro.navigateTo({ url: '/pages/assessment/index' });
@@ -164,7 +139,7 @@ const HomePage: React.FC = () => {
           <Text className={styles.sectionTitle}>AI 智能工具</Text>
         </View>
         <View className={styles.aiTools}>
-          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#7c3aed,#a78bfa)" onClick={() => setChatOpen(true)}>
+          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#7c3aed,#a78bfa)" onClick={() => Taro.navigateTo({ url: '/pages/tutor/index' })}>
             <Text className={styles.aiToolIcon}>💬</Text>
             <Text className={styles.aiToolName}>AI 导师</Text>
             <Text className={styles.aiToolDesc}>问答学习</Text>
@@ -266,47 +241,6 @@ const HomePage: React.FC = () => {
         </View>
       </View>
 
-      {/* AI 导师对话弹窗 */}
-      {chatOpen && (
-        <View className={styles.chatOverlay}>
-          <View className={styles.chatContainer}>
-            <View className={styles.chatHeader}>
-              <Text className={styles.chatHeaderTitle}>AI 学习导师</Text>
-              <Text className={styles.chatClose} onClick={() => setChatOpen(false)}>关闭</Text>
-            </View>
-            <ScrollView className={styles.chatMessages} scrollY ref={chatScrollRef}>
-              {chatMessages.map((msg, i) => (
-                <View key={i} className={`${styles.chatMsg} ${msg.role === 'user' ? styles.chatMsgUser : styles.chatMsgAi}`}>
-                  <View className={msg.role === 'user' ? styles.chatBubbleUser : styles.chatBubbleAi}>
-                    <Text className={styles.chatText}>{msg.content}</Text>
-                  </View>
-                </View>
-              ))}
-              {chatLoading && (
-                <View className={styles.chatMsgAi}>
-                  <View className={styles.chatBubbleAi}>
-                    <Text className={styles.chatText}>正在思考...</Text>
-                  </View>
-                </View>
-              )}
-            </ScrollView>
-            <View className={styles.chatInputBar}>
-              <Input
-                className={styles.chatInput}
-                placeholder="输入你的问题..."
-                value={chatInput}
-                onInput={(e) => setChatInput(e.detail.value)}
-                onConfirm={handleSendMessage}
-                disabled={chatLoading}
-                confirmType="send"
-              />
-              <Button className={styles.chatSendBtn} onClick={handleSendMessage} disabled={chatLoading}>
-                发送
-              </Button>
-            </View>
-          </View>
-        </View>
-      )}
     </ScrollView>
   );
 };

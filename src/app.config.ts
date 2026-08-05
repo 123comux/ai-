@@ -8,7 +8,8 @@ export default defineAppConfig({
     'pages/courseDetail/index',
     'pages/learningPath/index',
     'pages/projectDetail/index',
-    'pages/jobMatching/index'
+    'pages/jobMatching/index',
+    'pages/tutor/index'
   ],
   window: {
     backgroundTextStyle: 'light',

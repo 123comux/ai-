@@ -1,0 +1,51 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.directionBadge {
+  background: $color-ai-bg;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+}
+
+.directionText {
+  font-size: $font-size-sm;
+  color: $color-ai;
+}
+
+.weekText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.title {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.progressText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  white-space: nowrap;
+}

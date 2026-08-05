@@ -1,0 +1,116 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+}
+
+.locked {
+  opacity: 0.7;
+}
+
+.coverWrap {
+  position: relative;
+  width: 100%;
+  height: 180rpx;
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lockOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lockIcon {
+  font-size: 48rpx;
+}
+
+.body {
+  padding: $spacing-md;
+}
+
+.title {
+  display: block;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+  @include text-ellipsis;
+}
+
+.desc {
+  display: block;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-sm;
+  @include text-ellipsis-multi(2);
+}
+
+.tags {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+}
+
+.tagText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.freeTag {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-sm;
+  background: rgba(0, 180, 42, 0.1);
+}
+
+.freeTagText {
+  font-size: $font-size-xs;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+}
+
+.proTag {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-sm;
+  background: rgba(22, 93, 255, 0.1);
+}
+
+.proTagText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.progressText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  white-space: nowrap;
+}

@@ -1,0 +1,235 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+}
+
+.header {
+  position: relative;
+  padding: $spacing-lg $spacing-lg $spacing-xl;
+}
+
+.headerBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 240rpx;
+  background: $gradient-primary;
+  border-radius: 0 0 $radius-xl $radius-xl;
+}
+
+.userInfo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: $spacing-md;
+}
+
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-bg-card;
+  margin-bottom: $spacing-md;
+}
+
+.nickname {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-xs;
+}
+
+.userMeta {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: $spacing-sm;
+}
+
+.directionBadge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6rpx 24rpx;
+  border-radius: $radius-round;
+}
+
+.directionText {
+  font-size: $font-size-sm;
+  color: $color-text-white;
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  background: $color-bg-card;
+  margin: -$spacing-lg $spacing-lg $spacing-md;
+  border-radius: $radius-lg;
+  padding: $spacing-md 0;
+  box-shadow: $shadow-card;
+  position: relative;
+  z-index: 1;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.statValue {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.statDivider {
+  width: 1px;
+  height: 48rpx;
+  background: $color-divider;
+}
+
+.section {
+  padding: 0 $spacing-lg $spacing-md;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.sectionMore {
+  font-size: $font-size-sm;
+  color: $color-primary;
+}
+
+.reportCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.reportInfo {
+  margin-top: $spacing-md;
+}
+
+.reportRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+}
+
+.reportLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.reportValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.reportValueHighlight {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-ai;
+}
+
+.recordList {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.recordItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+}
+
+.recordDate {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  width: 80rpx;
+}
+
+.recordBar {
+  flex: 1;
+  height: 12rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-round;
+  overflow: hidden;
+}
+
+.recordFill {
+  height: 100%;
+  background: $gradient-primary;
+  border-radius: $radius-round;
+}
+
+.recordDuration {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  width: 80rpx;
+  text-align: right;
+}
+
+.menuSection {
+  margin: 0 $spacing-lg $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.menuIcon {
+  font-size: 36rpx;
+  margin-right: $spacing-md;
+}
+
+.menuLabel {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.menuArrow {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}

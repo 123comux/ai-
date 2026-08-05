@@ -1,0 +1,86 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.badge {
+  background: $color-ai-bg;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+}
+
+.badgeText {
+  font-size: $font-size-sm;
+  color: $color-ai;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+}
+
+.scoreWrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
+}
+
+.scoreValue {
+  font-size: 64rpx;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  line-height: 1;
+}
+
+.scoreUnit {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.infoLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.infoValue {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.infoValueHighlight {
+  font-size: $font-size-md;
+  color: $color-ai;
+  font-weight: $font-weight-medium;
+}

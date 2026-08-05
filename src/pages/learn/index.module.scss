@@ -1,0 +1,146 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+}
+
+.section {
+  padding: $spacing-md $spacing-lg 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.sectionMore {
+  font-size: $font-size-sm;
+  color: $color-primary;
+}
+
+.categoryScroll {
+  @include scroll-x-container;
+  padding-bottom: $spacing-md;
+}
+
+.categoryItem {
+  display: inline-block;
+  padding: $spacing-sm $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-round;
+  margin-right: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.categoryActive {
+  background: $color-primary;
+}
+
+.categoryText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.categoryTextActive {
+  color: $color-text-white;
+}
+
+.courseList {
+  padding: 0 $spacing-lg $spacing-lg;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+}
+
+.courseItem {
+  width: 100%;
+}
+
+// AI 课程推荐
+.recommendBar {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.recommendInput {
+  flex: 1;
+  height: 72rpx;
+  background: $color-bg-card;
+  border-radius: $radius-button;
+  padding: 0 $spacing-md;
+  font-size: $font-size-md;
+  box-shadow: $shadow-card;
+}
+
+.recommendBtn {
+  min-width: 120rpx;
+  height: 72rpx;
+  background: $gradient-ai;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recommendBtnText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
+.recommendResults {
+  margin-bottom: $spacing-md;
+}
+
+.recommendLoading {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+  text-align: center;
+  padding: $spacing-md;
+}
+
+.recommendList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.recommendItem {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.recommendItemTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  display: block;
+}
+
+.recommendItemMeta {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.recommendEmpty {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+  text-align: center;
+  padding: $spacing-md;
+}

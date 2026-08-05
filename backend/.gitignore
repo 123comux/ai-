@@ -1,0 +1,15 @@
+# Data (large files)
+data/raw/*
+data/processed/*
+data/knowledge_base/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/knowledge_base/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/

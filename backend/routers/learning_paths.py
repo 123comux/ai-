@@ -11,7 +11,10 @@ router = APIRouter(prefix="/api/learning-paths", tags=["learning-paths"])
 
 
 def _load_paths() -> list[LearningPathItem]:
-    path = PROCESSED_DIR / "learning_paths.json"
+    # Try enriched data first, fall back to original
+    path = PROCESSED_DIR / "enriched_learning_paths.json"
+    if not path.exists():
+        path = PROCESSED_DIR / "learning_paths.json"
     if not path.exists():
         return []
     with open(path, "r", encoding="utf-8") as f:

@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
 import { useLearningStore } from '@/store/useLearningStore';
-import { mockAbilityReport, mockDirections } from '@/data/assessment';
+import { fetchAbilityReport } from '@/services/api';
 import styles from './index.module.scss';
 
 const AssessmentPage: React.FC = () => {
@@ -33,8 +33,12 @@ const AssessmentPage: React.FC = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // 完成测评，跳转到结果
-      setAbilityReport(mockAbilityReport);
+      // 完成测评，从后端获取结果
+      fetchAbilityReport().then((report) => {
+        setAbilityReport(report);
+      }).catch((err) => {
+        console.error('[Assessment] fetch report failed:', err);
+      });
       setStep('result');
     }
   };
@@ -79,7 +83,15 @@ const AssessmentPage: React.FC = () => {
   }
 
   if (step === 'result') {
-    const report = mockAbilityReport;
+    const report = useLearningStore.getState().abilityReport || {
+      overallScore: 0,
+      level: '未评估',
+      dimensions: [],
+      strengths: [],
+      weaknesses: [],
+      recommendedDirection: '',
+      estimatedHours: 0,
+    };
     return (
       <ScrollView className={styles.page} scrollY>
         <View className={styles.resultHeader}>

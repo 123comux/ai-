@@ -11,7 +11,10 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 def _load_projects() -> list[ProjectItem]:
-    path = PROCESSED_DIR / "projects.json"
+    # Try enriched data first, fall back to original
+    path = PROCESSED_DIR / "enriched_projects.json"
+    if not path.exists():
+        path = PROCESSED_DIR / "projects.json"
     if not path.exists():
         return []
     with open(path, "r", encoding="utf-8") as f:

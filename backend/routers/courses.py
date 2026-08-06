@@ -11,7 +11,10 @@ router = APIRouter(prefix="/api/courses", tags=["courses"])
 
 
 def _load_courses() -> list[CourseItem]:
-    path = PROCESSED_DIR / "courses.json"
+    # Try enriched data first, fall back to original
+    path = PROCESSED_DIR / "enriched_courses.json"
+    if not path.exists():
+        path = PROCESSED_DIR / "courses.json"
     if not path.exists():
         return []
     with open(path, "r", encoding="utf-8") as f:
@@ -30,7 +33,7 @@ async def list_courses(
     items = _load_courses()
     filtered = items
     if topic:
-        filtered = [c for c in filtered if c.topic.lower() == topic.lower()]
+        filtered = [c for c in filtered if c.topic.lower() == topic.lower() or c.category.lower() == topic.lower()]
     if difficulty:
         filtered = [c for c in filtered if c.difficulty.lower() == difficulty.lower()]
     return filtered[offset:offset + limit]

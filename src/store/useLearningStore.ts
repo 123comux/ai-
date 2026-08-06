@@ -1,9 +1,5 @@
 import { create } from 'zustand';
 import type { AbilityReport, LearningPath, Course, Project } from '@/types/index';
-import { mockAbilityReport } from '@/data/assessment';
-import { mockLearningPath } from '@/data/learningPaths';
-import { mockCourses } from '@/data/courses';
-import { mockProjects } from '@/data/projects';
 
 interface LearningState {
   abilityReport: AbilityReport | null;
@@ -17,7 +13,6 @@ interface LearningState {
   setCurrentPath: (path: LearningPath) => void;
   setCourses: (courses: Course[]) => void;
   setProjects: (projects: Project[]) => void;
-  loadData: () => void;
 }
 
 export const useLearningStore = create<LearningState>((set) => ({
@@ -25,17 +20,11 @@ export const useLearningStore = create<LearningState>((set) => ({
   currentPath: null,
   courses: [],
   projects: [],
-  learningDays: 15,
-  totalHours: 48,
-  completedProjects: 1,
+  learningDays: 0,
+  totalHours: 0,
+  completedProjects: 0,
   setAbilityReport: (report) => set({ abilityReport: report }),
   setCurrentPath: (path) => set({ currentPath: path }),
   setCourses: (courses) => set({ courses }),
   setProjects: (projects) => set({ projects }),
-  loadData: () => set({
-    abilityReport: mockAbilityReport,
-    currentPath: mockLearningPath,
-    courses: mockCourses,
-    projects: mockProjects,
-  }),
 }));

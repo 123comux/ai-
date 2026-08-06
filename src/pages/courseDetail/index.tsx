@@ -2,13 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchCourses } from '@/services/api';
+import { fetchCourses, fetchCourseVideos } from '@/services/api';
 import { formatDuration } from '@/utils/index';
 import type { Course } from '@/types/index';
+import type { Video } from '@/types/index';
 import styles from './index.module.scss';
 
 const CourseDetailPage: React.FC = () => {
   const [course, setCourse] = useState<Course | null>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,6 +20,10 @@ const CourseDetailPage: React.FC = () => {
         const courses = await fetchCourses();
         const found = courses.find((c) => c.id === id);
         setCourse(found || null);
+        if (id) {
+          const courseVideos = await fetchCourseVideos(id);
+          setVideos(courseVideos);
+        }
       } catch (err) {
         console.error('[CourseDetail] load error:', err);
       } finally {
@@ -51,6 +57,10 @@ const CourseDetailPage: React.FC = () => {
     { id: 5, title: '第五章：项目实战', duration: '40分钟', status: 'locked' },
     { id: 6, title: '第六章：总结与拓展', duration: '20分钟', status: 'locked' },
   ];
+
+  const handleVideoClick = (video: Video) => {
+    Taro.navigateTo({ url: `/pages/video/index?videoId=${video.id}` });
+  };
 
   return (
     <ScrollView className={styles.page} scrollY>
@@ -96,6 +106,28 @@ const CourseDetailPage: React.FC = () => {
             </View>
           ))}
         </View>
+
+        {videos.length > 0 && (
+          <>
+            <Text className={styles.sectionTitle}>相关视频</Text>
+            <View className={styles.videoList}>
+              {videos.map((video) => (
+                <View
+                  key={video.id}
+                  className={styles.videoItem}
+                  onClick={() => handleVideoClick(video)}
+                >
+                  <Image className={styles.videoCover} src={video.coverUrl} mode="aspectFill" />
+                  <View className={styles.videoItemInfo}>
+                    <Text className={styles.videoItemTitle}>{video.title}</Text>
+                    <Text className={styles.videoItemDuration}>{formatDuration(video.duration)}</Text>
+                  </View>
+                  <Text className={styles.videoItemArrow}>▶</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </View>
     </ScrollView>
   );

@@ -8,7 +8,6 @@ import ProjectCard from '@/components/ProjectCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
 import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects } from '@/services/api';
-import { mockDirections } from '@/data/assessment';
 import { formatDuration } from '@/utils/index';
 import type { Course, Project } from '@/types/index';
 import styles from './index.module.scss';
@@ -184,7 +183,13 @@ const HomePage: React.FC = () => {
           <Text className={styles.sectionTitle}>学习方向</Text>
         </View>
         <ScrollView className={styles.directionScroll} scrollX>
-          {mockDirections.map((dir) => (
+          {[
+            { id: '1', name: 'AI 算法工程师', description: '机器学习、深度学习、大模型微调', color: '#165dff' },
+            { id: '2', name: 'AI 产品经理', description: 'AI 产品设计、Prompt Engineering', color: '#7c3aed' },
+            { id: '3', name: 'AIGC 应用人才', description: 'AI 绘画、AI 写作、AI 视频', color: '#00b42a' },
+            { id: '4', name: '数据分析工程师', description: 'Python 数据分析、SQL、BI', color: '#ff7d00' },
+            { id: '5', name: 'AI 应用开发', description: '大模型 API、RAG、Agent', color: '#f53f3f' },
+          ].map((dir) => (
             <View
               key={dir.id}
               className={styles.directionCard}

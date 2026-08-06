@@ -92,6 +92,18 @@ export interface LearningRecord {
   exercisesDone: number;
 }
 
+// 视频
+export interface Video {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  coverUrl: string;
+  duration: number;
+  chapter: string;
+  courseId: string;
+}
+
 // 岗位对标结果
 export interface JobMatchingResult {
   jobTitle: string;
@@ -102,3 +114,4 @@ export interface JobMatchingResult {
   recommendedCourses: string[];
   recommendedProjects: string[];
 }
+

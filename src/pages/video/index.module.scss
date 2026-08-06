@@ -1,0 +1,185 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: $gradient-page;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.navBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx $spacing-lg;
+  background: $color-bg-card;
+  border-bottom: 1px solid $color-border;
+  box-sizing: border-box;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.navTitle {
+  flex: 1;
+  text-align: center;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.navRight {
+  min-width: 140rpx;
+}
+
+.loadingText {
+  text-align: center;
+  padding: 200rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+// 视频播放器
+.playerWrapper {
+  width: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.videoPlayer {
+  width: 100%;
+  height: 440rpx;
+  display: block;
+}
+
+// 当前视频信息
+.videoInfo {
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-card;
+  border-bottom: 1px solid $color-border;
+}
+
+.videoTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.videoDesc {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: $line-height-normal;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.videoDuration {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+// 视频列表标题
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-card;
+}
+
+.listTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.listCount {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+// 视频列表（可滚动区域）
+.videoList {
+  position: absolute;
+  top: 670rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $color-bg-card;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.videoItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-divider;
+  position: relative;
+  transition: background $transition-fast;
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.videoItemActive {
+  background: $color-bg-hover;
+}
+
+.videoCover {
+  width: 200rpx;
+  height: 120rpx;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  background: $color-bg-hover;
+}
+
+.videoItemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.videoItemTitle {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: $line-height-tight;
+  margin-bottom: 4rpx;
+}
+
+.videoItemDuration {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+.playingBadge {
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-lg;
+  background: $color-primary;
+  border-radius: $radius-xs;
+  padding: 2rpx 10rpx;
+}
+
+.playingBadgeText {
+  font-size: 20rpx;
+  color: $color-text-white;
+}

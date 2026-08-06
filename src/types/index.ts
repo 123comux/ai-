@@ -26,6 +26,26 @@ export interface AbilityReport {
   estimatedHours: number;
 }
 
+// 课程小节
+export interface Section {
+  id: string;
+  title: string;
+  content: string;
+  knowledge_points: string[];
+  case: string;
+}
+
+// 课程章节
+export interface Chapter {
+  id: string;
+  title: string;
+  summary: string;
+  duration_minutes: number;
+  video_bv: string;
+  video_page: number;
+  sections: Section[];
+}
+
 // 课程
 export interface Course {
   id: string;
@@ -37,6 +57,11 @@ export interface Course {
   progress: number;
   category: string;
   isFree: boolean;
+  chapters?: Chapter[];
+  topic?: string;
+  difficulty?: string;
+  estimated_hours?: number;
+  price?: number;
 }
 
 // 学习路径节点

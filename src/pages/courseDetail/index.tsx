@@ -4,26 +4,8 @@ import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
 import { fetchCourseDetail, fetchCourseVideos } from '@/services/api';
 import { formatDuration } from '@/utils/index';
-import type { Video } from '@/types/index';
+import type { Chapter, Video } from '@/types/index';
 import styles from './index.module.scss';
-
-interface Section {
-  id: string;
-  title: string;
-  content: string;
-  knowledge_points: string[];
-  case: string;
-}
-
-interface Chapter {
-  id: string;
-  title: string;
-  duration_minutes: number;
-  summary: string;
-  video_bv: string;
-  video_page: number;
-  sections: Section[];
-}
 
 const CourseDetailPage: React.FC = () => {
   const [course, setCourse] = useState<any>(null);
@@ -86,6 +68,13 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
+  const handleChapterDetail = (chapter: Chapter) => {
+    const courseId = course?.id || '';
+    Taro.navigateTo({
+      url: `/pages/chapterDetail/index?courseId=${encodeURIComponent(courseId)}&chapterId=${encodeURIComponent(chapter.id)}`,
+    });
+  };
+
   if (loading) {
     return (
       <View className={styles.page}>
@@ -145,11 +134,16 @@ const CourseDetailPage: React.FC = () => {
                     <Text className={styles.chapterTitle}>{ch.title}</Text>
                     <Text className={styles.chapterDuration}>{ch.duration_minutes} 分钟 · {ch.sections?.length || 0} 小节</Text>
                   </View>
-                  {ch.video_bv && (
-                    <View className={styles.chapterVideoBtn} onClick={(e) => { e.stopPropagation(); handleChapterVideo(ch); }}>
-                      <Text className={styles.chapterVideoIcon}>▶</Text>
+                  <View className={styles.chapterActions}>
+                    <View className={styles.chapterDetailBtn} onClick={(e) => { e.stopPropagation(); handleChapterDetail(ch); }}>
+                      <Text className={styles.chapterDetailText}>详情</Text>
                     </View>
-                  )}
+                    {ch.video_bv && (
+                      <View className={styles.chapterVideoBtn} onClick={(e) => { e.stopPropagation(); handleChapterVideo(ch); }}>
+                        <Text className={styles.chapterVideoIcon}>▶</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 {isExpanded && ch.summary && (

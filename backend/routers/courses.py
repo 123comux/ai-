@@ -7,9 +7,37 @@ from database import query_all, query_one, parse_json_field
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
 
+def _normalize_chapters(raw: list) -> list:
+    """Normalize chapter structure: alias content_summary -> summary, ensure sections array,
+    map to expected frontend schema (title, summary, duration_minutes, sections, video_bv)."""
+    out = []
+    for ch in (raw or []):
+        sections_raw = ch.get("sections") or ch.get("sub_chapters") or ch.get("subsections") or []
+        sections_norm = []
+        for i, sec in enumerate(sections_raw):
+            sections_norm.append({
+                "id": sec.get("id") or f"{ch.get('id', 'ch')}-sec-{i+1}",
+                "title": sec.get("title") or sec.get("name") or f"第{i+1}小节",
+                "content": sec.get("content") or sec.get("description") or sec.get("summary") or "",
+                "knowledge_points": sec.get("knowledge_points") or sec.get("keyPoints") or sec.get("key_points") or [],
+                "case": sec.get("case") or sec.get("case_study") or sec.get("example") or "",
+            })
+        out.append({
+            "id": ch.get("id") or "",
+            "title": ch.get("title") or ch.get("name") or "",
+            "summary": ch.get("summary") or ch.get("content_summary") or ch.get("description") or "",
+            "duration_minutes": ch.get("duration_minutes") or ch.get("duration") or 0,
+            "video_bv": ch.get("video_bv") or ch.get("bvid") or "",
+            "video_page": ch.get("video_page") or ch.get("page") or 1,
+            "sections": sections_norm,
+        })
+    return out
+
+
 def _db_to_course(row: dict) -> dict:
     """Convert database row to course dict."""
-    chapters = parse_json_field(row.get("chapters", "[]"))
+    chapters_raw = parse_json_field(row.get("chapters", "[]"))
+    chapters = _normalize_chapters(chapters_raw)
     return {
         "id": row["id"],
         "title": row["title"],

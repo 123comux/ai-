@@ -6,6 +6,7 @@ export default defineAppConfig({
     'pages/mine/index',
     'pages/assessment/index',
     'pages/courseDetail/index',
+    'pages/chapterDetail/index',
     'pages/learningPath/index',
     'pages/projectDetail/index',
     'pages/jobMatching/index',
@@ -27,26 +28,26 @@ export default defineAppConfig({
       {
         pagePath: 'pages/home/index',
         text: '首页',
-        iconPath: 'assets/tabbar/home.svg',
-        selectedIconPath: 'assets/tabbar/home-selected.svg'
+        iconPath: 'assets/tabbar/home.png',
+        selectedIconPath: 'assets/tabbar/home-selected.png'
       },
       {
         pagePath: 'pages/learn/index',
         text: '学习',
-        iconPath: 'assets/tabbar/learn.svg',
-        selectedIconPath: 'assets/tabbar/learn-selected.svg'
+        iconPath: 'assets/tabbar/learn.png',
+        selectedIconPath: 'assets/tabbar/learn-selected.png'
       },
       {
         pagePath: 'pages/project/index',
         text: '项目',
-        iconPath: 'assets/tabbar/project.svg',
-        selectedIconPath: 'assets/tabbar/project-selected.svg'
+        iconPath: 'assets/tabbar/project.png',
+        selectedIconPath: 'assets/tabbar/project-selected.png'
       },
       {
         pagePath: 'pages/mine/index',
         text: '我的',
-        iconPath: 'assets/tabbar/mine.svg',
-        selectedIconPath: 'assets/tabbar/mine-selected.svg'
+        iconPath: 'assets/tabbar/mine.png',
+        selectedIconPath: 'assets/tabbar/mine-selected.png'
       }
     ]
   }

@@ -19,10 +19,16 @@ backend/models/
 # Data files
 backend/data/raw/
 backend/data/processed/
+backend/data/cms.db
+backend/database.sqlite3
 
 # Environment
 .env
 .env.local
+
+# Local IDE / tool config
+project.private.config.json
+.claude/
 
 # IDE
 .idea/

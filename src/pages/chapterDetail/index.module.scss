@@ -1,0 +1,321 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+  padding-bottom: $spacing-xl;
+}
+
+// 顶部导航
+.navBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.navTitle {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  text-align: center;
+  @include text-ellipsis;
+}
+
+.navRight {
+  width: 96rpx;
+}
+
+.loadingText {
+  text-align: center;
+  padding: 200rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+// 章节头部
+.header {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  margin: $spacing-sm $spacing-lg $spacing-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.chapterIndex {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.chapterTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  display: block;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-sm;
+}
+
+.chapterSummary {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.chapterMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.metaText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.metaDot {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+// 播放按钮
+.playBtn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  background: $gradient-primary;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  box-shadow: $shadow-card-hover;
+}
+
+.playIconWrap {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.playIcon {
+  font-size: 28rpx;
+  color: $color-text-white;
+}
+
+.playBtnText {
+  flex: 1;
+}
+
+.playBtnTitle {
+  font-size: $font-size-md;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.playBtnDesc {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.85);
+  display: block;
+}
+
+// 小节列表
+.sectionListTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin: 0 $spacing-lg $spacing-md;
+}
+
+.sectionList {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  margin: 0 $spacing-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.sectionItem {
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  cursor: pointer;
+}
+
+.sectionIndex {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: rgba($color-primary, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sectionIndexText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.sectionTitleText {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.sectionArrow {
+  font-size: 24rpx;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
+.sectionContent {
+  padding: 0 $spacing-lg $spacing-lg ($spacing-lg + 40rpx + $spacing-sm);
+}
+
+.sectionDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+// 知识点
+.knowledgeBlock {
+  background: rgba(22, 93, 255, 0.05);
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+}
+
+.knowledgeLabel {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.knowledgeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  padding: 4rpx 0;
+}
+
+.knowledgeBullet {
+  font-size: 16rpx;
+  color: $color-primary;
+  line-height: $line-height-tight;
+  flex-shrink: 0;
+}
+
+.knowledgeText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  flex: 1;
+}
+
+// 案例
+.caseBlock {
+  background: rgba(0, 180, 42, 0.05);
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  border-left: 4rpx solid $color-success;
+}
+
+.caseLabel {
+  font-size: $font-size-xs;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.caseText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+}
+
+.emptyText {
+  display: block;
+  padding: $spacing-xl;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+// 上一章 / 下一章
+.chapterNav {
+  display: flex;
+  gap: $spacing-md;
+  margin: $spacing-lg $spacing-lg 0;
+}
+
+.navItem {
+  flex: 1;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.navItemActive {
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.navItemLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.navItemTitle {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+  @include text-ellipsis;
+}
+
+.navItemDisabled {
+  color: $color-text-disabled;
+}

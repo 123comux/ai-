@@ -31,10 +31,6 @@ const LearningPathPage: React.FC = () => {
     Taro.navigateTo({ url: `/pages/courseDetail/index?id=${courseId}` });
   };
 
-  const handleViewProject = (projectId: string) => {
-    Taro.navigateTo({ url: `/pages/projectDetail/index?id=${projectId}` });
-  };
-
   if (!currentPath) {
     return (
       <View className={styles.page}>

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import classnames from 'classnames';
 import ProgressBar from '@/components/ProgressBar';
-import { getDifficultyLabel, getDifficultyColor, getStatusLabel } from '@/utils/index';
+import { getDifficultyLabel, getDifficultyColor } from '@/utils/index';
 import type { Project } from '@/types/index';
 import styles from './index.module.scss';
 

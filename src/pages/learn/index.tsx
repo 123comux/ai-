@@ -5,7 +5,7 @@ import CourseCard from '@/components/CourseCard';
 import PathCard from '@/components/PathCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { fetchCourses, fetchLearningPath, fetchCourseCategories, getRecommendedCourses } from '@/services/api';
-import type { Course, LearningPath } from '@/types/index';
+import type { Course } from '@/types/index';
 import type { CourseRecommendation } from '@/services/api';
 import styles from './index.module.scss';
 
@@ -30,7 +30,7 @@ const LearnPage: React.FC = () => {
           fetchLearningPath(),
         ]);
         setCourses(courseData);
-        setCategories(catData);
+        setCategories(catData.map((c: string) => ({ key: c, label: c })));
         setCurrentPath(pathData);
       } catch (err) {
         console.error('[Learn] load data error:', err);

@@ -85,7 +85,12 @@ export const fetchJobMatchingResult = async (): Promise<JobMatchingResult> => {
 };
 
 /** 获取学习统计 */
-export const fetchLearningStats = async () => {
+export const fetchLearningStats = async (): Promise<{
+  learningDays: number;
+  totalHours: number;
+  completedProjects: number;
+  completedLessons: number;
+}> => {
   return apiGet('/api/user/learning-stats');
 };
 

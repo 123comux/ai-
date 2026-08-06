@@ -11,7 +11,7 @@ const TutorPage: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [modelLoading, setModelLoading] = useState(true); // 模型预加载状态
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<any>(null);
 
   // 页面加载时预加载 AI 模型，避免首次提问超时
   useEffect(() => {

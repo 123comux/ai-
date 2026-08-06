@@ -8,7 +8,6 @@ import styles from './index.module.scss';
 
 const JobMatchingPage: React.FC = () => {
   const [result, setResult] = useState<JobMatchingResult | null>(null);
-  const [jobInput, setJobInput] = useState('');
 
   useEffect(() => {
     // 默认加载 mock 结果
@@ -30,9 +29,6 @@ const JobMatchingPage: React.FC = () => {
       </View>
     );
   }
-
-  const masteredCount = result.requiredSkills.filter((s) => s.mastered).length;
-  const totalCount = result.requiredSkills.length;
 
   return (
     <ScrollView className={styles.page} scrollY>

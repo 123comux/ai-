@@ -19,7 +19,7 @@ const ProjectPage: React.FC = () => {
           fetchProjectCategories(),
         ]);
         setProjects(projectData);
-        setCategories(catData);
+        setCategories(catData.map((c: string) => ({ key: c, label: c })));
       } catch (err) {
         console.error('[Project] load data error:', err);
       }

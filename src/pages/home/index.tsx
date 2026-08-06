@@ -8,7 +8,6 @@ import ProjectCard from '@/components/ProjectCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
 import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects } from '@/services/api';
-import { formatDuration } from '@/utils/index';
 import type { Course, Project } from '@/types/index';
 import styles from './index.module.scss';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from '@tarojs/components';
+import { View } from '@tarojs/components';
 import type { AbilityDimension } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -40,8 +40,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
     const r = (dim.score / dim.maxScore) * radius;
     return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
   });
-
-  const dataPath = dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ') + 'Z';
 
   return (
     <View className={styles.chart} style={{ width: `${size / 2.5}rpx`, height: `${size / 2.5}rpx` }}>

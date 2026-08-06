@@ -411,3 +411,31 @@
     border: none;
   }
 }
+
+// AI 推荐课程列表
+.recommendList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.recommendItem {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  border: 1px solid $color-border;
+}
+
+.recommendItemTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.recommendItemMeta {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+}

@@ -4,8 +4,9 @@ import Taro from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
 import { useUserStore } from '@/store/useUserStore';
 import { useLearningStore } from '@/store/useLearningStore';
-import { fetchLearningRecords, fetchLearningStats } from '@/services/api';
+import { fetchLearningRecords, fetchLearningStats, fetchMenuItems } from '@/services/api';
 import type { LearningRecord } from '@/types/index';
+import type { MenuItem } from '@/services/api';
 import styles from './index.module.scss';
 
 const MinePage: React.FC = () => {
@@ -13,16 +14,19 @@ const MinePage: React.FC = () => {
   const { abilityReport } = useLearningStore();
   const [records, setRecords] = useState<LearningRecord[]>([]);
   const [stats, setStats] = useState({ learningDays: 0, totalHours: 0, completedProjects: 0, completedLessons: 0 });
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [recordData, statsData] = await Promise.all([
+        const [recordData, statsData, menuData] = await Promise.all([
           fetchLearningRecords(),
           fetchLearningStats(),
+          fetchMenuItems('mine'),
         ]);
         setRecords(recordData);
         setStats(statsData);
+        setMenuItems(menuData);
       } catch (err) {
         console.error('[Mine] load data error:', err);
       }
@@ -30,16 +34,7 @@ const MinePage: React.FC = () => {
     loadData();
   }, []);
 
-  const menuItems = [
-    { icon: '📊', label: '岗位能力对标', path: '/pages/jobMatching/index' },
-    { icon: '📁', label: '我的作品集', path: '' },
-    { icon: '📝', label: '学习记录', path: '' },
-    { icon: '🎯', label: '学习目标', path: '' },
-    { icon: '⭐', label: '我的收藏', path: '' },
-    { icon: '⚙️', label: '设置', path: '' },
-  ];
-
-  const handleMenuClick = (item: typeof menuItems[0]) => {
+  const handleMenuClick = (item: MenuItem) => {
     if (item.path) {
       Taro.navigateTo({ url: item.path });
     } else {

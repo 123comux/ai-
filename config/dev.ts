@@ -7,7 +7,8 @@ export default {
   mini: {},
   h5: {
     devServer: {
-      open: false, //禁止自动打开浏览器
+      port: 10087,
+      open: false,
       proxy: {
         '/api': {
           target: 'http://localhost:8000',

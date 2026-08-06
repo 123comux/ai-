@@ -7,30 +7,45 @@ import CourseCard from '@/components/CourseCard';
 import ProjectCard from '@/components/ProjectCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
-import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects } from '@/services/api';
+import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects, getRecommendedCourses, fetchBanners, fetchDirections } from '@/services/api';
 import type { Course, Project } from '@/types/index';
+import type { CourseRecommendation, BannerItem, DirectionItem } from '@/services/api';
 import styles from './index.module.scss';
+
+/** 学习方向 → 话题映射（用于过滤课程） */
+const DIRECTION_TOPIC_MAP: Record<string, string> = {
+  'AI 算法工程师': 'Machine Learning',
+  'AI 产品经理': 'AI/ML',
+  'AIGC 应用人才': 'Generative AI',
+  '数据分析工程师': 'Data Science',
+  'AI 应用开发': 'LLM',
+};
 
 const HomePage: React.FC = () => {
   const { nickname, targetDirection } = useUserStore();
   const {
     abilityReport, setAbilityReport,
     currentPath, setCurrentPath,
-    setCourses, setProjects,
+    setCourses, setProjects, setSelectedTopic,
     learningDays, totalHours, completedProjects,
   } = useLearningStore();
 
   const [courses, setLocalCourses] = useState<Course[]>([]);
   const [projects, setLocalProjects] = useState<Project[]>([]);
+  const [aiRecommendations, setAiRecommendations] = useState<CourseRecommendation[]>([]);
+  const [banners, setBanners] = useState<BannerItem[]>([]);
+  const [directions, setDirections] = useState<DirectionItem[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [report, path, courseData, projectData] = await Promise.all([
+        const [report, path, courseData, projectData, bannerData, directionData] = await Promise.all([
           fetchAbilityReport(),
           fetchLearningPath(),
           fetchCourses(),
           fetchProjects(),
+          fetchBanners(),
+          fetchDirections(),
         ]);
         setAbilityReport(report);
         setCurrentPath(path);
@@ -38,6 +53,18 @@ const HomePage: React.FC = () => {
         setLocalProjects(projectData.slice(0, 4));
         setCourses(courseData);
         setProjects(projectData);
+        setBanners(bannerData);
+        setDirections(directionData);
+
+        // 根据用户目标方向获取 AI 推荐课程
+        if (targetDirection && DIRECTION_TOPIC_MAP[targetDirection]) {
+          try {
+            const recs = await getRecommendedCourses(DIRECTION_TOPIC_MAP[targetDirection], 4);
+            setAiRecommendations(recs);
+          } catch {
+            // 推荐接口不可用时忽略
+          }
+        }
       } catch (err) {
         console.error('[Home] load data error:', err);
       }
@@ -65,11 +92,21 @@ const HomePage: React.FC = () => {
     Taro.switchTab({ url: type === 'course' ? '/pages/learn/index' : '/pages/project/index' });
   };
 
-  const bannerList = [
-    { id: 1, img: 'https://picsum.photos/id/160/750/400', title: 'AI 能力测评', desc: '测测你的 AI 水平' },
-    { id: 2, img: 'https://picsum.photos/id/201/750/400', title: '实战项目', desc: '做出可写进简历的作品' },
-    { id: 3, img: 'https://picsum.photos/id/119/750/400', title: '岗位对标', desc: '看看你离目标岗位差多少' },
-  ];
+  /** 选择学习方向 → 设置话题并跳转到学习页 */
+  const handleSelectDirection = (directionName: string) => {
+    const topic = DIRECTION_TOPIC_MAP[directionName] || 'all';
+    setSelectedTopic(topic);
+    Taro.switchTab({ url: '/pages/learn/index' });
+  };
+
+  /** AI 课程推荐 → 跳转到学习页展示推荐 */
+  const handleCourseRecommend = () => {
+    // 如果有测评结果，使用推荐方向；否则使用用户目标方向
+    const interest = abilityReport?.recommendedDirection || targetDirection;
+    const topic = DIRECTION_TOPIC_MAP[interest] || 'all';
+    setSelectedTopic(topic);
+    Taro.switchTab({ url: '/pages/learn/index' });
+  };
 
   return (
     <ScrollView className={styles.page} scrollY>
@@ -90,28 +127,30 @@ const HomePage: React.FC = () => {
       </View>
 
       {/* Banner 轮播 */}
-      <View className={styles.bannerWrap}>
-        <Swiper
-          className={styles.banner}
-          indicatorColor="#e5e6eb"
-          indicatorActiveColor="#165dff"
-          circular
-          autoplay
-          interval={3000}
-        >
-          {bannerList.map((item) => (
-            <SwiperItem key={item.id}>
-              <View className={styles.bannerSlide}>
-                <Image className={styles.bannerImg} src={item.img} mode="aspectFill" />
-                <View className={styles.bannerOverlay}>
-                  <Text className={styles.bannerTitle}>{item.title}</Text>
-                  <Text className={styles.bannerDesc}>{item.desc}</Text>
+      {banners.length > 0 && (
+        <View className={styles.bannerWrap}>
+          <Swiper
+            className={styles.banner}
+            indicatorColor="#e5e6eb"
+            indicatorActiveColor="#165dff"
+            circular
+            autoplay
+            interval={3000}
+          >
+            {banners.map((item) => (
+              <SwiperItem key={item.id}>
+                <View className={styles.bannerSlide}>
+                  <Image className={styles.bannerImg} src={item.image_url} mode="aspectFill" />
+                  <View className={styles.bannerOverlay}>
+                    <Text className={styles.bannerTitle}>{item.title}</Text>
+                    <Text className={styles.bannerDesc}>{item.description}</Text>
+                  </View>
                 </View>
-              </View>
-            </SwiperItem>
-          ))}
-        </Swiper>
-      </View>
+              </SwiperItem>
+            ))}
+          </Swiper>
+        </View>
+      )}
 
       {/* 学习统计 */}
       <View className={styles.statsRow}>
@@ -147,7 +186,7 @@ const HomePage: React.FC = () => {
             <Text className={styles.aiToolName}>能力分析</Text>
             <Text className={styles.aiToolDesc}>AI 精准评估</Text>
           </View>
-          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#00b42a,#27c346)" onClick={() => Taro.switchTab({ url: '/pages/learn/index' })}>
+          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#00b42a,#27c346)" onClick={handleCourseRecommend}>
             <Text className={styles.aiToolIcon}>📚</Text>
             <Text className={styles.aiToolName}>课程推荐</Text>
             <Text className={styles.aiToolDesc}>AI 智能匹配</Text>
@@ -176,26 +215,19 @@ const HomePage: React.FC = () => {
         )}
       </View>
 
-      {/* 学习方向 */}
+      {/* 学习方向（点击后过滤课程） */}
       <View className={styles.section}>
         <View className={styles.sectionHeader}>
           <Text className={styles.sectionTitle}>学习方向</Text>
+          <Text className={styles.sectionMore} onClick={() => Taro.switchTab({ url: '/pages/learn/index' })}>查看课程 →</Text>
         </View>
         <ScrollView className={styles.directionScroll} scrollX>
-          {[
-            { id: '1', name: 'AI 算法工程师', description: '机器学习、深度学习、大模型微调', color: '#165dff' },
-            { id: '2', name: 'AI 产品经理', description: 'AI 产品设计、Prompt Engineering', color: '#7c3aed' },
-            { id: '3', name: 'AIGC 应用人才', description: 'AI 绘画、AI 写作、AI 视频', color: '#00b42a' },
-            { id: '4', name: '数据分析工程师', description: 'Python 数据分析、SQL、BI', color: '#ff7d00' },
-            { id: '5', name: 'AI 应用开发', description: '大模型 API、RAG、Agent', color: '#f53f3f' },
-          ].map((dir) => (
+          {directions.map((dir) => (
             <View
               key={dir.id}
               className={styles.directionCard}
               style={{ borderTopColor: dir.color }}
-              onClick={() => {
-                Taro.navigateTo({ url: '/pages/learningPath/index' });
-              }}
+              onClick={() => handleSelectDirection(dir.name)}
             >
               <Text className={styles.directionName}>{dir.name}</Text>
               <Text className={styles.directionDesc}>{dir.description}</Text>
@@ -212,6 +244,26 @@ const HomePage: React.FC = () => {
             <Text className={styles.sectionMore} onClick={handleViewPath}>查看全部 →</Text>
           </View>
           <PathCard path={currentPath} onClick={handleViewPath} />
+        </View>
+      )}
+
+      {/* AI 推荐课程（基于用户目标方向） */}
+      {aiRecommendations.length > 0 && (
+        <View className={styles.section}>
+          <View className={styles.sectionHeader}>
+            <Text className={styles.sectionTitle}>AI 推荐课程</Text>
+            <Text className={styles.sectionMore} onClick={handleCourseRecommend}>更多 →</Text>
+          </View>
+          <View className={styles.recommendList}>
+            {aiRecommendations.map((rec, i) => (
+              <View key={i} className={styles.recommendItem}>
+                <Text className={styles.recommendItemTitle}>{rec.title}</Text>
+                <Text className={styles.recommendItemMeta}>
+                  {rec.topic} · {rec.difficulty} · 匹配度 {Math.round(rec.score * 100)}%
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
 

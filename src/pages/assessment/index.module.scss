@@ -302,3 +302,26 @@
   font-weight: $font-weight-medium;
   color: $color-text-secondary;
 }
+
+.errorText {
+  text-align: center;
+  padding: 100rpx 0;
+  font-size: $font-size-md;
+  color: $color-error;
+  display: block;
+}
+
+.loadingText {
+  text-align: center;
+  padding: 100rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+.emptyText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+  padding: $spacing-sm 0;
+}

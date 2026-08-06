@@ -114,10 +114,8 @@
 }
 
 .chapterItem {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  padding: $spacing-md $spacing-lg;
+  display: block;
+  padding: 0;
   border-bottom: 1px solid $color-divider;
 
   &:last-child {
@@ -135,13 +133,6 @@
 
 .statusIcon {
   font-size: 28rpx;
-}
-
-.currentDot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: $radius-round;
-  background: $color-primary;
 }
 
 .chapterInfo {
@@ -218,4 +209,142 @@
   font-size: 28rpx;
   color: $color-text-tertiary;
   flex-shrink: 0;
+}
+
+// ============ Rich chapter content ============
+
+.chapterHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  cursor: pointer;
+}
+
+.chapterVideoBtn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: rgba($color-primary, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chapterVideoIcon {
+  font-size: 24rpx;
+  color: $color-primary;
+}
+
+.chapterSummary {
+  padding: 0 $spacing-lg $spacing-md $spacing-lg;
+}
+
+.chapterSummaryText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+}
+
+// Section (subsection)
+.sectionItem {
+  padding: $spacing-sm $spacing-lg;
+  background: $color-bg-hover;
+  border-top: 1px solid $color-divider;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+  cursor: pointer;
+}
+
+.sectionArrow {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  width: 32rpx;
+  text-align: center;
+}
+
+.sectionTitle {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  flex: 1;
+}
+
+.sectionContent {
+  padding: $spacing-sm 0 $spacing-md $spacing-md;
+}
+
+.sectionDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+// Knowledge points block
+.knowledgeBlock {
+  background: rgba(22, 93, 255, 0.05);
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+}
+
+.knowledgeLabel {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.knowledgeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  padding: 4rpx 0;
+}
+
+.knowledgeBullet {
+  font-size: 16rpx;
+  color: $color-primary;
+  line-height: $line-height-tight;
+  flex-shrink: 0;
+}
+
+.knowledgeText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  flex: 1;
+}
+
+// Case block
+.caseBlock {
+  background: rgba(0, 180, 42, 0.05);
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  border-left: 4rpx solid $color-success;
+}
+
+.caseLabel {
+  font-size: $font-size-xs;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.caseText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
 }

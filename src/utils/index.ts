@@ -1,9 +1,12 @@
 /**
- * 格式化学习时长（分钟 → 小时分钟）
+ * 格式化学习时长（接收：分钟 或 秒；自动根据数值范围判断单位，输出"X小时Y分钟"或"X分钟"）
+ * - 阈值 1000：< 1000 视为分钟（max 16小时≈960分钟），≥ 1000 视为秒（max 3600秒=1小时，45分钟=2700秒）
  */
-export const formatDuration = (minutes: number): string => {
+export const formatDuration = (value: number): string => {
+  if (!value || value < 0) return '0分钟';
+  const minutes: number = value >= 1000 ? Math.round(value / 60) : value;
   const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+  const m = Math.round(minutes % 60);
   if (h === 0) return `${m}分钟`;
   if (m === 0) return `${h}小时`;
   return `${h}小时${m}分钟`;

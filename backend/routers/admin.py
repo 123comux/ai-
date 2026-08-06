@@ -1,0 +1,139 @@
+"""
+CMS Admin API - CRUD endpoints for all content types.
+"""
+import hashlib
+import json
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Header, Request
+from pydantic import BaseModel, Field
+
+from database import query_all, query_one, insert_row, update_row, delete_row, parse_json_field
+
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# ============ Auth ============
+
+ADMIN_TOKEN_CACHE: dict[str, str] = {}
+
+
+def verify_token(authorization: str = Header(None)) -> str:
+    """Verify admin auth token."""
+    if not authorization:
+        raise HTTPException(401, "Missing authorization header")
+    token = authorization.replace("Bearer ", "")
+    username = ADMIN_TOKEN_CACHE.get(token)
+    if not username:
+        raise HTTPException(401, "Invalid or expired token")
+    return username
+
+
+@router.post("/login")
+def admin_login(username: str, password: str):
+    """Login and get auth token."""
+    users = query_all("admin_users", {"username": username})
+    if not users:
+        raise HTTPException(401, "Invalid credentials")
+    user = users[0]
+    pwd_hash = hashlib.sha256(password.encode()).hexdigest()
+    if user["password_hash"] != pwd_hash:
+        raise HTTPException(401, "Invalid credentials")
+    # Generate simple token
+    import secrets
+    token = f"admin_{secrets.token_hex(16)}"
+    ADMIN_TOKEN_CACHE[token] = username
+    return {"token": token, "username": username, "role": user["role"]}
+
+
+# ============ Generic CRUD Helpers ============
+
+TABLE_CONFIG = {
+    "banners": {"fields": ["title", "description", "image_url", "link_url", "sort_order", "is_active"], "label": "Banners"},
+    "directions": {"fields": ["name", "description", "color", "topic_key", "icon", "sort_order", "is_active"], "label": "Directions"},
+    "courses": {"fields": ["id", "title", "description", "cover_img", "topic", "difficulty", "estimated_hours", "lessons", "progress", "is_free", "price", "source", "chapters", "is_active"], "label": "Courses"},
+    "projects": {"fields": ["id", "title", "description", "cover_img", "tech_stack", "difficulty", "estimated_hours", "step_count", "status", "progress", "is_free", "price", "topics_covered", "source", "is_active"], "label": "Projects"},
+    "videos": {"fields": ["id", "title", "description", "url", "cover_url", "duration", "chapter", "course_id", "is_active"], "label": "Videos"},
+    "learning_paths": {"fields": ["id", "direction", "title", "description", "total_weeks", "current_week", "nodes", "is_active"], "label": "Learning Paths"},
+    "menu_items": {"fields": ["icon", "label", "path", "section", "sort_order", "is_active"], "label": "Menu Items"},
+    "job_matching": {"fields": ["job_title", "company", "match_score", "required_skills", "gap_skills", "recommended_courses", "recommended_projects", "is_active"], "label": "Job Matching"},
+    "learning_stats": {"fields": ["learning_days", "total_hours", "completed_projects", "completed_lessons"], "label": "Learning Stats"},
+    "learning_records": {"fields": ["date", "duration", "lessons_completed", "exercises_done"], "label": "Learning Records"},
+}
+
+
+@router.get("/tables")
+def list_tables():
+    """List all available tables."""
+    return [{"name": k, "label": v["label"], "fields": v["fields"]} for k, v in TABLE_CONFIG.items()]
+
+
+@router.get("/{table}")
+def read_all(table: str, auth: str = Header(None)):
+    """Read all rows from a table."""
+    verify_token(auth)
+    if table not in TABLE_CONFIG:
+        raise HTTPException(404, f"Unknown table: {table}")
+    return query_all(table)
+
+
+@router.get("/{table}/{item_id}")
+def read_one(table: str, item_id, auth: str = Header(None)):
+    """Read a single row."""
+    verify_token(auth)
+    if table not in TABLE_CONFIG:
+        raise HTTPException(404, f"Unknown table: {table}")
+    row = query_one(table, item_id)
+    if not row:
+        raise HTTPException(404, f"Item not found in {table}")
+    return row
+
+
+@router.post("/{table}")
+def create_item(table: str, data: dict, auth: str = Header(None)):
+    """Create a new item."""
+    verify_token(auth)
+    if table not in TABLE_CONFIG:
+        raise HTTPException(404, f"Unknown table: {table}")
+    # Filter to allowed fields
+    allowed = TABLE_CONFIG[table]["fields"]
+    clean = {k: v for k, v in data.items() if k in allowed}
+    if not clean:
+        raise HTTPException(400, "No valid fields provided")
+    # Handle JSON fields
+    for k, v in clean.items():
+        if isinstance(v, (list, dict)):
+            clean[k] = json.dumps(v, ensure_ascii=False)
+    item_id = insert_row(table, clean)
+    return {"id": item_id, "message": f"Created in {table}"}
+
+
+@router.put("/{table}/{item_id}")
+def update_item(table: str, item_id, data: dict, auth: str = Header(None)):
+    """Update an existing item."""
+    verify_token(auth)
+    if table not in TABLE_CONFIG:
+        raise HTTPException(404, f"Unknown table: {table}")
+    allowed = TABLE_CONFIG[table]["fields"]
+    clean = {k: v for k, v in data.items() if k in allowed}
+    if not clean:
+        raise HTTPException(400, "No valid fields provided")
+    for k, v in clean.items():
+        if isinstance(v, (list, dict)):
+            clean[k] = json.dumps(v, ensure_ascii=False)
+    ok = update_row(table, item_id, clean)
+    if not ok:
+        raise HTTPException(404, f"Item not found in {table}")
+    return {"message": f"Updated in {table}"}
+
+
+@router.delete("/{table}/{item_id}")
+def delete_item(table: str, item_id, auth: str = Header(None)):
+    """Delete an item."""
+    verify_token(auth)
+    if table not in TABLE_CONFIG:
+        raise HTTPException(404, f"Unknown table: {table}")
+    ok = delete_row(table, item_id)
+    if not ok:
+        raise HTTPException(404, f"Item not found in {table}")
+    return {"message": f"Deleted from {table}"}

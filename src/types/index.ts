@@ -96,9 +96,24 @@ export interface LearningRecord {
 export interface Video {
   id: string;
   title: string;
+  subtitle?: string;
   description: string;
+  /** 核心知识点/关键信息 */
+  coreInfo?: string[];
+  /** 叙事结构（教学流程） */
+  narrative?: string;
+  /** 视觉呈现 */
+  visual?: string;
+  /** 视频质量元数据 */
+  quality?: {
+    resolution: string;
+    fps: number;
+    audio: string;
+    watermark: string;
+  };
   url: string;
   coverUrl: string;
+  /** 视频时长（秒） */
   duration: number;
   chapter: string;
   courseId: string;

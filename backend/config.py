@@ -38,6 +38,8 @@ CORS_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:57434",
     "http://127.0.0.1:8000",
+    "http://localhost:10087",
+    "http://127.0.0.1:10087",
     "https://trae.mobile.volcapp.com",
 ]
 CORS_ORIGIN_REGEX = r"https://.*\.(mobile\.volcapp\.com|volceapi\.com|apigateway.*\.volceapi\.com)"

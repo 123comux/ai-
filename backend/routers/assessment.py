@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from models.schemas import AssessmentQuestion, AssessmentResult
+from models.schemas import AssessmentQuestion, AssessmentQuestionPublic, AssessmentResult
 from services.assessment_service import get_assessment, score_assessment
 
 router = APIRouter(prefix="/api/assessment", tags=["assessment"])
@@ -14,16 +14,17 @@ class SubmitRequest(BaseModel):
     question_ids: list[str]
 
 
-@router.get("/questions", response_model=list[AssessmentQuestion])
+@router.get("/questions", response_model=list[AssessmentQuestionPublic])
 async def get_questions(
     topic: str = Query(None, description="Filter by topic"),
     count: int = Query(10, ge=1, le=20),
 ):
-    """Get assessment questions."""
+    """Get assessment questions (without correct_answer)."""
     questions = get_assessment(topic, count)
     if not questions:
         raise HTTPException(status_code=404, detail="No questions available")
-    return questions
+    # 隐藏正确答案，避免前端泄露
+    return [AssessmentQuestionPublic(**q.model_dump()) for q in questions]
 
 
 @router.post("/submit", response_model=AssessmentResult)

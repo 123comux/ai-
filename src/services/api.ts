@@ -7,12 +7,23 @@
 import Taro from '@tarojs/taro';
 import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video } from '@/types/index';
 
+// H5 dev mode & WeChat mini-program: both use direct backend URL.
+// CORS is fully configured in backend config.py (allow_origins includes localhost:10087).
+// This approach avoids Taro devServer proxy reliability issues.
+// NOTE: WeChat mini-program requires HTTPS and domain whitelist — update this for production.
 const API_BASE = 'http://localhost:8000';
+
+/** 规范化 URL，避免双斜杠等问题 */
+function buildUrl(path: string): string {
+  const full = API_BASE + path;
+  // 修正拼接后的多余双斜杠（保留协议部分的 ://）
+  return full.replace(/([^:])\/{2,}/g, '$1/');
+}
 
 /** GET 辅助函数 */
 async function apiGet<T>(path: string, timeoutMs: number = 15000): Promise<T> {
   const res = await Taro.request<T>({
-    url: `${API_BASE}${path}`,
+    url: buildUrl(path),
     method: 'GET',
     timeout: timeoutMs,
     dataType: 'json',
@@ -24,7 +35,7 @@ async function apiGet<T>(path: string, timeoutMs: number = 15000): Promise<T> {
 /** POST 辅助函数 */
 async function apiPost<T>(path: string, body: Record<string, unknown>, timeoutMs: number = 30000): Promise<T> {
   const res = await Taro.request<T>({
-    url: `${API_BASE}${path}`,
+    url: buildUrl(path),
     method: 'POST',
     header: { 'Content-Type': 'application/json' },
     data: body,
@@ -57,6 +68,11 @@ export const fetchCourses = async (topic?: string): Promise<Course[]> => {
   return apiGet<Course[]>(`/api/courses${query}`);
 };
 
+/** 获取单个课程详情（含 chapters） */
+export const fetchCourseDetail = async (courseId: string): Promise<any> => {
+  return apiGet<any>(`/api/courses/${courseId}`);
+};
+
 /** 获取课程分类 */
 export const fetchCourseCategories = async () => {
   const data = await apiGet<{ topics: string[] }>('/api/courses/topics');
@@ -71,7 +87,8 @@ export const fetchProjects = async (difficulty?: string): Promise<Project[]> => 
 
 /** 获取项目分类 */
 export const fetchProjectCategories = async () => {
-  return apiGet<string[]>('/api/projects/topics');
+  const data = await apiGet<{ topics: string[] }>('/api/projects/topics');
+  return data.topics;
 };
 
 /** 获取学习记录 */
@@ -105,6 +122,37 @@ export const fetchCourseVideos = async (courseId: string): Promise<Video[]> => {
   return apiGet<Video[]>(`/api/videos/course/${courseId}`);
 };
 
+// ============ 测评系统 API ============
+
+/** 测评题目类型 */
+export interface AssessmentQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  topic: string;
+  difficulty: string;
+}
+
+/** 测评结果类型 */
+export interface AssessmentScoreResult {
+  score: number;
+  total: number;
+  level: string;
+  strengths: string[];
+  weaknesses: string[];
+  recommended_direction: string;
+}
+
+/** 获取测评题目 */
+export const fetchAssessmentQuestions = async (count: number = 10): Promise<AssessmentQuestion[]> => {
+  return apiGet<AssessmentQuestion[]>(`/api/assessment/questions?count=${count}`);
+};
+
+/** 提交测评答案并获取评分结果 */
+export const submitAssessment = async (answers: number[], question_ids: string[]): Promise<AssessmentScoreResult> => {
+  return apiPost<AssessmentScoreResult>('/api/assessment/submit', { answers, question_ids });
+};
+
 // ============ AI 功能 API ============
 
 /** AI 模型类型定义 */
@@ -136,7 +184,7 @@ export interface CourseRecommendation {
 /** AI 导师问答（超时 120 秒，支持取消） */
 export const askTutor = async (question: string): Promise<TutorResponse> => {
   const requestTask = Taro.request<TutorResponse>({
-    url: `${API_BASE}/api/tutor/chat`,
+    url: buildUrl('/api/tutor/chat'),
     method: 'POST',
     header: { 'Content-Type': 'application/json' },
     data: { question },
@@ -182,4 +230,52 @@ export const getAIModelsInfo = async () => {
       tutor?: { status?: string; model_type?: string };
     };
   }>('/api/ai/models');
+};
+
+// ============ CMS 动态内容 API ============
+
+/** Banner 类型 */
+export interface BannerItem {
+  id: number;
+  title: string;
+  description: string;
+  image_url: string;
+  link_url: string;
+  sort_order: number;
+}
+
+/** 学习方向类型 */
+export interface DirectionItem {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  topic_key: string;
+  icon: string;
+  sort_order: number;
+}
+
+/** 菜单项类型 */
+export interface MenuItem {
+  id: number;
+  icon: string;
+  label: string;
+  path: string;
+  section: string;
+  sort_order: number;
+}
+
+/** 获取首页Banner */
+export const fetchBanners = async (): Promise<BannerItem[]> => {
+  return apiGet<BannerItem[]>('/api/content/banners');
+};
+
+/** 获取学习方向 */
+export const fetchDirections = async (): Promise<DirectionItem[]> => {
+  return apiGet<DirectionItem[]>('/api/content/directions');
+};
+
+/** 获取菜单项 */
+export const fetchMenuItems = async (section: string = 'mine'): Promise<MenuItem[]> => {
+  return apiGet<MenuItem[]>(`/api/content/menu-items?section=${section}`);
 };

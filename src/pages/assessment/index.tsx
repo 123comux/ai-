@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import RadarChart from '@/components/RadarChart';
 import { useLearningStore } from '@/store/useLearningStore';
-import { fetchAbilityReport } from '@/services/api';
+import { fetchAssessmentQuestions, submitAssessment } from '@/services/api';
+import type { AssessmentQuestion, AssessmentScoreResult } from '@/services/api';
 import styles from './index.module.scss';
 
 const AssessmentPage: React.FC = () => {
@@ -11,47 +11,117 @@ const AssessmentPage: React.FC = () => {
   const [step, setStep] = useState<'start' | 'doing' | 'result'>('start');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
+  const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
+  const [result, setResult] = useState<AssessmentScoreResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const questions = [
-    { q: 'Python 中列表和元组的区别是什么？', options: ['可变 vs 不可变', '有序 vs 无序', '可重复 vs 不可重复', '没有区别'], answer: 0 },
-    { q: '以下哪个是监督学习的例子？', options: ['聚类分析', '线性回归', '主成分分析', '关联规则'], answer: 1 },
-    { q: 'Transformer 中自注意力机制的核心计算是什么？', options: ['卷积', '点积注意力', '循环', '池化'], answer: 1 },
-    { q: '以下哪个不是激活函数？', options: ['ReLU', 'Sigmoid', 'Tanh', 'SVM'], answer: 3 },
-    { q: '大模型中的"Prompt"指的是什么？', options: ['模型参数', '训练数据', '输入指令', '输出结果'], answer: 2 },
-  ];
-
-  const handleStart = () => {
-    setStep('doing');
-    setCurrentQuestion(0);
-    setAnswers([]);
+  const handleStart = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const qs = await fetchAssessmentQuestions(10);
+      if (qs.length === 0) {
+        setError('暂无可用题目，请稍后再试');
+        return;
+      }
+      setQuestions(qs);
+      setStep('doing');
+      setCurrentQuestion(0);
+      setAnswers([]);
+    } catch (err) {
+      setError('加载题目失败，请检查网络连接');
+      console.error('[Assessment] load questions failed:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAnswer = (index: number) => {
+  const handleAnswer = async (index: number) => {
     const newAnswers = [...answers, index];
     setAnswers(newAnswers);
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // 完成测评，从后端获取结果
-      fetchAbilityReport().then((report) => {
-        setAbilityReport(report);
-      }).catch((err) => {
-        console.error('[Assessment] fetch report failed:', err);
-      });
+      // 完成测评，提交到后端评分
+      setLoading(true);
+      try {
+        const questionIds = questions.map((q) => q.id);
+        const scoreResult = await submitAssessment(newAnswers, questionIds);
+        setResult(scoreResult);
+
+        // 同时更新 store 中的能力报告（用于首页展示）
+        setAbilityReport({
+          overallScore: Math.round((scoreResult.score / scoreResult.total) * 100),
+          level: scoreResult.level === 'expert' ? '专家' : scoreResult.level === 'advanced' ? '高级' : scoreResult.level === 'intermediate' ? '中级' : '初级',
+          dimensions: [],
+          strengths: scoreResult.strengths,
+          weaknesses: scoreResult.weaknesses,
+          recommendedDirection: scoreResult.recommended_direction,
+          estimatedHours: scoreResult.total * 10,
+        });
+      } catch (err) {
+        setError('提交评分失败，请重试');
+        console.error('[Assessment] submit failed:', err);
+      } finally {
+        setLoading(false);
+      }
       setStep('result');
     }
   };
 
   const handleReassess = () => {
     setStep('start');
+    setResult(null);
+    setError('');
   };
 
   const handleBack = () => {
     Taro.navigateBack();
   };
 
-  if (step === 'doing') {
+  const getLevelLabel = (level: string) => {
+    const map: Record<string, string> = {
+      expert: '专家',
+      advanced: '高级',
+      intermediate: '中级',
+      beginner: '初级',
+    };
+    return map[level] || level;
+  };
+
+  // 加载中
+  if (loading && step === 'start') {
+    return (
+      <View className={styles.page}>
+        <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
+          <Text className={styles.navBack}>← 返回</Text>
+        </View>
+        <View className={styles.startContent}>
+          <Text className={styles.loadingText}>加载中...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error && step === 'start') {
+    return (
+      <View className={styles.page}>
+        <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
+          <Text className={styles.navBack}>← 返回</Text>
+        </View>
+        <View className={styles.startContent}>
+          <Text className={styles.errorText}>{error}</Text>
+          <View className={styles.startButton} onClick={handleStart}>
+            <Text className={styles.startButtonText}>重试</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (step === 'doing' && questions.length > 0) {
     const q = questions[currentQuestion];
     return (
       <View className={styles.page}>
@@ -65,74 +135,61 @@ const AssessmentPage: React.FC = () => {
           {currentQuestion + 1} / {questions.length}
         </Text>
         <View className={styles.questionCard}>
-          <Text className={styles.questionTitle}>{q.q}</Text>
+          <Text className={styles.questionTitle}>{q.question}</Text>
           <View className={styles.options}>
             {q.options.map((opt, i) => (
               <View
                 key={i}
                 className={styles.option}
-                onClick={() => handleAnswer(i)}
+                onClick={() => !loading && handleAnswer(i)}
               >
                 <Text className={styles.optionText}>{opt}</Text>
               </View>
             ))}
           </View>
         </View>
+        {loading && <Text className={styles.loadingText}>提交中...</Text>}
       </View>
     );
   }
 
-  if (step === 'result') {
-    const report = useLearningStore.getState().abilityReport || {
-      overallScore: 0,
-      level: '未评估',
-      dimensions: [],
-      strengths: [],
-      weaknesses: [],
-      recommendedDirection: '',
-      estimatedHours: 0,
-    };
+  if (step === 'result' && result) {
     return (
       <ScrollView className={styles.page} scrollY>
         <View className={styles.resultHeader}>
           <Text className={styles.resultTitle}>测评报告</Text>
           <View className={styles.scoreCircle}>
-            <Text className={styles.scoreValue}>{report.overallScore}</Text>
+            <Text className={styles.scoreValue}>{result.score}/{result.total}</Text>
             <Text className={styles.scoreUnit}>分</Text>
           </View>
-          <Text className={styles.levelText}>当前水平：{report.level}</Text>
+          <Text className={styles.levelText}>当前水平：{getLevelLabel(result.level)}</Text>
         </View>
 
         <View className={styles.section}>
-          <Text className={styles.sectionTitle}>能力雷达图</Text>
-          <RadarChart dimensions={report.dimensions} size={400} />
-        </View>
-
-        <View className={styles.section}>
-          <Text className={styles.sectionTitle}>优势</Text>
-          {report.strengths.map((s, i) => (
+          <Text className={styles.sectionTitle}>优势领域</Text>
+          {result.strengths.length > 0 ? result.strengths.map((s, i) => (
             <View key={i} className={styles.tagItem}>
               <Text className={styles.tagIcon}>✅</Text>
               <Text className={styles.tagText}>{s}</Text>
             </View>
-          ))}
+          )) : <Text className={styles.emptyText}>暂无显著优势</Text>}
         </View>
 
         <View className={styles.section}>
-          <Text className={styles.sectionTitle}>薄弱点</Text>
-          {report.weaknesses.map((w, i) => (
+          <Text className={styles.sectionTitle}>待提升领域</Text>
+          {result.weaknesses.length > 0 ? result.weaknesses.map((w, i) => (
             <View key={i} className={styles.tagItem}>
               <Text className={styles.tagIcon}>💪</Text>
               <Text className={styles.tagText}>{w}</Text>
             </View>
-          ))}
+          )) : <Text className={styles.emptyText}>暂无薄弱环节</Text>}
         </View>
 
         <View className={styles.section}>
           <Text className={styles.sectionTitle}>推荐方向</Text>
           <View className={styles.recommendCard}>
-            <Text className={styles.recommendText}>{report.recommendedDirection}</Text>
-            <Text className={styles.recommendDesc}>预计学习时长：{report.estimatedHours} 小时</Text>
+            <Text className={styles.recommendText}>{result.recommended_direction}</Text>
+            <Text className={styles.recommendDesc}>答对 {result.score}/{result.total} 题</Text>
           </View>
         </View>
 
@@ -157,16 +214,16 @@ const AssessmentPage: React.FC = () => {
         <Text className={styles.startIcon}>🧠</Text>
         <Text className={styles.startTitle}>AI 能力测评</Text>
         <Text className={styles.startDesc}>
-          完成 5 道题目，精准定位你的 AI 能力水平，获取个性化学习推荐
+          完成 10 道题目，精准定位你的 AI 能力水平，获取个性化学习推荐
         </Text>
         <View className={styles.startInfo}>
           <View className={styles.startInfoItem}>
-            <Text className={styles.startInfoValue}>5</Text>
+            <Text className={styles.startInfoValue}>10</Text>
             <Text className={styles.startInfoLabel}>题目数</Text>
           </View>
           <View className={styles.startInfoDivider} />
           <View className={styles.startInfoItem}>
-            <Text className={styles.startInfoValue}>5</Text>
+            <Text className={styles.startInfoValue}>10</Text>
             <Text className={styles.startInfoLabel}>分钟</Text>
           </View>
           <View className={styles.startInfoDivider} />

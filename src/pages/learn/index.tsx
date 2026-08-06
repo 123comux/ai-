@@ -24,13 +24,20 @@ const LearnPage: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // 读取从首页传递的学习方向
+        const topic = useLearningStore.getState().selectedTopic;
+        const loadTopic = topic !== 'all' ? topic : undefined;
+
         const [courseData, catData, pathData] = await Promise.all([
-          fetchCourses(),
+          fetchCourses(loadTopic),
           fetchCourseCategories(),
           fetchLearningPath(),
         ]);
         setCourses(courseData);
         setCategories(catData.map((c: string) => ({ key: c, label: c })));
+        if (topic !== 'all' && catData.includes(topic)) {
+          setActiveCategory(topic);
+        }
         setCurrentPath(pathData);
       } catch (err) {
         console.error('[Learn] load data error:', err);

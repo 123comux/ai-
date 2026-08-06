@@ -43,6 +43,15 @@ class AssessmentQuestion(BaseModel):
     difficulty: str
 
 
+class AssessmentQuestionPublic(BaseModel):
+    """Assessment question for public API (without correct_answer)."""
+    id: str
+    question: str
+    options: list[str]
+    topic: str
+    difficulty: str
+
+
 class AssessmentSubmit(BaseModel):
     answers: list[int]
 
@@ -90,12 +99,13 @@ class ChapterItem(BaseModel):
 
 class ProjectItem(BaseModel):
     """Project extracted from training data."""
+    model_config = {"populate_by_name": True}
     id: str
     title: str
     description: str
-    tech_stack: list[str]
+    tech_stack: list[str] = Field(alias="techStack", default=[])
     difficulty: str
-    estimated_hours: int
+    estimated_hours: int = Field(alias="estimatedHours", default=0)
     topics_covered: list[str]
     source: str
     # Enriched display fields
@@ -110,22 +120,24 @@ class ProjectItem(BaseModel):
 # ---- Learning Path ----
 
 class LearningPathNode(BaseModel):
+    model_config = {"populate_by_name": True}
     id: str
     title: str
     type: str  # course, project, quiz
-    items: list[str]  # course/project IDs
+    items: list[str] = Field(default=[])
     # Enriched display fields
     status: str = "locked"
     progress: int = 0
-    courseId: str = ""
+    courseId: Optional[str] = None
 
 
 class LearningPathItem(BaseModel):
+    model_config = {"populate_by_name": True}
     id: str
     direction: str
     title: str
     nodes: list[LearningPathNode]
-    total_weeks: int
+    total_weeks: int = Field(alias="totalWeeks", default=0)
     # Enriched display fields
     currentWeek: int = 0
     createdAt: str = ""
@@ -173,11 +185,23 @@ class LearningStats(BaseModel):
 
 # ---- Video ----
 
+class VideoQuality(BaseModel):
+    resolution: str = ""
+    fps: int = 0
+    audio: str = ""
+    watermark: str = ""
+
+
 class VideoItem(BaseModel):
     """Video item from course materials."""
     id: str
     title: str
+    subtitle: str | None = None
     description: str
+    coreInfo: list[str] | None = None
+    narrative: str | None = None
+    visual: str | None = None
+    quality: VideoQuality | None = None
     url: str
     coverUrl: str
     duration: int

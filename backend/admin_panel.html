@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMS 管理后台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+/* Login */
+.login-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #165dff, #7c3aed); }
+.login-card { background: #fff; border-radius: 16px; padding: 40px; width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.login-card h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+.login-card p { text-align: center; color: #86909c; font-size: 14px; margin-bottom: 24px; }
+.login-card input { width: 100%; padding: 12px 16px; border: 1px solid #e5e6eb; border-radius: 8px; font-size: 14px; margin-bottom: 16px; outline: none; }
+.login-card input:focus { border-color: #165dff; box-shadow: 0 0 0 2px rgba(22,93,255,0.1); }
+.login-card button { width: 100%; padding: 12px; background: #165dff; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+.login-card button:hover { background: #0e4ad0; }
+.login-error { color: #f53f3f; font-size: 13px; text-align: center; margin-top: 8px; }
+/* Dashboard */
+.dashboard { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: #fff; border-right: 1px solid #e5e6eb; padding: 20px 0; }
+.sidebar h2 { padding: 0 20px; font-size: 18px; margin-bottom: 16px; color: #165dff; }
+.sidebar-item { padding: 12px 20px; cursor: pointer; color: #4e5969; font-size: 14px; transition: all 0.2s; }
+.sidebar-item:hover { background: #f2f3f5; }
+.sidebar-item.active { background: #e8f0ff; color: #165dff; font-weight: 600; }
+.main { flex: 1; padding: 24px; }
+.main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.main-header h3 { font-size: 20px; }
+.main-header button { padding: 8px 20px; background: #165dff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f2f3f5; font-size: 13px; }
+th { background: #f7f8fa; font-weight: 600; color: #4e5969; white-space: nowrap; }
+tr:hover { background: #fafafa; }
+.action-btn { padding: 4px 12px; border-radius: 4px; border: 1px solid #e5e6eb; cursor: pointer; font-size: 12px; margin-right: 4px; }
+.action-btn.edit { color: #165dff; border-color: #165dff; }
+.action-btn.edit:hover { background: #165dff; color: #fff; }
+.action-btn.del { color: #f53f3f; border-color: #f53f3f; }
+.action-btn.del:hover { background: #f53f3f; color: #fff; }
+.action-btn.add { background: #165dff; color: #fff; border: none; }
+/* Modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 12px; padding: 24px; width: 600px; max-height: 80vh; overflow-y: auto; }
+.modal h4 { font-size: 18px; margin-bottom: 16px; }
+.modal label { display: block; font-size: 13px; color: #4e5969; margin-bottom: 4px; margin-top: 12px; }
+.modal input, .modal textarea, .modal select { width: 100%; padding: 8px 12px; border: 1px solid #e5e6eb; border-radius: 6px; font-size: 13px; outline: none; }
+.modal textarea { min-height: 60px; resize: vertical; }
+.modal input:focus, .modal textarea:focus { border-color: #165dff; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.modal-btns button { padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.modal-btns .save { background: #165dff; color: #fff; border: none; }
+.modal-btns .save:hover { background: #0e4ad0; }
+.modal-btns .cancel { background: #fff; color: #4e5969; border: 1px solid #e5e6eb; }
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 2000; display: none; }
+.toast.success { background: #00b42a; }
+.toast.error { background: #f53f3f; }
+.empty { text-align: center; padding: 60px; color: #86909c; font-size: 14px; }
+.logout { display: inline-block; margin-left: 16px; padding: 6px 16px; background: #f53f3f; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.table-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const API = '';
+
+// ============ State ============
+let token = localStorage.getItem('admin_token') || '';
+let currentTable = '';
+let tables = [];
+
+// ============ API Helpers ============
+async function apiCall(path, method = 'GET', body = null) {
+  const headers = { 'Authorization': `Bearer ${token}` };
+  if (body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : null });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ============ Toast ============
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast') || (() => {
+    const el = document.createElement('div');
+    el.id = 'toast'; el.className = 'toast';
+    document.body.appendChild(el);
+    return el;
+  })();
+  t.textContent = msg;
+  t.className = `toast ${type}`;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+// ============ Login ============
+function renderLogin() {
+  document.getElementById('app').innerHTML = `
+    <div class="login-page">
+      <div class="login-card">
+        <h1>📚 CMS 管理后台</h1>
+        <p>AI 实习培训平台内容管理系统</p>
+        <input type="text" id="loginUser" placeholder="用户名" value="admin">
+        <input type="password" id="loginPass" placeholder="密码" value="admin123">
+        <button onclick="handleLogin()">登录</button>
+        <div class="login-error" id="loginError"></div>
+      </div>
+    </div>
+  `;
+}
+
+async function handleLogin() {
+  const user = document.getElementById('loginUser').value;
+  const pass = document.getElementById('loginPass').value;
+  try {
+    const res = await fetch(`${API}/api/admin/login?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('登录失败');
+    const data = await res.json();
+    token = data.token;
+    localStorage.setItem('admin_token', token);
+    showToast('登录成功');
+    initApp();
+  } catch (e) {
+    document.getElementById('loginError').textContent = '用户名或密码错误';
+  }
+}
+
+// ============ Dashboard ============
+async function initApp() {
+  try {
+    tables = await apiCall('/api/admin/tables');
+    renderDashboard();
+    if (tables.length > 0) selectTable(tables[0].name);
+  } catch (e) {
+    if (e.message.includes('401')) {
+      token = '';
+      localStorage.removeItem('admin_token');
+      renderLogin();
+    }
+  }
+}
+
+function renderDashboard() {
+  document.getElementById('app').innerHTML = `
+    <div class="dashboard">
+      <div class="sidebar">
+        <h2>📚 CMS</h2>
+        <div id="sidebarItems"></div>
+        <div style="padding: 20px; margin-top: 20px;">
+          <button onclick="handleLogout()" class="logout" style="width:100%">退出登录</button>
+        </div>
+      </div>
+      <div class="main">
+        <div class="main-header">
+          <h3 id="pageTitle">选择数据表</h3>
+          <button id="addBtn" style="display:none" onclick="openAddModal()">+ 新增</button>
+        </div>
+        <div id="tableContent"><div class="empty">请从左侧选择要管理的数据表</div></div>
+      </div>
+    </div>
+  `;
+  const sidebar = document.getElementById('sidebarItems');
+  tables.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'sidebar-item';
+    item.textContent = t.label;
+    item.dataset.name = t.name;
+    item.onclick = () => selectTable(t.name);
+    sidebar.appendChild(item);
+  });
+}
+
+function selectTable(name) {
+  currentTable = name;
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.sidebar-item[data-name="${name}"]`)?.classList.add('active');
+  document.getElementById('addBtn').style.display = 'block';
+  document.getElementById('pageTitle').textContent = `${tables.find(t => t.name === name)?.label || name} 管理`;
+  loadData();
+}
+
+async function loadData() {
+  const container = document.getElementById('tableContent');
+  container.innerHTML = '<div class="empty">加载中...</div>';
+  try {
+    const data = await apiCall(`/api/admin/${currentTable}`);
+    renderTable(data);
+  } catch (e) {
+    container.innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+  }
+}
+
+function renderTable(data) {
+  const container = document.getElementById('tableContent');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="empty">暂无数据，点击右上角新增</div>';
+    return;
+  }
+  const fields = Object.keys(data[0]);
+  let html = '<table><thead><tr>';
+  fields.forEach(f => { html += `<th>${f}</th>`; });
+  html += '<th style="width:120px">操作</th></tr></thead><tbody>';
+  data.forEach((row, i) => {
+    html += '<tr>';
+    fields.forEach(f => {
+      let val = row[f];
+      if (val === null || val === undefined) val = '';
+      if (typeof val === 'string' && val.length > 50) val = val.substring(0, 50) + '...';
+      if (typeof val === 'object') val = JSON.stringify(val).substring(0, 50);
+      html += `<td class="table-cell" title="${String(row[f]).substring(0, 200)}">${val}</td>`;
+    });
+    html += `<td>
+      <button class="action-btn edit" onclick="openEditModal('${row.id}')">编辑</button>
+      <button class="action-btn del" onclick="handleDelete('${row.id}')">删除</button>
+    </td></tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ============ CRUD ============
+function openAddModal() {
+  const table = tables.find(t => t.name === currentTable);
+  if (!table) return;
+  renderModal(table.fields, {}, true);
+}
+
+function openEditModal(id) {
+  const table = tables.find(t => t.name === currentTable);
+  if (!table) return;
+  apiCall(`/api/admin/${currentTable}/${id}`).then(row => {
+    renderModal(table.fields, row, false);
+  }).catch(e => showToast(e.message, 'error'));
+}
+
+function renderModal(fields, data, isNew) {
+  const overlay = document.getElementById('modal-overlay') || (() => {
+    const el = document.createElement('div');
+    el.id = 'modal-overlay'; el.className = 'modal-overlay';
+    document.body.appendChild(el);
+    return el;
+  })();
+  let html = '<div class="modal"><h4>' + (isNew ? '新增' : '编辑') + ' ' + currentTable + '</h4>';
+  fields.forEach(f => {
+    if (f === 'id' && !isNew) {
+      html += `<label>${f}</label><input type="text" value="${data[f] || ''}" disabled>`;
+      return;
+    }
+    const val = data[f] !== undefined && data[f] !== null ? data[f] : '';
+    const strVal = typeof val === 'object' ? JSON.stringify(val, null, 2) : val;
+    if (typeof val === 'object' || String(strVal).length > 60) {
+      html += `<label>${f}</label><textarea id="field-${f}">${strVal}</textarea>`;
+    } else {
+      html += `<label>${f}</label><input type="text" id="field-${f}" value="${strVal}">`;
+    }
+  });
+  html += `<div class="modal-btns">
+    <button class="save" onclick="saveModal(${isNew})">保存</button>
+    <button class="cancel" onclick="closeModal()">取消</button>
+  </div></div>`;
+  overlay.innerHTML = html;
+  overlay.className = 'modal-overlay show';
+  overlay.dataset.isNew = isNew ? '1' : '0';
+  overlay.dataset.editId = isNew ? '' : (data.id || '');
+}
+
+async function saveModal(isNew) {
+  const table = tables.find(t => t.name === currentTable);
+  if (!table) return;
+  const data = {};
+  table.fields.forEach(f => {
+    if (f === 'id' && !isNew) return;
+    const el = document.getElementById(`field-${f}`);
+    if (!el) return;
+    let val = el.value;
+    if (el.tagName === 'TEXTAREA') {
+      try { val = JSON.parse(val); } catch(e) { /* keep as string */ }
+    }
+    data[f] = val;
+  });
+  try {
+    if (isNew) {
+      await apiCall(`/api/admin/${currentTable}`, 'POST', data);
+      showToast('新增成功');
+    } else {
+      const id = document.getElementById('modal-overlay').dataset.editId;
+      await apiCall(`/api/admin/${currentTable}/${id}`, 'PUT', data);
+      showToast('更新成功');
+    }
+    closeModal();
+    loadData();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').className = 'modal-overlay';
+}
+
+async function handleDelete(id) {
+  if (!confirm('确认删除此记录？')) return;
+  try {
+    await apiCall(`/api/admin/${currentTable}/${id}`, 'DELETE');
+    showToast('删除成功');
+    loadData();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function handleLogout() {
+  token = '';
+  localStorage.removeItem('admin_token');
+  renderLogin();
+}
+
+// ============ Init ============
+if (token) {
+  initApp();
+} else {
+  renderLogin();
+}
+</script>
+</body>
+</html>

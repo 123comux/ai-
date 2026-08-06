@@ -148,9 +148,9 @@ export const fetchAssessmentQuestions = async (count: number = 10): Promise<Asse
   return apiGet<AssessmentQuestion[]>(`/api/assessment/questions?count=${count}`);
 };
 
-/** 提交测评答案并获取评分结果 */
-export const submitAssessment = async (answers: number[], question_ids: string[]): Promise<AssessmentScoreResult> => {
-  return apiPost<AssessmentScoreResult>('/api/assessment/submit', { answers, question_ids });
+/** 提交测评答案并获取评分结果（可附带自我描述，供 AI 分析融合推荐方向） */
+export const submitAssessment = async (answers: number[], question_ids: string[], self_description: string = ''): Promise<AssessmentScoreResult> => {
+  return apiPost<AssessmentScoreResult>('/api/assessment/submit', { answers, question_ids, self_description });
 };
 
 // ============ AI 功能 API ============

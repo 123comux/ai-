@@ -1,4 +1,4 @@
-"""Assessment service - generates and scores assessments."""
+"""Assessment service - generates and scores assessments with per-dimension ability report."""
 
 import json
 import random
@@ -23,7 +23,11 @@ def load_questions() -> list[AssessmentQuestion]:
 
 
 def get_assessment(topic: Optional[str] = None, count: int = 10) -> list[AssessmentQuestion]:
-    """Get a random set of assessment questions."""
+    """Get a random set of assessment questions.
+
+    When no topic filter, draw a balanced sample: at least one question per
+    available dimension so every ability is probed.
+    """
     all_q = load_questions()
 
     if topic:
@@ -34,12 +38,77 @@ def get_assessment(topic: Optional[str] = None, count: int = 10) -> list[Assessm
     if not filtered:
         return []
 
+    if topic is None:
+        # Balanced sampling: group by topic, take floor(count / n_topics) from each,
+        # fill the remainder round-robin from leftover questions.
+        random.shuffle(filtered)
+        topics = list(dict.fromkeys(q.topic for q in filtered))
+        per_topic = max(1, count // len(topics)) if len(topics) > 0 else count
+        buckets: dict[str, list] = {}
+        for q in filtered:
+            buckets.setdefault(q.topic, []).append(q)
+        selected = []
+        for t in topics:
+            selected.extend(buckets[t][:per_topic])
+        # Fill remaining slots with any leftover questions
+        used_ids = {q.id for q in selected}
+        for q in filtered:
+            if len(selected) >= count:
+                break
+            if q.id not in used_ids:
+                selected.append(q)
+                used_ids.add(q.id)
+        return selected[:count]
+
     random.shuffle(filtered)
     return filtered[:count]
 
 
+# Dimension name -> canonical key used in the report and direction mapping
+DIMENSIONS = {
+    "Python": "编程基础",
+    "Math": "数学基础",
+    "Machine Learning": "机器学习",
+    "Deep Learning": "深度学习",
+    "Large Language Models": "大模型应用",
+    "Project": "项目经验",
+}
+
+
+def _level_from_score(score: int) -> str:
+    if score >= 85:
+        return "expert"
+    if score >= 70:
+        return "advanced"
+    if score >= 50:
+        return "intermediate"
+    return "beginner"
+
+
+def _recommend_direction(dim_scores: dict[str, int]) -> str:
+    """Map per-dimension scores to a recommended career direction."""
+    ml = dim_scores.get("机器学习", 0)
+    dl = dim_scores.get("深度学习", 0)
+    llm = dim_scores.get("大模型应用", 0)
+    prog = dim_scores.get("编程基础", 0)
+    data = dim_scores.get("数学基础", 0)
+
+    # Strongest axis wins, with sensible career mapping.
+    candidates = [
+        ("大模型应用开发", llm),
+        ("机器学习工程师", ml),
+        ("深度学习工程师", dl),
+        ("数据科学家", max(data, prog)),
+    ]
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    best, best_score = candidates[0]
+
+    # Tie-break: if LLM and ML are close, prefer the one with higher absolute score.
+    return best if best_score > 0 else "AI 应用开发"
+
+
 def score_assessment(answers: list[int], question_ids: list[str]) -> AssessmentResult:
-    """Score assessment answers and generate result."""
+    """Score answers, build a per-dimension ability report, persist it, and return it."""
     all_q = load_questions()
     q_map = {q.id: q for q in all_q}
 
@@ -58,43 +127,72 @@ def score_assessment(answers: list[int], question_ids: list[str]) -> AssessmentR
             correct += 1
             topic_stats[q.topic]["correct"] += 1
 
-    # Determine level
-    ratio = correct / total if total > 0 else 0
-    if ratio >= 0.9:
-        level = "expert"
-    elif ratio >= 0.7:
-        level = "advanced"
-    elif ratio >= 0.5:
-        level = "intermediate"
-    else:
-        level = "beginner"
+    # Per-dimension scores (0-100)
+    dim_scores: dict[str, int] = {}
+    for topic, stats in topic_stats.items():
+        cn = DIMENSIONS.get(topic, topic)
+        ratio = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
+        dim_scores[cn] = round(ratio * 100)
 
-    # Determine strengths and weaknesses
+    # Overall score as mean of dimension scores (not raw ratio, so all dims weigh equally)
+    overall = round(sum(dim_scores.values()) / len(dim_scores)) if dim_scores else 0
+
     strengths = []
     weaknesses = []
-    for topic, stats in topic_stats.items():
-        if stats["total"] > 0:
-            topic_ratio = stats["correct"] / stats["total"]
-            if topic_ratio >= 0.7:
-                strengths.append(topic)
-            else:
-                weaknesses.append(topic)
+    for cn, score in dim_scores.items():
+        if score >= 70:
+            strengths.append(cn)
+        elif score < 50:
+            weaknesses.append(cn)
 
-    # Recommended direction
-    if "Machine Learning" in strengths or "AI/ML" in strengths:
-        recommended = "Machine Learning Engineer"
-    elif "Programming" in strengths:
-        recommended = "AI Developer"
-    elif "Data Science" in strengths:
-        recommended = "Data Scientist"
-    else:
-        recommended = "AI Engineer"
+    level = _level_from_score(overall)
+    recommended = _recommend_direction(dim_scores)
 
-    return AssessmentResult(
-        score=correct,
+    result = AssessmentResult(
+        score=overall,
         total=total,
         level=level,
         strengths=strengths,
         weaknesses=weaknesses,
         recommended_direction=recommended,
     )
+
+    # Persist a full AbilityReport so home/mine pages reflect fresh assessment.
+    _persist_ability_report(dim_scores, overall, level, strengths, weaknesses, recommended)
+
+    return result
+
+
+def _persist_ability_report(
+    dim_scores: dict[str, int],
+    overall: int,
+    level: str,
+    strengths: list[str],
+    weaknesses: list[str],
+    recommended: str,
+) -> None:
+    """Write the latest assessment into ability_report.json (dynamic, not hard-coded)."""
+    # Fixed order for a stable radar chart
+    order = ["编程基础", "数学基础", "机器学习", "深度学习", "大模型应用", "项目经验"]
+    dimensions = [
+        {"label": dim, "score": dim_scores.get(dim, 0), "maxScore": 100}
+        for dim in order
+    ]
+    level_cn = {
+        "expert": "专家",
+        "advanced": "高级",
+        "intermediate": "中级",
+        "beginner": "初级",
+    }.get(level, "初级")
+    report = {
+        "overallScore": overall,
+        "level": level_cn,
+        "dimensions": dimensions,
+        "strengths": [f"{s}掌握较好" if len(strengths) else s for s in strengths],
+        "weaknesses": [f"{w}需要加强" for w in weaknesses] or ["各维度有待均衡提升"],
+        "recommendedDirection": recommended,
+        "estimatedHours": 100 + max(0, overall) * 2,
+    }
+    path = PROCESSED_DIR / "ability_report.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)

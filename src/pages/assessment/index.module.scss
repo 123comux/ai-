@@ -325,3 +325,32 @@
   display: block;
   padding: $spacing-sm 0;
 }
+
+// ====== 自我描述步骤 ======
+.describeBox {
+  width: 100%;
+  max-width: $max-content-width;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-sm;
+  box-sizing: border-box;
+}
+
+.describeInput {
+  width: 100%;
+  height: 140rpx;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-loose;
+  text-align: left;
+}
+
+.errorInline {
+  font-size: $font-size-sm;
+  color: $color-error;
+  margin-bottom: $spacing-sm;
+  display: block;
+  text-align: center;
+}

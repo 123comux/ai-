@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useLearningStore } from '@/store/useLearningStore';
 import { fetchAssessmentQuestions, submitAssessment } from '@/services/api';
@@ -8,10 +8,11 @@ import styles from './index.module.scss';
 
 const AssessmentPage: React.FC = () => {
   const { setAbilityReport } = useLearningStore();
-  const [step, setStep] = useState<'start' | 'doing' | 'result'>('start');
+  const [step, setStep] = useState<'start' | 'doing' | 'describe' | 'result'>('start');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
+  const [selfDescription, setSelfDescription] = useState('');
   const [result, setResult] = useState<AssessmentScoreResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +21,7 @@ const AssessmentPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const qs = await fetchAssessmentQuestions(10);
+      const qs = await fetchAssessmentQuestions(20);
       if (qs.length === 0) {
         setError('暂无可用题目，请稍后再试');
         return;
@@ -44,30 +45,36 @@ const AssessmentPage: React.FC = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // 完成测评，提交到后端评分
-      setLoading(true);
-      try {
-        const questionIds = questions.map((q) => q.id);
-        const scoreResult = await submitAssessment(newAnswers, questionIds);
-        setResult(scoreResult);
+      // 全部答完，进入自我描述步骤（可选，用于 AI 分析融合）
+      setStep('describe');
+    }
+  };
 
-        // 同时更新 store 中的能力报告（用于首页展示）
-        setAbilityReport({
-          overallScore: Math.round((scoreResult.score / scoreResult.total) * 100),
-          level: scoreResult.level === 'expert' ? '专家' : scoreResult.level === 'advanced' ? '高级' : scoreResult.level === 'intermediate' ? '中级' : '初级',
-          dimensions: [],
-          strengths: scoreResult.strengths,
-          weaknesses: scoreResult.weaknesses,
-          recommendedDirection: scoreResult.recommended_direction,
-          estimatedHours: scoreResult.total * 10,
-        });
-      } catch (err) {
-        setError('提交评分失败，请重试');
-        console.error('[Assessment] submit failed:', err);
-      } finally {
-        setLoading(false);
-      }
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const questionIds = questions.map((q) => q.id);
+      const scoreResult = await submitAssessment(answers, questionIds, selfDescription.trim());
+      setResult(scoreResult);
+
+      // 更新 store 中的能力报告（用于首页/我的页展示）
+      setAbilityReport({
+        overallScore: scoreResult.score,
+        level: scoreResult.level === 'expert' ? '专家' : scoreResult.level === 'advanced' ? '高级' : scoreResult.level === 'intermediate' ? '中级' : '初级',
+        dimensions: [],
+        strengths: scoreResult.strengths,
+        weaknesses: scoreResult.weaknesses,
+        recommendedDirection: scoreResult.recommended_direction,
+        estimatedHours: scoreResult.total * 10,
+      });
       setStep('result');
+    } catch (err) {
+      setError('提交评分失败，请重试');
+      console.error('[Assessment] submit failed:', err);
+      setStep('describe');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,6 +82,7 @@ const AssessmentPage: React.FC = () => {
     setStep('start');
     setResult(null);
     setError('');
+    setSelfDescription('');
   };
 
   const handleBack = () => {
@@ -148,7 +156,43 @@ const AssessmentPage: React.FC = () => {
             ))}
           </View>
         </View>
-        {loading && <Text className={styles.loadingText}>提交中...</Text>}
+      </View>
+    );
+  }
+
+  if (step === 'describe') {
+    return (
+      <View className={styles.page}>
+        <View className={styles.navBar}>
+          <Text className={styles.navBack} onClick={() => setStep('doing')}>← 上一题</Text>
+        </View>
+        <View className={styles.startContent}>
+          <Text className={styles.startIcon}>✨</Text>
+          <Text className={styles.startTitle}>介绍一下你自己</Text>
+          <Text className={styles.startDesc}>
+            可选。简单描述你的背景或学习目标（如「我熟悉 Python，想学大模型开发」），
+            AI 会结合答题结果给出更精准的方向推荐。
+          </Text>
+          <View className={styles.describeBox}>
+            <Input
+              className={styles.describeInput}
+              placeholder="例如：我是计算机专业学生，Python 基础较好，想做 AI 应用开发"
+              value={selfDescription}
+              onInput={(e) => setSelfDescription(e.detail.value)}
+            />
+          </View>
+          {error && <Text className={styles.errorInline}>{error}</Text>}
+          <View className={styles.buttonGroup} style={{ marginTop: '40rpx' }}>
+            <View className={styles.startButton} onClick={() => !loading && handleSubmit()}>
+              <Text className={styles.startButtonText}>
+                {loading ? '分析中...' : '生成测评报告'}
+              </Text>
+            </View>
+            <View className={styles.secondaryButton} onClick={() => !loading && handleSubmit()}>
+              <Text className={styles.secondaryButtonText}>跳过，直接生成</Text>
+            </View>
+          </View>
+        </View>
       </View>
     );
   }
@@ -159,7 +203,7 @@ const AssessmentPage: React.FC = () => {
         <View className={styles.resultHeader}>
           <Text className={styles.resultTitle}>测评报告</Text>
           <View className={styles.scoreCircle}>
-            <Text className={styles.scoreValue}>{result.score}/{result.total}</Text>
+            <Text className={styles.scoreValue}>{result.score}</Text>
             <Text className={styles.scoreUnit}>分</Text>
           </View>
           <Text className={styles.levelText}>当前水平：{getLevelLabel(result.level)}</Text>
@@ -189,13 +233,13 @@ const AssessmentPage: React.FC = () => {
           <Text className={styles.sectionTitle}>推荐方向</Text>
           <View className={styles.recommendCard}>
             <Text className={styles.recommendText}>{result.recommended_direction}</Text>
-            <Text className={styles.recommendDesc}>答对 {result.score}/{result.total} 题</Text>
+            <Text className={styles.recommendDesc}>综合答题表现生成</Text>
           </View>
         </View>
 
         <View className={styles.buttonGroup}>
-          <View className={styles.primaryButton} onClick={handleBack}>
-            <Text className={styles.primaryButtonText}>开始学习</Text>
+          <View className={styles.primaryButton} onClick={() => Taro.navigateTo({ url: '/pages/learningPath/index' })}>
+            <Text className={styles.primaryButtonText}>查看学习路径</Text>
           </View>
           <View className={styles.secondaryButton} onClick={handleReassess}>
             <Text className={styles.secondaryButtonText}>重新测评</Text>
@@ -214,11 +258,12 @@ const AssessmentPage: React.FC = () => {
         <Text className={styles.startIcon}>🧠</Text>
         <Text className={styles.startTitle}>AI 能力测评</Text>
         <Text className={styles.startDesc}>
-          完成 10 道题目，精准定位你的 AI 能力水平，获取个性化学习推荐
+          完成 20 道题目，覆盖编程、数学、机器学习、深度学习、大模型、项目经验六大维度，
+          精准定位你的 AI 能力水平
         </Text>
         <View className={styles.startInfo}>
           <View className={styles.startInfoItem}>
-            <Text className={styles.startInfoValue}>10</Text>
+            <Text className={styles.startInfoValue}>20</Text>
             <Text className={styles.startInfoLabel}>题目数</Text>
           </View>
           <View className={styles.startInfoDivider} />
@@ -228,8 +273,8 @@ const AssessmentPage: React.FC = () => {
           </View>
           <View className={styles.startInfoDivider} />
           <View className={styles.startInfoItem}>
-            <Text className={styles.startInfoValue}>5</Text>
-            <Text className={styles.startInfoLabel}>个方向</Text>
+            <Text className={styles.startInfoValue}>6</Text>
+            <Text className={styles.startInfoLabel}>个维度</Text>
           </View>
         </View>
         <View className={styles.startButton} onClick={handleStart}>

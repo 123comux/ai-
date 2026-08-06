@@ -1,29 +1,38 @@
 /**
  * API Service Layer
  *
- * Fetches data from the FastAPI backend (http://localhost:8000).
+ * Uses Taro.request() for cross-platform compatibility (WeChat mini-program + H5).
+ * All data is fetched from the FastAPI backend (http://localhost:8000).
  */
+import Taro from '@tarojs/taro';
 import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video } from '@/types/index';
 
 const API_BASE = 'http://localhost:8000';
 
-/** GET 辅助函数（支持自定义超时） */
+/** GET 辅助函数 */
 async function apiGet<T>(path: string, timeoutMs: number = 15000): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as T;
+  const res = await Taro.request<T>({
+    url: `${API_BASE}${path}`,
+    method: 'GET',
+    timeout: timeoutMs,
+    dataType: 'json',
+  });
+  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  return res.data;
 }
 
-/** POST 辅助函数（支持自定义超时） */
+/** POST 辅助函数 */
 async function apiPost<T>(path: string, body: Record<string, unknown>, timeoutMs: number = 30000): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await Taro.request<T>({
+    url: `${API_BASE}${path}`,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
+    header: { 'Content-Type': 'application/json' },
+    data: body,
+    timeout: timeoutMs,
+    dataType: 'json',
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as T;
+  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  return res.data;
 }
 
 /** 获取能力报告 */
@@ -119,24 +128,30 @@ export interface CourseRecommendation {
   score: number;
 }
 
-/** AI 导师问答 */
+/** AI 导师问答（超时 120 秒，支持取消） */
 export const askTutor = async (question: string): Promise<TutorResponse> => {
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  if (controller) {
-    timeoutId = setTimeout(() => controller.abort(), 120000);
-  }
+  const requestTask = Taro.request<TutorResponse>({
+    url: `${API_BASE}/api/tutor/chat`,
+    method: 'POST',
+    header: { 'Content-Type': 'application/json' },
+    data: { question },
+    timeout: 120000,
+    dataType: 'json',
+  });
+  const timeoutId = setTimeout(() => {
+    requestTask.abort();
+  }, 120000);
   try {
-    const res = await fetch(`${API_BASE}/api/tutor/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
-      signal: controller?.signal,
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as TutorResponse;
+    const res = await requestTask;
+    if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+    return res.data;
+  } catch (err: any) {
+    if (err.errMsg === 'abort' || err.errMsg?.includes('abort')) {
+      throw new Error('请求超时');
+    }
+    throw new Error(err?.message || err?.errMsg || 'AI 导师请求失败');
   } finally {
-    if (timeoutId) clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
   }
 };
 

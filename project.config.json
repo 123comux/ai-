@@ -5,7 +5,7 @@
   "description": "taro_template",
   "appid": "touristappid",
   "setting": {
-    "urlCheck": true,
+    "urlCheck": false,
     "es6": false,
     "enhance": false,
     "compileHotReLoad": false,

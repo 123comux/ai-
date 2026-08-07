@@ -167,14 +167,22 @@ const VideoPage: React.FC = () => {
     setCurrentVideo(video);
     setBiliError(false);
     iframeLoadedRef.current = false;
+    // 切换视频时重置停留计时
+    enterTimeRef.current = Date.now();
   };
 
   const handleMarkWatched = async () => {
     if (!currentVideo || watchedLoading) return;
+    // 至少停留 1 分钟才能标记完成，防止只看几秒就刷完成
+    const elapsedMs = Date.now() - enterTimeRef.current;
+    if (elapsedMs < 60000) {
+      const remain = Math.ceil((60000 - elapsedMs) / 1000);
+      Taro.showToast({ title: `请至少观看 1 分钟（还需 ${remain} 秒）`, icon: 'none' });
+      return;
+    }
     setWatchedLoading(true);
     try {
-      // 估算实际观看分钟数：进入视频页到点击"已看完"的停留时间
-      const elapsedMs = Date.now() - enterTimeRef.current;
+      // 实际观看分钟数 = 停留时间（分钟）
       const minutes = Math.max(1, Math.round(elapsedMs / 60000));
       await completeVideo(currentVideo.id, minutes);
       setCurrentVideo((prev) => (prev ? { ...prev, completed: true } : prev));

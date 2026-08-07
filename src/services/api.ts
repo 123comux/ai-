@@ -120,7 +120,7 @@ export const fetchJobMatchingResult = async (): Promise<JobMatchingResult> => {
 /** 获取学习统计 */
 export const fetchLearningStats = async (): Promise<{
   learningDays: number;
-  totalHours: number;
+  totalMinutes: number;
   completedProjects: number;
   completedLessons: number;
 }> => {

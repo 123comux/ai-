@@ -106,7 +106,7 @@ async def get_learning_stats():
             streak += 1
             cur -= timedelta(days=1)
 
-    # 完成项目：path_progress 中已完成的项目节点（type=project）数
+    # 完成项目 = 路径中已完成的项目节点 + 项目页完成全部步骤的项目数
     projects_done = 0
     path_progress = None
     if (PROCESSED_DIR / "path_progress.json").exists():
@@ -121,6 +121,30 @@ async def get_learning_stats():
             for nid in node_ids:
                 if "-project-" in nid:
                     projects_done += 1
+
+    # 项目页直接完成的项目（project_progress 中完成步骤数 == 项目总步骤数）
+    project_progress = None
+    if (PROCESSED_DIR / "project_progress.json").exists():
+        try:
+            project_progress = _load_json("project_progress.json")
+        except Exception:
+            project_progress = None
+    if isinstance(project_progress, dict):
+        projects_data = []
+        if (PROCESSED_DIR / "enriched_projects.json").exists():
+            try:
+                projects_data = _load_json("enriched_projects.json")
+            except Exception:
+                projects_data = []
+        elif (PROCESSED_DIR / "projects.json").exists():
+            try:
+                projects_data = _load_json("projects.json")
+            except Exception:
+                projects_data = []
+        total_steps = {p.get("id"): len(p.get("steps", []) or []) for p in projects_data if isinstance(p, dict)}
+        for pid, done in project_progress.items():
+            if total_steps.get(pid, 0) and done >= total_steps[pid]:
+                projects_done += 1
 
     return LearningStats(
         learningDays=streak,

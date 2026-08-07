@@ -6,9 +6,6 @@ interface LearningState {
   currentPath: LearningPath | null;
   courses: Course[];
   projects: Project[];
-  learningDays: number;
-  totalHours: number;
-  completedProjects: number;
   selectedTopic: string;  // 从首页选择的学习方向，用于学习页预过滤
   setAbilityReport: (report: AbilityReport) => void;
   setCurrentPath: (path: LearningPath) => void;
@@ -22,9 +19,6 @@ export const useLearningStore = create<LearningState>((set) => ({
   currentPath: null,
   courses: [],
   projects: [],
-  learningDays: 0,
-  totalHours: 0,
-  completedProjects: 0,
   selectedTopic: 'all',
   setAbilityReport: (report) => set({ abilityReport: report }),
   setCurrentPath: (path) => set({ currentPath: path }),

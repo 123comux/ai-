@@ -13,7 +13,7 @@ const MinePage: React.FC = () => {
   const { nickname, avatar, grade, major, targetDirection } = useUserStore();
   const { abilityReport } = useLearningStore();
   const [records, setRecords] = useState<LearningRecord[]>([]);
-  const [stats, setStats] = useState({ learningDays: 0, totalHours: 0, completedProjects: 0, completedLessons: 0 });
+  const [stats, setStats] = useState({ learningDays: 0, totalMinutes: 0, completedProjects: 0, completedLessons: 0 });
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
   useEffect(() => {
@@ -65,8 +65,8 @@ const MinePage: React.FC = () => {
         </View>
         <View className={styles.statDivider} />
         <View className={styles.statItem}>
-          <Text className={styles.statValue}>{stats.totalHours}</Text>
-          <Text className={styles.statLabel}>学习时长(h)</Text>
+          <Text className={styles.statValue}>{stats.totalMinutes}</Text>
+          <Text className={styles.statLabel}>学习时长(min)</Text>
         </View>
         <View className={styles.statDivider} />
         <View className={styles.statItem}>

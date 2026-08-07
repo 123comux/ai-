@@ -233,23 +233,25 @@
 }
 
 .courseGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: $spacing-md;
 }
 
 .courseItem {
-  width: 100%;
+  width: calc(50% - #{$spacing-md});
+  box-sizing: border-box;
 }
 
 .projectGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: $spacing-md;
 }
 
 .projectItem {
-  width: 100%;
+  width: calc(50% - #{$spacing-md});
+  box-sizing: border-box;
 }
 
 // AI 智能工具

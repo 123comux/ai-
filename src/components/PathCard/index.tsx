@@ -20,7 +20,6 @@ const PathCard: React.FC<PathCardProps> = ({ path, onClick }) => {
         <View className={styles.directionBadge}>
           <Text className={styles.directionText}>{path.direction}</Text>
         </View>
-        <Text className={styles.weekText}>第 {path.currentWeek}/{path.totalWeeks} 周</Text>
       </View>
       <Text className={styles.title}>{path.title}</Text>
       <View className={styles.progressWrap}>

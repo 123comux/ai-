@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Image } from '@tarojs/components';
-import ProgressBar from '@/components/ProgressBar';
 import { formatMinutes } from '@/utils/index';
 import type { Course } from '@/types/index';
 import styles from './index.module.scss';
@@ -31,12 +30,6 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
             </View>
           )}
         </View>
-        {course.progress > 0 && (
-          <View className={styles.progressWrap}>
-            <ProgressBar percent={course.progress} height={6} />
-            <Text className={styles.progressText}>{course.progress}%</Text>
-          </View>
-        )}
       </View>
     </View>
   );

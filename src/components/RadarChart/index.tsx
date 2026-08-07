@@ -20,20 +20,28 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
 
     // canvas CSS 为 500rpx，绘制坐标单位是 px，需换算成实际像素尺寸
     // （750rpx = 屏宽 px，故 500rpx = 500/750 * 屏宽px），否则绘制内容与显示尺寸不匹配被裁切
-    const sys = Taro.getSystemInfoSync();
-    const pxSize = (500 * sys.windowWidth) / 750;
+    let pxSize = 250; // 兜底：375px 屏上 500rpx ≈ 250px
+    try {
+      const sys = Taro.getSystemInfoSync();
+      if (sys && typeof sys.windowWidth === 'number' && sys.windowWidth > 0) {
+        pxSize = (500 * sys.windowWidth) / 750;
+      }
+    } catch (e) {
+      // 系统信息获取失败时使用默认值，避免阻断页面渲染
+    }
 
     const draw = () => {
-      const ctx = Taro.createCanvasContext(canvasId);
-      const size = pxSize;
-      const center = size / 2;
-      // 半径按比例取 size 的 36%，与 H5 端（radius=size/2-60，size=400 时占 35%）视觉一致
-      const radius = size * 0.36;
-      const angleStep = (Math.PI * 2) / dimensions.length;
+      try {
+        const ctx = Taro.createCanvasContext(canvasId);
+        const size = pxSize;
+        const center = size / 2;
+        // 半径按比例取 size 的 36%，与 H5 端（radius=size/2-60，size=400 时占 35%）视觉一致
+        const radius = size * 0.36;
+        const angleStep = (Math.PI * 2) / dimensions.length;
 
-      const getPoint = (index: number, ratio: number) => {
-        const angle = angleStep * index - Math.PI / 2;
-        const r = radius * ratio;
+        const getPoint = (index: number, ratio: number) => {
+          const angle = angleStep * index - Math.PI / 2;
+          const r = radius * ratio;
         return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
       };
 
@@ -86,6 +94,10 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
         ctx.fillText(dim.label, p.x, p.y);
       });
       ctx.draw();
+      } catch (e) {
+        // Canvas 绘制异常不阻断页面渲染
+        console.error('[RadarChart] draw error:', e);
+      }
     };
 
     const t1 = setTimeout(draw, 100);

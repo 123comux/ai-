@@ -56,16 +56,3 @@
   color: $color-text-white;
   font-weight: $font-weight-medium;
 }
-
-.progressWrap {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  margin-top: $spacing-sm;
-}
-
-.progressText {
-  font-size: $font-size-xs;
-  color: $color-primary;
-  white-space: nowrap;
-}

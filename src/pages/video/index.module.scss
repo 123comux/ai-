@@ -70,6 +70,31 @@
   display: block;
 }
 
+// 小程序端：悬浮在 web-view 上方的"标记完成"按钮（CoverView 覆盖原生组件）
+.weappFloatBtn {
+  position: fixed;
+  right: 24rpx;
+  bottom: 40rpx;
+  z-index: 999;
+  background: $gradient-primary;
+  border-radius: $radius-round;
+  padding: 16rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.3);
+}
+
+.weappFloatBtn.watchedBtnDone {
+  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
+}
+
+.weappFloatBtnText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
 // B站加载失败提示条
 .biliTroubleBar {
   display: flex;

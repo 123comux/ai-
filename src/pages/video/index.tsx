@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, Image, Video } from '@tarojs/components';
+import { View, Text, ScrollView, Image, Video, CoverView, CoverImage } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { fetchVideos, fetchCourseDetail, completeVideo } from '@/services/api';
 import { formatDuration } from '@/utils/index';
 import type { Video as VideoType, Chapter } from '@/types/index';
 import styles from './index.module.scss';
+
+const IS_WEAPP = process.env.TARO_ENV === 'weapp';
 
 /** 对可能 URL 编码的字符串做安全解码 */
 const safeDecode = (s: string | undefined): string => {
@@ -253,6 +255,17 @@ const VideoPage: React.FC = () => {
                 referrerPolicy="no-referrer"
                 onLoad={() => { iframeLoadedRef.current = true; }}
               />
+              {/* 小程序端：CoverView 悬浮"标记完成"按钮，覆盖在全屏 web-view 上方 */}
+              {IS_WEAPP && (
+                <CoverView
+                  className={`${styles.weappFloatBtn} ${currentVideo.completed ? styles.watchedBtnDone : ''}`}
+                  onClick={handleMarkWatched}
+                >
+                  <CoverView className={styles.weappFloatBtnText}>
+                    {currentVideo.completed ? '✓ 已看完' : watchedLoading ? '确认中...' : '我已看完本视频'}
+                  </CoverView>
+                </CoverView>
+              )}
               <View className={styles.biliTroubleBar}>
                 <Text className={styles.biliTroubleHint}>
                   {bvFromUrl(currentVideo.url)} · 无法播放？

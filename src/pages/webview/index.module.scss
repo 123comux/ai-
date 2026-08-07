@@ -1,0 +1,48 @@
+.page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: #fff;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.navBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 90rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 $spacing-lg;
+  background: $color-bg-card;
+  border-bottom: 1px solid $color-border;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.webview {
+  position: absolute;
+  top: 90rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+.loadingText {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}

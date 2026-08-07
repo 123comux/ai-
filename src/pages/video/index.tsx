@@ -190,10 +190,9 @@ const VideoPage: React.FC = () => {
     const bv = bvFromUrl(currentVideo?.url || '');
     const biliUrl = bv ? `https://www.bilibili.com/video/${bv}` : (currentVideo?.url || '');
     if (IS_WEAPP) {
-      // 小程序无 window.open：复制链接，提示用户自行打开
-      Taro.setClipboardData({
-        data: biliUrl,
-        success: () => Taro.showToast({ title: 'B站链接已复制，请粘贴到浏览器打开', icon: 'none' }),
+      // 小程序：跳转到内置 web-view 页内嵌打开 B 站
+      Taro.navigateTo({
+        url: `/pages/webview/index?url=${encodeURIComponent(biliUrl)}`,
       });
     } else {
       window.open(biliUrl, '_blank');

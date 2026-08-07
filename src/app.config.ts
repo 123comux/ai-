@@ -11,7 +11,8 @@ export default defineAppConfig({
     'pages/projectDetail/index',
     'pages/jobMatching/index',
     'pages/tutor/index',
-    'pages/video/index'
+    'pages/video/index',
+    'pages/webview/index'
   ],
   window: {
     backgroundTextStyle: 'light',

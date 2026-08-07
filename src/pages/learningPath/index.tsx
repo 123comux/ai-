@@ -116,6 +116,10 @@ const LearningPathPage: React.FC = () => {
             <View
               className={styles.pathContent}
               onClick={() => {
+                if (node.status === 'locked') {
+                  Taro.showToast({ title: '请先完成前一节点', icon: 'none' });
+                  return;
+                }
                 if (node.courseId) {
                   handleViewCourse(node.courseId, node);
                 }

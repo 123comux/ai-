@@ -229,6 +229,16 @@ async def complete_node(path_id: str, node_id: str):
     if node is None:
         raise HTTPException(status_code=404, detail="Node not found in path")
 
+    # 解锁约束：只能完成当前（current）节点，locked 节点不可越级完成
+    progress = _load_progress()
+    completed = set(progress.get(path_id, []))
+    if node.id in completed:
+        return _apply_user_progress(base, completed)
+    effective = _apply_user_progress(base, completed)
+    current_node = next((n for n in effective.nodes if n.status == "current"), None)
+    if current_node is None or current_node.id != node_id:
+        raise HTTPException(status_code=400, detail="请先完成前一个节点")
+
     # 课程节点：先校验该课程全部视频已看完
     if node.type == "course" and node.courseId:
         from routers.videos import _load_videos, _load_watched
@@ -242,8 +252,6 @@ async def complete_node(path_id: str, node_id: str):
                     detail=f"还有 {len(un_watched)}/{len(course_videos)} 个视频未看完：{', '.join(v.id for v in un_watched)}",
                 )
 
-    progress = _load_progress()
-    completed = set(progress.get(path_id, []))
     completed.add(node_id)
     progress[path_id] = sorted(completed)
     _save_progress(progress)

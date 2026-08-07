@@ -40,7 +40,7 @@ const VideoPage: React.FC = () => {
           videoId?: string; videoUrl?: string; videoTitle?: string;
           courseId?: string; chapterId?: string;
         };
-        const allVideos = await fetchVideos();
+        const allVideos = await fetchVideos(courseId || undefined);
         // 对所有视频字段做安全解码，修复 URL 编码中文导致的乱码
         const decodedVideos: VideoType[] = allVideos.map((v) => ({
           ...v,

@@ -55,6 +55,21 @@ def _all_chunks() -> list[dict]:
                     "text": text,
                     "meta": {"type": "小节", "course": course_title, "chapter": ch_title, "section": sec_title},
                 })
+
+    # 补充知识库：更详细的主题知识点（course_knowledge.json）
+    extra_path = PROCESSED_DIR / "course_knowledge.json"
+    if extra_path.exists():
+        with open(extra_path, "r", encoding="utf-8") as f:
+            extra = json.load(f)
+        for item in extra:
+            if isinstance(item, dict) and item.get("content"):
+                keywords = item.get("keywords", [])
+                # 关键词拼进文本，便于检索评分命中
+                kw_text = " ".join(keywords) if keywords else ""
+                chunks.append({
+                    "text": (kw_text + "\n" + item["content"]).strip(),
+                    "meta": {"type": "知识点", "topic": item.get("topic", ""), "keywords": keywords},
+                })
     return chunks
 
 
@@ -71,22 +86,33 @@ _TOPIC_ALIASES = [
 ]
 
 
-def _score_question(question: str, chunk_text: str) -> int:
+def _score_question(question: str, chunk_text: str, meta: dict | None = None) -> int:
     """Score how relevant a chunk is to the question (0 = not relevant)."""
+    import re
     q = question.lower()
     score = 0
-    # 1. 命中主题关键词
+
+    # 1. 若该块是补充知识点，且问题命中其关键词 → 高分
+    if meta and meta.get("keywords"):
+        kw = [k.lower() for k in meta["keywords"] if k]
+        if any(k in q for k in kw):
+            score += 10
+        # 问题字面词与关键词重合
+        hit_kw = sum(1 for k in kw if k in q)
+        score += hit_kw * 2
+
+    # 2. 主题关键词命中（课程块）
     for topic, keywords in _TOPIC_ALIASES:
         if any(k in q for k in keywords):
             if any(k in chunk_text.lower() for k in keywords):
                 score += 2
-    # 2. 问题里的字面词出现在 chunk 中
-    # 取问题里的中文词（2+ 字），统计命中
-    import re
+
+    # 3. 问题里的中文词（2+ 字）出现在 chunk 中
     tokens = set(re.findall(r"[一-龥]{2,}", q))
     if tokens:
         hit = sum(1 for t in tokens if t in chunk_text)
         score += hit
+
     return score
 
 
@@ -94,7 +120,7 @@ def retrieve_context(question: str, k: int = 4) -> str:
     """Search course knowledge base and return a text context block."""
     try:
         chunks = _all_chunks()
-        scored = [(c, _score_question(question, c["text"])) for c in chunks]
+        scored = [(c, _score_question(question, c["text"], c.get("meta"))) for c in chunks]
         scored = [x for x in scored if x[1] > 0]
         scored.sort(key=lambda x: x[1], reverse=True)
         top = scored[:k]

@@ -255,17 +255,6 @@ const VideoPage: React.FC = () => {
                 referrerPolicy="no-referrer"
                 onLoad={() => { iframeLoadedRef.current = true; }}
               />
-              {/* 小程序端：CoverView 悬浮"标记完成"按钮，覆盖在全屏 web-view 上方 */}
-              {IS_WEAPP && (
-                <CoverView
-                  className={`${styles.weappFloatBtn} ${currentVideo.completed ? styles.watchedBtnDone : ''}`}
-                  onClick={handleMarkWatched}
-                >
-                  <CoverView className={styles.weappFloatBtnText}>
-                    {currentVideo.completed ? '✓ 已看完' : watchedLoading ? '确认中...' : '我已看完本视频'}
-                  </CoverView>
-                </CoverView>
-              )}
               <View className={styles.biliTroubleBar}>
                 <Text className={styles.biliTroubleHint}>
                   {bvFromUrl(currentVideo.url)} · 无法播放？
@@ -387,6 +376,18 @@ const VideoPage: React.FC = () => {
           </View>
         ))}
       </ScrollView>
+
+      {/* 小程序端：CoverView 悬浮"标记完成"按钮（顶层，覆盖全屏 web-view） */}
+      {IS_WEAPP && isBilibili && !biliError && (
+        <CoverView
+          className={`${styles.weappFloatBtn} ${currentVideo.completed ? styles.watchedBtnDone : ''}`}
+          onClick={handleMarkWatched}
+        >
+          <CoverView className={styles.weappFloatBtnText}>
+            {currentVideo.completed ? '✓ 已看完' : watchedLoading ? '确认中...' : '我已看完本视频'}
+          </CoverView>
+        </CoverView>
+      )}
     </View>
   );
 };

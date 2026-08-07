@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Swiper, SwiperItem, Image } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import AssessmentCard from '@/components/AssessmentCard';
 import PathCard from '@/components/PathCard';
 import CourseCard from '@/components/CourseCard';
@@ -59,42 +59,48 @@ const HomePage: React.FC = () => {
   const [directions, setDirections] = useState<DirectionItem[]>([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [report, path, courseData, projectData, bannerData, directionData, statsData] = await Promise.all([
-          fetchAbilityReport(),
-          fetchLearningPath(),
-          fetchCourses(),
-          fetchProjects(),
-          fetchBanners(),
-          fetchDirections(),
-          fetchLearningStats(),
-        ]);
-        setStats(statsData);
-        setAbilityReport(report);
-        setCurrentPath(path);
-        setLocalCourses(courseData.slice(0, 4));
-        setLocalProjects(projectData.slice(0, 4));
-        setCourses(courseData);
-        setProjects(projectData);
-        setBanners(bannerData);
-        setDirections(directionData);
-
-        // 根据用户目标方向获取 AI 推荐课程
-        if (targetDirection && DIRECTION_TOPIC_MAP[targetDirection]) {
-          try {
-            const recs = await getRecommendedCourses(DIRECTION_TOPIC_MAP[targetDirection], 4);
-            setAiRecommendations(recs);
-          } catch {
-            // 推荐接口不可用时忽略
-          }
-        }
-      } catch (err) {
-        console.error('[Home] load data error:', err);
-      }
-    };
     loadData();
   }, []);
+
+  // 每次页面显示时刷新（从学习路径/课程页标记完成后返回，路径进度同步更新）
+  useDidShow(() => {
+    loadData();
+  });
+
+  const loadData = async () => {
+    try {
+      const [report, path, courseData, projectData, bannerData, directionData, statsData] = await Promise.all([
+        fetchAbilityReport(),
+        fetchLearningPath(),
+        fetchCourses(),
+        fetchProjects(),
+        fetchBanners(),
+        fetchDirections(),
+        fetchLearningStats(),
+      ]);
+      setStats(statsData);
+      setAbilityReport(report);
+      setCurrentPath(path);
+      setLocalCourses(courseData.slice(0, 4));
+      setLocalProjects(projectData.slice(0, 4));
+      setCourses(courseData);
+      setProjects(projectData);
+      setBanners(bannerData);
+      setDirections(directionData);
+
+      // 根据用户目标方向获取 AI 推荐课程
+      if (targetDirection && DIRECTION_TOPIC_MAP[targetDirection]) {
+        try {
+          const recs = await getRecommendedCourses(DIRECTION_TOPIC_MAP[targetDirection], 4);
+          setAiRecommendations(recs);
+        } catch {
+          // 推荐接口不可用时忽略
+        }
+      }
+    } catch (err) {
+      console.error('[Home] load data error:', err);
+    }
+  };
 
   const handleStartAssessment = () => {
     Taro.navigateTo({ url: '/pages/assessment/index' });

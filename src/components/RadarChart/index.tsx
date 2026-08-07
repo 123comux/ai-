@@ -42,7 +42,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
   });
 
   return (
-    <View className={styles.chart} style={{ width: `${size / 2.5}rpx`, height: `${size / 2.5}rpx` }}>
+    <View className={styles.chart}>
       <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%">
         {/* 网格线 */}
         {gridLines.map((points, gi) => (

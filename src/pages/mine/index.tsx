@@ -1,38 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
 import { useUserStore } from '@/store/useUserStore';
-import { useLearningStore } from '@/store/useLearningStore';
-import { fetchLearningRecords, fetchLearningStats, fetchMenuItems } from '@/services/api';
+import { fetchAbilityReport, fetchLearningRecords, fetchLearningStats, fetchMenuItems } from '@/services/api';
 import type { LearningRecord } from '@/types/index';
 import type { MenuItem } from '@/services/api';
 import styles from './index.module.scss';
 
 const MinePage: React.FC = () => {
   const { nickname, avatar, grade, major, targetDirection } = useUserStore();
-  const { abilityReport } = useLearningStore();
+  const [abilityReport, setAbilityReport] = useState<any>(null);
   const [records, setRecords] = useState<LearningRecord[]>([]);
   const [stats, setStats] = useState({ learningDays: 0, totalMinutes: 0, completedProjects: 0, completedLessons: 0 });
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
+  const loadData = async () => {
+    try {
+      const [reportData, recordData, statsData, menuData] = await Promise.all([
+        fetchAbilityReport(),
+        fetchLearningRecords(),
+        fetchLearningStats(),
+        fetchMenuItems('mine'),
+      ]);
+      setAbilityReport(reportData);
+      setRecords(recordData);
+      setStats(statsData);
+      setMenuItems(menuData);
+    } catch (err) {
+      console.error('[Mine] load data error:', err);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [recordData, statsData, menuData] = await Promise.all([
-          fetchLearningRecords(),
-          fetchLearningStats(),
-          fetchMenuItems('mine'),
-        ]);
-        setRecords(recordData);
-        setStats(statsData);
-        setMenuItems(menuData);
-      } catch (err) {
-        console.error('[Mine] load data error:', err);
-      }
-    };
     loadData();
   }, []);
+
+  // 每次显示刷新，学习时长/能力报告同步
+  useDidShow(() => {
+    loadData();
+  });
 
   const handleMenuClick = (item: MenuItem) => {
     if (item.path) {

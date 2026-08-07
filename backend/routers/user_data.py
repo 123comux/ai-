@@ -27,9 +27,59 @@ async def get_ability_report():
 
 @router.get("/learning-records", response_model=list[LearningRecord])
 async def get_learning_records():
-    """Get learning records list."""
-    data = _load_json("learning_records.json")
-    return [LearningRecord(**r) for r in data]
+    """Get learning records from real watched videos (video_progress).
+
+    Groups watched videos by date: duration = 观看分钟累计, lessonsCompleted = 该日看完视频数。
+    """
+    videos = []
+    if (PROCESSED_DIR / "videos.json").exists():
+        try:
+            videos = _load_json("videos.json")
+        except Exception:
+            videos = []
+    if not isinstance(videos, list):
+        videos = []
+
+    watched = {}
+    if (PROCESSED_DIR / "video_progress.json").exists():
+        try:
+            progress = _load_json("video_progress.json")
+            raw = progress.get("watched", {})
+            if isinstance(raw, dict):
+                for vid, val in raw.items():
+                    if isinstance(val, dict):
+                        watched[vid] = val
+                    else:
+                        watched[vid] = {"at": val if isinstance(val, str) else "", "minutes": 0}
+        except Exception:
+            watched = {}
+
+    # 按日期聚合：date -> {duration, lessons}
+    from datetime import datetime
+    day_map: dict[str, dict] = {}
+    video_ids = {v.get("id") for v in videos}
+    for vid, w in watched.items():
+        if vid not in video_ids:
+            continue
+        at = w.get("at", "") if isinstance(w, dict) else ""
+        minutes = (w.get("minutes", 0) or 0) if isinstance(w, dict) else 0
+        date = at[:10] if at else ""
+        if not date:
+            continue
+        day_map.setdefault(date, {"duration": 0, "lessons": 0})
+        day_map[date]["duration"] += minutes
+        day_map[date]["lessons"] += 1
+
+    records = []
+    for date in sorted(day_map.keys(), reverse=True):
+        d = day_map[date]
+        records.append(LearningRecord(
+            date=date[5:],  # MM-DD
+            duration=d["duration"],
+            lessonsCompleted=d["lessons"],
+            exercisesDone=0,
+        ))
+    return records[:30]
 
 
 @router.get("/job-matching", response_model=JobMatchingResult)

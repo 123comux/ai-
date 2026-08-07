@@ -277,7 +277,7 @@ const HomePage: React.FC = () => {
           </View>
           <View className={styles.recommendList}>
             {aiRecommendations.map((rec, i) => (
-              <View key={i} className={styles.recommendItem}>
+              <View key={i} className={styles.recommendItem} onClick={() => handleViewCourse(rec.id)}>
                 <Text className={styles.recommendItemTitle}>{rec.title}</Text>
                 <Text className={styles.recommendItemMeta}>
                   {TOPIC_CN_MAP[rec.topic] || rec.topic} · {TOPIC_CN_MAP[rec.difficulty] || rec.difficulty} · 匹配度 {Math.round(rec.score * 100)}%

@@ -1,10 +1,17 @@
 """AI-powered API routes: tutor chat, assessment analysis, course recommendation."""
 
+import concurrent.futures
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
 router = APIRouter(prefix="/api", tags=["ai"])
+
+# AI 推荐运行在模块级线程池并设超时：BERT 冷加载慢时不阻塞接口，
+# 超时回退纯关键词匹配，worker 继续后台预热模型。
+_recommend_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+_RECOMMEND_TIMEOUT_SECONDS = 6.0
 
 
 # ---- Schemas ----
@@ -78,18 +85,22 @@ async def recommend_courses(
     topic: Optional[str] = None,
 ):
     """Course recommendation: suggest courses based on user interest."""
+    from services.recommend_service import recommend_courses as recommend
+
+    # BERT 冷加载可能很慢：在线程中运行并设超时，超时后回退到纯关键词匹配，
+    # 避免第一个请求卡死。模型在后台线程继续预热，后续请求即可用到 AI。
+    future = _recommend_executor.submit(recommend, interest=interest, limit=limit, topic=topic)
     try:
-        from services.recommend_service import recommend_courses as recommend
-        results = recommend(interest=interest, limit=limit, topic=topic)
-        return {
-            "interest": interest,
-            "recommendations": results,
-            "total": len(results),
-        }
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=503, detail=f"Model not available: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Recommendation failed: {str(e)}")
+        results = future.result(timeout=_RECOMMEND_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        # 超时：用关闭 AI 分析的纯关键词匹配重试（快速返回）
+        from services.recommend_service import recommend_courses_keyword_only
+        results = recommend_courses_keyword_only(interest=interest, limit=limit, topic=topic)
+    return {
+        "interest": interest,
+        "recommendations": results,
+        "total": len(results),
+    }
 
 
 @router.get("/ai/models")

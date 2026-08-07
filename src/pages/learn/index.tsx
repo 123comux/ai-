@@ -131,7 +131,7 @@ const LearnPage: React.FC = () => {
             ) : recommendResults.length > 0 ? (
               <View className={styles.recommendList}>
                 {recommendResults.map((item, i) => (
-                  <View key={i} className={styles.recommendItem}>
+                  <View key={i} className={styles.recommendItem} onClick={() => handleViewCourse(item.id)}>
                     <Text className={styles.recommendItemTitle}>{item.title}</Text>
                     <Text className={styles.recommendItemMeta}>
                       {TOPIC_LABEL_MAP[item.topic] || item.topic} · {TOPIC_LABEL_MAP[item.difficulty] || item.difficulty} · 匹配度 {Math.round(item.score * 100)}%

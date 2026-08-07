@@ -109,6 +109,11 @@ const CourseDetailPage: React.FC = () => {
     );
   }
 
+  // 学习进度实时计算：已看完视频数 / 该课程总视频数
+  const progressPercent = videos.length
+    ? Math.round((videos.filter((v) => v.completed).length / videos.length) * 100)
+    : 0;
+
   if (!course) {
     return (
       <View className={styles.page}>
@@ -140,9 +145,9 @@ const CourseDetailPage: React.FC = () => {
         <View className={styles.progressSection}>
           <View className={styles.progressHeader}>
             <Text className={styles.progressLabel}>学习进度</Text>
-            <Text className={styles.progressValue}>{course.progress || 0}%</Text>
+            <Text className={styles.progressValue}>{progressPercent}%</Text>
           </View>
-          <ProgressBar percent={course.progress || 0} height={8} />
+          <ProgressBar percent={progressPercent} height={8} />
           {pathIdRef.current && nodeIdRef.current && (
             <View
               className={`${styles.completeBtn} ${completed ? styles.completeBtnDone : ''}`}

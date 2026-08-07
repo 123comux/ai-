@@ -80,14 +80,11 @@ const LearningPathPage: React.FC = () => {
       <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
         <Text className={styles.navBack}>← 返回</Text>
       </View>
-      <View className={styles.section}>
+      <View className={styles.header}>
         <View className={styles.headerInfo}>
           <Text className={styles.direction}>{currentPath.direction}</Text>
           <Text className={styles.title}>{currentPath.title}</Text>
           <View className={styles.progressInfo}>
-            <Text className={styles.progressText}>
-              第 {currentPath.currentWeek}/{currentPath.totalWeeks} 周
-            </Text>
             <Text className={styles.progressText}>
               {percent}% · {completedNodes}/{totalNodes} 项完成
             </Text>

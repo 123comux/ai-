@@ -18,10 +18,17 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
   useEffect(() => {
     if (!IS_WEAPP || !dimensions || dimensions.length === 0) return;
 
+    // canvas CSS 为 500rpx，绘制坐标单位是 px，需换算成实际像素尺寸
+    // （750rpx = 屏宽 px，故 500rpx = 500/750 * 屏宽px），否则绘制内容与显示尺寸不匹配被裁切
+    const sys = Taro.getSystemInfoSync();
+    const pxSize = (500 * sys.windowWidth) / 750;
+
     const draw = () => {
       const ctx = Taro.createCanvasContext(canvasId);
+      const size = pxSize;
       const center = size / 2;
-      const radius = size / 2 - 70;
+      // 半径按比例取 size 的 36%，与 H5 端（radius=size/2-60，size=400 时占 35%）视觉一致
+      const radius = size * 0.36;
       const angleStep = (Math.PI * 2) / dimensions.length;
 
       const getPoint = (index: number, ratio: number) => {

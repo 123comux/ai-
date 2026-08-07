@@ -57,10 +57,6 @@ const MinePage: React.FC = () => {
         <View className={styles.userInfo}>
           <Image className={styles.avatar} src={avatar} mode="aspectFill" />
           <Text className={styles.nickname}>{nickname}</Text>
-          <Text className={styles.userMeta}>{grade} · {major}</Text>
-          <View className={styles.directionBadge}>
-            <Text className={styles.directionText}>目标：{targetDirection}</Text>
-          </View>
         </View>
       </View>
 

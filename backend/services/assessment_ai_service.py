@@ -117,11 +117,23 @@ def _get_recommendation(topic_key: str, confidence: float) -> str:
 
 
 def get_model_info() -> dict:
-    """Get assessment model info."""
-    cache = _load_model()
-    return {
-        "model_type": "BERT Classifier (bert-base-chinese)",
-        "num_labels": len(cache["label_map"]["topic_to_id"]),
-        "device": str(cache["device"]),
-        "labels": cache["label_map"]["topic_labels_cn"],
-    }
+    """Report assessment model availability WITHOUT loading the model (fast).
+
+    Loading bert-base-chinese takes ~107s cold; this endpoint must never trigger it.
+    """
+    model_dir = MODELS_DIR / "assessment"
+    label_path = model_dir / "label_map.json"
+    if not label_path.exists():
+        return {"status": "not available", "reason": "model not found"}
+    try:
+        with open(label_path, "r", encoding="utf-8") as f:
+            label_map = json.load(f)
+        return {
+            "status": "available",
+            "model_type": "BERT Classifier (bert-base-chinese)",
+            "num_labels": len(label_map.get("topic_to_id", {})),
+            "labels": label_map.get("topic_labels_cn", {}),
+            "device": "cuda" if __import__("torch").cuda.is_available() else "cpu",
+        }
+    except Exception:
+        return {"status": "error"}

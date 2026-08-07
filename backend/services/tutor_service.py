@@ -172,10 +172,13 @@ def chat(
 
 
 def get_model_info() -> dict:
-    """Get tutor model info."""
-    cache = _load_model()
+    """Report tutor model availability WITHOUT loading the model (fast)."""
+    model_dir = MODELS_DIR / "tutor"
+    if not model_dir.exists() or not any(model_dir.iterdir()):
+        return {"status": "not available", "reason": "model not found"}
     return {
+        "status": "available",
         "model_type": "Qwen2.5-1.5B-Instruct (LoRA fine-tuned)",
-        "device": str(cache["device"]),
+        "device": "cuda" if __import__("torch").cuda.is_available() else "cpu",
         "training_data": "StudyChat (4,073 samples)",
     }

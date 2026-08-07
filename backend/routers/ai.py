@@ -1,6 +1,7 @@
 """AI-powered API routes: tutor chat, assessment analysis, course recommendation."""
 
 import concurrent.futures
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -12,6 +13,9 @@ router = APIRouter(prefix="/api", tags=["ai"])
 # 超时回退纯关键词匹配，worker 继续后台预热模型。
 _recommend_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 _RECOMMEND_TIMEOUT_SECONDS = 6.0
+
+# 模型信息接口也用线程池+超时，避免模型冷加载阻塞 /api/ai/models
+_model_info_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
 
 # ---- Schemas ----
@@ -105,28 +109,30 @@ async def recommend_courses(
 
 @router.get("/ai/models")
 async def model_info():
-    """Get info about all available AI models."""
+    """Get info about all available AI models.
+
+    IMPORTANT: must NOT import services.assessment_ai_service / tutor_service here —
+    those modules do top-level `import torch/transformers` which takes tens of seconds
+    and would block this endpoint (and thus every request) on cold start.
+    We report static model info from disk only.
+    """
     info = {"models": {}}
 
-    # Recommender (always available if built)
+    # Recommender (fast, no heavy imports)
     try:
         from services.recommend_service import get_model_info
         info["models"]["recommender"] = get_model_info()
     except Exception:
         info["models"]["recommender"] = {"status": "not available"}
 
-    # Assessment BERT
-    try:
-        from services.assessment_ai_service import get_model_info
-        info["models"]["assessment"] = get_model_info()
-    except Exception:
-        info["models"]["assessment"] = {"status": "not available"}
-
-    # Tutor Qwen
-    try:
-        from services.tutor_service import get_model_info
-        info["models"]["tutor"] = get_model_info()
-    except Exception:
-        info["models"]["tutor"] = {"status": "not available"}
+    # Assessment BERT / Tutor Qwen: report availability from disk without importing
+    # the heavy service modules (which import torch/transformers).
+    models_dir = Path(__file__).resolve().parent.parent / "models"
+    for key, sub in (("assessment", "assessment"), ("tutor", "tutor")):
+        d = models_dir / sub
+        if d.exists() and any(d.iterdir()):
+            info["models"][key] = {"status": "available", "model_type": "see detail"}
+        else:
+            info["models"][key] = {"status": "not available", "reason": "model not found"}
 
     return info

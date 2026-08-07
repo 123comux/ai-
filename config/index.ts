@@ -16,7 +16,10 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       828: 1.81 / 2,
     },
     sourceRoot: 'src',
-    outputRoot: process.env.TARO_OUTPUT_DIR || 'dist',
+    // h5 和 weapp 用不同输出目录，避免互相覆盖清空：
+    // - weapp -> dist（微信开发者工具项目目录）
+    // - h5    -> dist-h5
+    outputRoot: process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist',
     plugins: ['@tarojs/plugin-html'],
     defineConstants: {},
     copy: {

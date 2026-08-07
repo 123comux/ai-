@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
 import { fetchLearningPaths } from '@/services/api';
 import type { LearningPath } from '@/types/index';
@@ -11,21 +11,28 @@ const LearningPathPage: React.FC = () => {
   const [activeId, setActiveId] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
+  const loadData = async () => {
+    try {
+      const paths = await fetchLearningPaths();
+      setAllPaths(paths);
+      // 默认选中第一个（推荐方向）；若已有选中且方向仍存在则保留
+      setActiveId((prev) => (prev && paths.some((p) => p.id === prev)) ? prev : (paths[0]?.id || ''));
+    } catch (err) {
+      console.error('[LearningPath] load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 首次挂载加载
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const paths = await fetchLearningPaths();
-        setAllPaths(paths);
-        // 默认选中第一个（推荐方向）
-        setActiveId(paths[0]?.id || '');
-      } catch (err) {
-        console.error('[LearningPath] load error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
   }, []);
+
+  // 每次页面显示时刷新（从课程页标记完成后返回，能看到最新进度/解锁状态）
+  useDidShow(() => {
+    loadData();
+  });
 
   const currentPath = allPaths.find((p) => p.id === activeId) || allPaths[0] || null;
 

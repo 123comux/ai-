@@ -238,11 +238,11 @@ const CourseDetailPage: React.FC = () => {
                         </View>
                       </View>
                     ))}
-                    {/* 非完整版标注 + B站链接 */}
+                    {/* 完整版合集标注 + B站链接 */}
                     {ch.video_bv && (
                       <View className={styles.chapterVideoNotice}>
                         <Text className={styles.chapterVideoNoticeText}>
-                          以上为该合集前 10 集精选，非完整版
+                          本视频为完整版合集，可在 B 站查看全部内容
                         </Text>
                         <Text
                           className={styles.chapterVideoBiliLink}
@@ -250,7 +250,7 @@ const CourseDetailPage: React.FC = () => {
                             e.stopPropagation();
                             Taro.setClipboardData({
                               data: `https://www.bilibili.com/video/${ch.video_bv}`,
-                              success: () => Taro.showToast({ title: '链接已复制，去 B 站查看完整版', icon: 'none' }),
+                              success: () => Taro.showToast({ title: '链接已复制，去 B 站查看', icon: 'none' }),
                             });
                           }}
                         >

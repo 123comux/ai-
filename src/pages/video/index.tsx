@@ -25,6 +25,15 @@ const bvFromUrl = (url: string): string => {
   return m ? m[0] : '';
 };
 
+/** 把 B站视频页 URL（www.bilibili.com/video/BV..）转成可嵌入的播放器 URL */
+const biliEmbedUrl = (url: string): string => {
+  const bv = bvFromUrl(url);
+  if (bv && !url.includes('player.bilibili.com')) {
+    return `https://player.bilibili.com/player.html?bvid=${bv}&page=1`;
+  }
+  return url;
+};
+
 const VideoPage: React.FC = () => {
   const [videos, setVideos] = useState<VideoType[]>([]);
   const [currentVideo, setCurrentVideo] = useState<VideoType | null>(null);
@@ -178,7 +187,7 @@ const VideoPage: React.FC = () => {
   };
 
   /** 判断是否为 B 站嵌入 URL */
-  const isBilibiliUrl = (url: string) => url.includes('player.bilibili.com');
+  const isBilibiliUrl = (url: string) => url.includes('bilibili.com');
 
   /** 切换到降级视图（手动触发） */
   const handleReportPlaybackIssue = () => {
@@ -260,7 +269,7 @@ const VideoPage: React.FC = () => {
             <View className={styles.biliWrapper}>
               <iframe
                 className={styles.bilibiliPlayer}
-                src={`${currentVideo.url}&autoplay=0&danmaku=0&t=0`}
+                src={`${biliEmbedUrl(currentVideo.url)}&autoplay=0&danmaku=0&t=0`}
                 width="100%"
                 height="100%"
                 frameBorder="0"

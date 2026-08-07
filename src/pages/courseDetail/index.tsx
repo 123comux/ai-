@@ -105,6 +105,17 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
+  /** 打开章节下的某个子视频（分P） */
+  const handleChapterSubVideo = (chapterId: string, video: any) => {
+    const courseId = course?.id || '';
+    Taro.navigateTo({
+      url: `/pages/video/index?videoId=${encodeURIComponent(video.id)}&courseId=${encodeURIComponent(courseId)}&chapterId=${encodeURIComponent(chapterId)}`,
+    });
+  };
+
+  /** 该章节的子视频列表（按 chapter 字段过滤） */
+  const chapterVideos = (chapterId: string) => videos.filter((v) => v.chapter === chapterId);
+
   const handleChapterDetail = (chapter: Chapter) => {
     const courseId = course?.id || '';
     Taro.navigateTo({
@@ -204,6 +215,52 @@ const CourseDetailPage: React.FC = () => {
                   </View>
                 )}
 
+                {/* 本章节子视频（分P精选） */}
+                {isExpanded && chapterVideos(ch.id).length > 0 && (
+                  <View className={styles.chapterVideos}>
+                    {chapterVideos(ch.id).map((video) => (
+                      <View
+                        key={video.id}
+                        className={styles.chapterVideoItem}
+                        onClick={() => handleChapterSubVideo(ch.id, video)}
+                      >
+                        <Text className={styles.chapterVideoItemIcon}>
+                          {video.completed ? '✅' : '▶'}
+                        </Text>
+                        <View className={styles.chapterVideoItemInfo}>
+                          <Text className={styles.chapterVideoItemTitle} numberOfLines={1}>
+                            {video.title}
+                          </Text>
+                          <Text className={styles.chapterVideoItemMeta}>
+                            {formatDuration(video.duration)}
+                            {video.completed ? ' · 已看完' : ''}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                    {/* 非完整版标注 + B站链接 */}
+                    {ch.video_bv && (
+                      <View className={styles.chapterVideoNotice}>
+                        <Text className={styles.chapterVideoNoticeText}>
+                          以上为该合集前 10 集精选，非完整版
+                        </Text>
+                        <Text
+                          className={styles.chapterVideoBiliLink}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            Taro.setClipboardData({
+                              data: `https://www.bilibili.com/video/${ch.video_bv}`,
+                              success: () => Taro.showToast({ title: '链接已复制，去 B 站查看完整版', icon: 'none' }),
+                            });
+                          }}
+                        >
+                          复制 B 站完整版链接 →
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 {isExpanded && ch.sections?.map((sec) => {
                   const secExpanded = expandedSections.has(sec.id);
                   return (
@@ -247,12 +304,12 @@ const CourseDetailPage: React.FC = () => {
           )}
         </View>
 
-        {/* 相关视频 */}
+        {/* 相关视频（精选前 6 个，完整列表见上方各章节） */}
         {videos.length > 0 && (
           <>
             <Text className={styles.sectionTitle}>相关视频</Text>
             <View className={styles.videoList}>
-              {videos.map((video) => (
+              {videos.slice(0, 6).map((video) => (
                 <View
                   key={video.id}
                   className={styles.videoItem}

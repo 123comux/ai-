@@ -132,6 +132,55 @@ def _recommended_direction() -> str | None:
     return None
 
 
+# ===== 用户进度持久化 =====
+# 用一份 path_progress.json 记录每个路径中已完成的节点，运行时数据（gitignore）。
+# 静态路径 JSON 里的 baked 状态 + 用户完成记录合并后，得到最终展示状态。
+
+
+def _load_progress() -> dict[str, list[str]]:
+    data = _load_json("path_progress.json")
+    return data if isinstance(data, dict) else {}
+
+
+def _save_progress(progress: dict[str, list[str]]) -> None:
+    path = PROCESSED_DIR / "path_progress.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(progress, f, ensure_ascii=False, indent=2)
+
+
+def _apply_user_progress(path: LearningPathItem, completed: set[str]) -> LearningPathItem:
+    """Merge user-completed node ids into a path's node statuses.
+
+    Recomputes a clean chain: completed nodes stay completed, the first
+    non-completed node becomes current, everything after stays locked.
+    """
+    all_completed = {n.id for n in path.nodes if n.status == "completed"} | completed
+    current_set = False
+    for node in path.nodes:
+        if node.id in all_completed:
+            node.status = "completed"
+            node.progress = 100
+        elif not current_set:
+            node.status = "current"
+            current_set = True
+        else:
+            node.status = "locked"
+            node.progress = 0
+    return path
+
+
+def _get_base_path(path_id: str) -> LearningPathItem | None:
+    """Return the un-merged base path (static or generated) by id, if it exists."""
+    for p in _load_paths():
+        if p.id == path_id:
+            return p
+    if path_id.startswith("path-"):
+        direction = path_id[len("path-"):]
+        if direction in _DIRECTION_PLAN or direction == "AI 工程师":
+            return _build_path(direction)
+    return None
+
+
 @router.get("", response_model=list[LearningPathItem])
 async def list_paths(direction: str | None = Query(None, description="Filter / generate path for a direction")):
     """List learning paths.
@@ -140,26 +189,45 @@ async def list_paths(direction: str | None = Query(None, description="Filter / g
     - Without params: return static enriched paths plus (if available) a
       dynamically generated path for the user's recommended direction.
     """
+    progress = _load_progress()
+
     if direction:
-        return [_build_path(direction)]
+        path = _build_path(direction)
+        return [_apply_user_progress(path, set(progress.get(path.id, [])))]
 
     paths = _load_paths()
     rec_dir = _recommended_direction()
     if rec_dir and not any(p.direction == rec_dir for p in paths):
         paths.insert(0, _build_path(rec_dir))
-    return paths
+    return [_apply_user_progress(p, set(progress.get(p.id, []))) for p in paths]
+
+
+@router.post("/{path_id}/nodes/{node_id}/complete")
+async def complete_node(path_id: str, node_id: str):
+    """Mark a node as completed; the next locked node becomes current.
+
+    Persists completion in path_progress.json so it survives restarts.
+    """
+    base = _get_base_path(path_id)
+    if base is None:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+    if not any(n.id == node_id for n in base.nodes):
+        raise HTTPException(status_code=404, detail="Node not found in path")
+
+    progress = _load_progress()
+    completed = set(progress.get(path_id, []))
+    completed.add(node_id)
+    progress[path_id] = sorted(completed)
+    _save_progress(progress)
+
+    return _apply_user_progress(base, completed)
 
 
 @router.get("/{path_id}", response_model=LearningPathItem)
 async def get_path(path_id: str):
     """Get a single learning path by ID."""
-    # Prefer the static set; fall back to generating for a direction-name ID.
-    items = _load_paths()
-    for p in items:
-        if p.id == path_id:
-            return p
-    if path_id.startswith("path-"):
-        direction = path_id[len("path-"):]
-        if direction in _DIRECTION_PLAN or direction == "AI 工程师":
-            return _build_path(direction)
-    raise HTTPException(status_code=404, detail="Learning path not found")
+    base = _get_base_path(path_id)
+    if base is None:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+    progress = _load_progress()
+    return _apply_user_progress(base, set(progress.get(path_id, [])))

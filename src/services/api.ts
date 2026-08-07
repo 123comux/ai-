@@ -62,6 +62,12 @@ export const fetchLearningPaths = async (): Promise<LearningPath[]> => {
   return apiGet<LearningPath[]>('/api/learning-paths');
 };
 
+/** 标记学习路径节点完成，返回更新后的路径（解锁下一个节点） */
+export const completeLearningPathNode = async (pathId: string, nodeId: string): Promise<LearningPath> => {
+  // 不预编码：中文路径参数让 Taro/浏览器编码一次即可，预编码会导致双重编码 404
+  return apiPost<LearningPath>(`/api/learning-paths/${pathId}/nodes/${nodeId}/complete`, {});
+};
+
 /** 获取课程列表 */
 export const fetchCourses = async (topic?: string): Promise<Course[]> => {
   const query = topic && topic !== 'all' ? `?topic=${encodeURIComponent(topic)}` : '';

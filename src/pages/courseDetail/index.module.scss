@@ -98,6 +98,34 @@
   font-weight: $font-weight-semibold;
 }
 
+.completeBtn {
+  margin-top: $spacing-md;
+  width: 100%;
+  height: $button-height-md;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.completeBtnText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
+.completeBtnDone {
+  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
+  color: $color-text-tertiary;
+  pointer-events: none;
+}
+
 .sectionTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;

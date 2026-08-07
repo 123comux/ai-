@@ -27,8 +27,12 @@ const LearningPathPage: React.FC = () => {
     loadData();
   }, []);
 
-  const handleViewCourse = (courseId: string) => {
-    Taro.navigateTo({ url: `/pages/courseDetail/index?id=${courseId}` });
+  const handleViewCourse = (courseId: string, node?: any) => {
+    const pathId = currentPath?.id || '';
+    const nodeId = node?.id || '';
+    Taro.navigateTo({
+      url: `/pages/courseDetail/index?id=${courseId}&pathId=${encodeURIComponent(pathId)}&nodeId=${encodeURIComponent(nodeId)}`,
+    });
   };
 
   if (!currentPath) {
@@ -89,7 +93,7 @@ const LearningPathPage: React.FC = () => {
               className={styles.pathContent}
               onClick={() => {
                 if (node.courseId) {
-                  handleViewCourse(node.courseId);
+                  handleViewCourse(node.courseId, node);
                 }
               }}
             >

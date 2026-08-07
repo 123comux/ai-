@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchCourseDetail, fetchCourseVideos } from '@/services/api';
+import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode } from '@/services/api';
 import { formatDuration } from '@/utils/index';
 import type { Chapter, Video } from '@/types/index';
 import styles from './index.module.scss';
@@ -14,12 +14,19 @@ const CourseDetailPage: React.FC = () => {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const pathIdRef = useRef('');
+  const nodeIdRef = useRef('');
 
   useEffect(() => {
     const loadCourse = async () => {
       try {
-        const { id } = Taro.getCurrentInstance().router?.params || {};
+        const { id, pathId, nodeId } = Taro.getCurrentInstance().router?.params || {};
         if (!id) { setLoading(false); return; }
+
+        if (pathId) pathIdRef.current = pathId;
+        if (nodeId) nodeIdRef.current = nodeId;
 
         const data = await fetchCourseDetail(id);
         if (data) {
@@ -56,6 +63,23 @@ const CourseDetailPage: React.FC = () => {
 
   const handleVideoClick = (video: Video) => {
     Taro.navigateTo({ url: `/pages/video/index?videoId=${video.id}` });
+  };
+
+  const handleComplete = async () => {
+    const pathId = pathIdRef.current;
+    const nodeId = nodeIdRef.current;
+    if (!pathId || !nodeId || completing || completed) return;
+    setCompleting(true);
+    try {
+      await completeLearningPathNode(pathId, nodeId);
+      setCompleted(true);
+      Taro.showToast({ title: '已完成，下一个已解锁', icon: 'success' });
+    } catch (err) {
+      console.error('[CourseDetail] complete failed:', err);
+      Taro.showToast({ title: '标记失败，请重试', icon: 'none' });
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const handleChapterVideo = (chapter: Chapter) => {
@@ -117,6 +141,16 @@ const CourseDetailPage: React.FC = () => {
             <Text className={styles.progressValue}>{course.progress || 0}%</Text>
           </View>
           <ProgressBar percent={course.progress || 0} height={8} />
+          {pathIdRef.current && nodeIdRef.current && (
+            <View
+              className={`${styles.completeBtn} ${completed ? styles.completeBtnDone : ''}`}
+              onClick={handleComplete}
+            >
+              <Text className={styles.completeBtnText}>
+                {completed ? '✓ 已完成' : completing ? '标记中...' : '标记完成'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* 课程目录 - 富文本 */}

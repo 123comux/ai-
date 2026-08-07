@@ -137,12 +137,14 @@ def score_assessment(answers: list[int], question_ids: list[str]) -> AssessmentR
     # Overall score as mean of dimension scores (not raw ratio, so all dims weigh equally)
     overall = round(sum(dim_scores.values()) / len(dim_scores)) if dim_scores else 0
 
+    # 每个维度仅 3~4 题，分数粒度很陡（3 题: 0/33/67/100；4 题: 0/25/50/75/100）。
+    # 用 >=60 / <40 作为优势/薄弱分界：2/3、3/4 即算优势，1/3、1/4 即算薄弱。
     strengths = []
     weaknesses = []
     for cn, score in dim_scores.items():
-        if score >= 70:
+        if score >= 60:
             strengths.append(cn)
-        elif score < 50:
+        elif score < 40:
             weaknesses.append(cn)
 
     level = _level_from_score(overall)

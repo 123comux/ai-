@@ -42,6 +42,12 @@ const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  /** 轻量清理 guide 里的 markdown 代码块标记，保留代码内容 */
+  const cleanGuide = (g: string) => g
+    .replace(/```python/g, '')   // 去掉代码块开始标记
+    .replace(/```/g, '')          // 去掉代码块结束标记
+    .replace(/`([^`]+)`/g, '$1'); // 去掉行内反引号
+
   if (loading) {
     return (
       <View className={styles.page}>
@@ -142,13 +148,13 @@ const ProjectDetailPage: React.FC = () => {
               <View className={styles.stepContent}>
                 <Text className={styles.stepTitle}>{step.title}</Text>
                 <Text className={styles.stepDesc}>{step.desc}</Text>
-                {step.status === 'current' && step.guide && (
+                {step.status !== 'pending' && step.guide && (
                   <View className={styles.stepGuide}>
                     <Text className={styles.stepGuideLabel}>📋 操作指引</Text>
-                    <Text className={styles.stepGuideText}>{step.guide}</Text>
+                    <Text className={styles.stepGuideText}>{cleanGuide(step.guide)}</Text>
                   </View>
                 )}
-                {step.status === 'current' && step.acceptance && (
+                {step.status !== 'pending' && step.acceptance && (
                   <View className={styles.stepAcceptance}>
                     <Text className={styles.stepAcceptanceLabel}>✅ 验收标准</Text>
                     <Text className={styles.stepAcceptanceText}>{step.acceptance}</Text>

@@ -188,10 +188,15 @@ const VideoPage: React.FC = () => {
   /** 在 Bilibili 站点打开当前视频 */
   const handleOpenOnBilibili = () => {
     const bv = bvFromUrl(currentVideo?.url || '');
-    if (bv) {
-      window.open(`https://www.bilibili.com/video/${bv}`, '_blank');
-    } else if (currentVideo?.url) {
-      window.open(currentVideo.url, '_blank');
+    const biliUrl = bv ? `https://www.bilibili.com/video/${bv}` : (currentVideo?.url || '');
+    if (IS_WEAPP) {
+      // 小程序无 window.open：复制链接，提示用户自行打开
+      Taro.setClipboardData({
+        data: biliUrl,
+        success: () => Taro.showToast({ title: 'B站链接已复制，请粘贴到浏览器打开', icon: 'none' }),
+      });
+    } else {
+      window.open(biliUrl, '_blank');
     }
   };
 

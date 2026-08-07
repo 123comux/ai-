@@ -5,6 +5,16 @@
   background: $gradient-page;
 }
 
+.backHome {
+  padding: $spacing-md $spacing-lg 0;
+}
+
+.backHomeText {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
 .section {
   padding: $spacing-md $spacing-lg 0;
 }

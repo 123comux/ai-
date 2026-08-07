@@ -9,6 +9,22 @@ import type { Course } from '@/types/index';
 import type { CourseRecommendation } from '@/services/api';
 import styles from './index.module.scss';
 
+/** 课程 topic 英文 → 中文映射 */
+const TOPIC_LABEL_MAP: Record<string, string> = {
+  'Machine Learning': '机器学习',
+  'Deep Learning': '深度学习',
+  'Large Language Models': '大模型',
+  'NLP': '自然语言',
+  'Data Science': '数据科学',
+  'Python': 'Python',
+  'Computer Vision': '计算机视觉',
+  'Reinforcement Learning': '强化学习',
+  'all': '全部',
+  'beginner': '入门',
+  'intermediate': '进阶',
+  'advanced': '高级',
+};
+
 const LearnPage: React.FC = () => {
   const { currentPath, setCurrentPath } = useLearningStore();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -34,7 +50,7 @@ const LearnPage: React.FC = () => {
           fetchLearningPath(),
         ]);
         setCourses(courseData);
-        setCategories(catData.map((c: string) => ({ key: c, label: c })));
+        setCategories(catData.map((c: string) => ({ key: c, label: TOPIC_LABEL_MAP[c] || c })));
         if (topic !== 'all' && catData.includes(topic)) {
           setActiveCategory(topic);
         }
@@ -79,8 +95,16 @@ const LearnPage: React.FC = () => {
     }
   };
 
+  const handleBackHome = () => {
+    Taro.switchTab({ url: '/pages/home/index' });
+  };
+
   return (
     <ScrollView className={styles.page} scrollY>
+      {/* 返回首页 */}
+      <View className={styles.backHome} onClick={handleBackHome}>
+        <Text className={styles.backHomeText}>← 返回首页</Text>
+      </View>
       {/* AI 课程推荐搜索 */}
       <View className={styles.section}>
         <View className={styles.sectionHeader}>
@@ -110,7 +134,7 @@ const LearnPage: React.FC = () => {
                   <View key={i} className={styles.recommendItem}>
                     <Text className={styles.recommendItemTitle}>{item.title}</Text>
                     <Text className={styles.recommendItemMeta}>
-                      {item.topic} · {item.difficulty} · 匹配度 {Math.round(item.score * 100)}%
+                      {TOPIC_LABEL_MAP[item.topic] || item.topic} · {TOPIC_LABEL_MAP[item.difficulty] || item.difficulty} · 匹配度 {Math.round(item.score * 100)}%
                     </Text>
                   </View>
                 ))}

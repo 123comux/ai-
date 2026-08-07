@@ -180,7 +180,7 @@ class JobMatchingResult(BaseModel):
 class LearningStats(BaseModel):
     """Overall learning statistics."""
     learningDays: int
-    totalHours: int
+    totalMinutes: int = 0
     completedProjects: int
     completedLessons: int
 

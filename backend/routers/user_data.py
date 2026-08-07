@@ -76,12 +76,11 @@ async def get_learning_stats():
 
     watched_videos = [v for v in videos if v.get("id") in watched]
     watched_count = len(watched_videos)
-    # 总时长 = 实际观看分钟数累计（分钟转小时）
+    # 总时长 = 实际观看分钟数累计
     total_minutes = sum(
         (w.get("minutes", 0) or 0) if isinstance(w, dict) else 0
         for w in watched.values()
     )
-    total_hours = round(total_minutes / 60)
 
     # 连续学习天数：从今天往前，统计连续有学习行为的自然日
     from datetime import datetime, timedelta
@@ -125,7 +124,7 @@ async def get_learning_stats():
 
     return LearningStats(
         learningDays=streak,
-        totalHours=total_hours,
+        totalMinutes=total_minutes,
         completedProjects=projects_done,
         completedLessons=watched_count,
     )

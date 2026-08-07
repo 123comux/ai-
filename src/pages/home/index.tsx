@@ -50,7 +50,7 @@ const HomePage: React.FC = () => {
     setCourses, setProjects, setSelectedTopic,
   } = useLearningStore();
 
-  const [stats, setStats] = useState<{ learningDays: number; totalHours: number; completedProjects: number }>({ learningDays: 0, totalHours: 0, completedProjects: 0 });
+  const [stats, setStats] = useState<{ learningDays: number; totalMinutes: number; completedProjects: number }>({ learningDays: 0, totalMinutes: 0, completedProjects: 0 });
 
   const [courses, setLocalCourses] = useState<Course[]>([]);
   const [projects, setLocalProjects] = useState<Project[]>([]);
@@ -184,8 +184,8 @@ const HomePage: React.FC = () => {
         </View>
         <View className={styles.statDivider} />
         <View className={styles.statItem}>
-          <Text className={styles.statValue}>{stats.totalHours}</Text>
-          <Text className={styles.statLabel}>学习时长(h)</Text>
+          <Text className={styles.statValue}>{stats.totalMinutes}</Text>
+          <Text className={styles.statLabel}>学习时长(min)</Text>
         </View>
         <View className={styles.statDivider} />
         <View className={styles.statItem}>

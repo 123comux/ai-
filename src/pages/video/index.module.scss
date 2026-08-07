@@ -70,27 +70,54 @@
   display: block;
 }
 
-// 小程序端：悬浮在 web-view 上方的"标记完成"按钮（CoverView 覆盖原生组件）
-.weappFloatBtn {
-  position: fixed;
-  right: 24rpx;
-  bottom: 120rpx;
-  z-index: 99999;
+// 小程序端：B站视频卡片（不内嵌播放，引导去B站观看）
+.weappBiliCard {
+  padding: $spacing-xl;
+  background: $color-bg-card;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.weappBiliCardIcon {
+  font-size: 80rpx;
+  margin-bottom: $spacing-md;
+}
+
+.weappBiliCardTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-md;
+  line-height: $line-height-loose;
+}
+
+.weappBiliCardDesc {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: $line-height-loose;
+  display: block;
+  margin-bottom: $spacing-lg;
+}
+
+.weappBiliCardBtn {
+  width: 100%;
+  height: $button-height-md;
   background: $gradient-primary;
-  border-radius: $radius-round;
-  padding: 16rpx 32rpx;
+  border-radius: $radius-button;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.3);
+
+  &:active {
+    opacity: 0.9;
+  }
 }
 
-.weappFloatBtn.watchedBtnDone {
-  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
-}
-
-.weappFloatBtnText {
-  font-size: $font-size-sm;
+.weappBiliCardBtnText {
+  font-size: $font-size-md;
   font-weight: $font-weight-medium;
   color: $color-text-white;
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, Image, Video, CoverView, CoverImage } from '@tarojs/components';
+import { View, Text, ScrollView, Image, Video } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { fetchVideos, fetchCourseDetail, completeVideo } from '@/services/api';
 import { formatDuration } from '@/utils/index';
@@ -222,9 +222,20 @@ const VideoPage: React.FC = () => {
         <View className={styles.navRight} />
       </View>
 
-      {/* 视频播放器 - B站嵌入或原生播放器 */}
+      {/* 视频播放器 - 小程序端 B站用卡片引导，H5 用嵌入 */}
       <View className={styles.playerWrapper}>
-        {isBilibili ? (
+        {isBilibili && IS_WEAPP ? (
+          <View className={styles.weappBiliCard}>
+            <View className={styles.weappBiliCardIcon}>🎬</View>
+            <Text className={styles.weappBiliCardTitle}>{currentVideo.title}</Text>
+            <Text className={styles.weappBiliCardDesc}>
+              该视频来自 Bilibili，小程序内无法直接内嵌播放。请点击下方按钮前往 B 站观看，观看完成后回来标记已完成。
+            </Text>
+            <View className={styles.weappBiliCardBtn} onClick={handleOpenOnBilibili}>
+              <Text className={styles.weappBiliCardBtnText}>在 Bilibili 观看 →</Text>
+            </View>
+          </View>
+        ) : isBilibili ? (
           biliError ? (
             <View className={styles.biliFallback}>
               <Text className={styles.biliFallbackIcon}>▶</Text>
@@ -376,18 +387,6 @@ const VideoPage: React.FC = () => {
           </View>
         ))}
       </ScrollView>
-
-      {/* 小程序端：CoverView 悬浮"标记完成"按钮（顶层，覆盖全屏 web-view） */}
-      {IS_WEAPP && isBilibili && !biliError && (
-        <CoverView
-          className={`${styles.weappFloatBtn} ${currentVideo.completed ? styles.watchedBtnDone : ''}`}
-          onClick={handleMarkWatched}
-        >
-          <CoverView className={styles.weappFloatBtnText}>
-            {currentVideo.completed ? '✓ 已看完' : watchedLoading ? '确认中...' : '我已看完本视频'}
-          </CoverView>
-        </CoverView>
-      )}
     </View>
   );
 };

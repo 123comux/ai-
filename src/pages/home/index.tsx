@@ -7,7 +7,7 @@ import CourseCard from '@/components/CourseCard';
 import ProjectCard from '@/components/ProjectCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
-import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects, getRecommendedCourses, fetchBanners, fetchDirections } from '@/services/api';
+import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects, getRecommendedCourses, fetchBanners, fetchDirections, fetchLearningStats } from '@/services/api';
 import type { Course, Project } from '@/types/index';
 import type { CourseRecommendation, BannerItem, DirectionItem } from '@/services/api';
 import styles from './index.module.scss';
@@ -48,8 +48,9 @@ const HomePage: React.FC = () => {
     abilityReport, setAbilityReport,
     currentPath, setCurrentPath,
     setCourses, setProjects, setSelectedTopic,
-    learningDays, totalHours, completedProjects,
   } = useLearningStore();
+
+  const [stats, setStats] = useState<{ learningDays: number; totalHours: number; completedProjects: number }>({ learningDays: 0, totalHours: 0, completedProjects: 0 });
 
   const [courses, setLocalCourses] = useState<Course[]>([]);
   const [projects, setLocalProjects] = useState<Project[]>([]);
@@ -60,14 +61,16 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [report, path, courseData, projectData, bannerData, directionData] = await Promise.all([
+        const [report, path, courseData, projectData, bannerData, directionData, statsData] = await Promise.all([
           fetchAbilityReport(),
           fetchLearningPath(),
           fetchCourses(),
           fetchProjects(),
           fetchBanners(),
           fetchDirections(),
+          fetchLearningStats(),
         ]);
+        setStats(statsData);
         setAbilityReport(report);
         setCurrentPath(path);
         setLocalCourses(courseData.slice(0, 4));
@@ -176,17 +179,17 @@ const HomePage: React.FC = () => {
       {/* 学习统计 */}
       <View className={styles.statsRow}>
         <View className={styles.statItem}>
-          <Text className={styles.statValue}>{learningDays}</Text>
+          <Text className={styles.statValue}>{stats.learningDays}</Text>
           <Text className={styles.statLabel}>学习天数</Text>
         </View>
         <View className={styles.statDivider} />
         <View className={styles.statItem}>
-          <Text className={styles.statValue}>{totalHours}</Text>
+          <Text className={styles.statValue}>{stats.totalHours}</Text>
           <Text className={styles.statLabel}>学习时长(h)</Text>
         </View>
         <View className={styles.statDivider} />
         <View className={styles.statItem}>
-          <Text className={styles.statValue}>{completedProjects}</Text>
+          <Text className={styles.statValue}>{stats.completedProjects}</Text>
           <Text className={styles.statLabel}>完成项目</Text>
         </View>
       </View>

@@ -61,7 +61,12 @@ const VideoPage: React.FC = () => {
           let matchedFromList: VideoType | undefined;
           // 优先从已加载的视频列表匹配，获取完整元数据（subtitle、coreInfo、narrative等）
           if (decodedUrl) {
-            matchedFromList = decodedVideos.find((v) => v.url === decodedUrl);
+            // 章节跳转的 URL 可能与视频库 URL 的 page 参数不同（如 page=2 vs page=1），
+            // 不能精确匹配整串 URL。改为按 bvid 匹配，确保拿到真实的 video id（用于"已看完"持久化）。
+            const targetBv = bvFromUrl(decodedUrl);
+            matchedFromList = targetBv
+              ? decodedVideos.find((v) => bvFromUrl(v.url) === targetBv)
+              : decodedVideos.find((v) => v.url === decodedUrl);
           }
           if (courseId) {
             try {

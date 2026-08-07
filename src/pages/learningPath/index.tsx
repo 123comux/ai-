@@ -2,30 +2,32 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import PathCard from '@/components/PathCard';
-import { fetchLearningPath, fetchLearningPaths } from '@/services/api';
+import { fetchLearningPaths } from '@/services/api';
 import type { LearningPath } from '@/types/index';
 import styles from './index.module.scss';
 
 const LearningPathPage: React.FC = () => {
-  const [currentPath, setCurrentPath] = useState<LearningPath | null>(null);
   const [allPaths, setAllPaths] = useState<LearningPath[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [path, paths] = await Promise.all([
-          fetchLearningPath(),
-          fetchLearningPaths(),
-        ]);
-        setCurrentPath(path);
+        const paths = await fetchLearningPaths();
         setAllPaths(paths);
+        // 默认选中第一个（推荐方向）
+        setActiveId(paths[0]?.id || '');
       } catch (err) {
         console.error('[LearningPath] load error:', err);
+      } finally {
+        setLoading(false);
       }
     };
     loadData();
   }, []);
+
+  const currentPath = allPaths.find((p) => p.id === activeId) || allPaths[0] || null;
 
   const handleViewCourse = (courseId: string, node?: any) => {
     const pathId = currentPath?.id || '';
@@ -35,10 +37,18 @@ const LearningPathPage: React.FC = () => {
     });
   };
 
-  if (!currentPath) {
+  if (loading) {
     return (
       <View className={styles.page}>
         <Text className={styles.loadingText}>加载中...</Text>
+      </View>
+    );
+  }
+
+  if (!currentPath) {
+    return (
+      <View className={styles.page}>
+        <Text className={styles.loadingText}>暂无学习路径</Text>
       </View>
     );
   }
@@ -77,6 +87,20 @@ const LearningPathPage: React.FC = () => {
         </View>
       </View>
 
+      {/* 方向切换 tab */}
+      <Text className={styles.sectionTitle}>选择学习方向</Text>
+      <View className={styles.directionTabs}>
+        {allPaths.map((path) => (
+          <View
+            key={path.id}
+            className={`${styles.directionTab} ${path.id === currentPath.id ? styles.directionTabActive : ''}`}
+            onClick={() => setActiveId(path.id)}
+          >
+            <Text>{path.direction}</Text>
+          </View>
+        ))}
+      </View>
+
       <Text className={styles.sectionTitle}>学习路径</Text>
       <View className={styles.pathList}>
         {currentPath.nodes.map((node, index) => (
@@ -102,15 +126,6 @@ const LearningPathPage: React.FC = () => {
                 {node.type === 'course' ? '📚 课程' : '🛠️ 项目'}
               </Text>
             </View>
-          </View>
-        ))}
-      </View>
-
-      <Text className={styles.sectionTitle}>其他学习方向</Text>
-      <View className={styles.otherPaths}>
-        {allPaths.filter((p) => p.id !== currentPath.id).map((path) => (
-          <View key={path.id} className={styles.otherPathItem}>
-            <PathCard path={path} />
           </View>
         ))}
       </View>

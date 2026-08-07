@@ -35,26 +35,31 @@ def _load_json(filename: str):
 
 
 # direction family -> (course ids in order, project ids in order)
+# 每个方向差异化选课，让用户能切换不同学习路径
 _DIRECTION_PLAN = {
     "大模型应用开发": (
-        ["course-5", "course-0", "course-2"],
-        ["project-8", "project-2", "project-5"],
+        ["course-5", "course-2", "course-0", "course-1", "course-3"],
+        ["project-8", "project-2", "project-5", "project-1"],
     ),
     "机器学习工程师": (
-        ["course-5", "course-4", "course-0"],
-        ["project-3", "project-7"],
+        ["course-5", "course-0", "course-4", "course-1", "course-3"],
+        ["project-3", "project-7", "project-6", "project-2"],
     ),
     "深度学习工程师": (
-        ["course-5", "course-0", "course-1"],
-        ["project-0", "project-6"],
+        ["course-5", "course-1", "course-6", "course-0", "course-3"],
+        ["project-0", "project-4", "project-6", "project-1"],
     ),
     "数据科学家": (
-        ["course-5", "course-4", "course-0"],
-        ["project-9", "project-3"],
+        ["course-5", "course-4", "course-0", "course-3", "course-1"],
+        ["project-9", "project-3", "project-6", "project-7"],
     ),
     "AI 应用开发": (
-        ["course-5", "course-0", "course-2"],
-        ["project-8", "project-2"],
+        ["course-5", "course-2", "course-3", "course-0", "course-7"],
+        ["project-8", "project-2", "project-1", "project-5"],
+    ),
+    "计算机视觉工程师": (
+        ["course-5", "course-6", "course-1", "course-0", "course-3"],
+        ["project-4", "project-0", "project-6", "project-2"],
     ),
 }
 
@@ -65,34 +70,36 @@ _DEFAULT_PLAN = (
 )
 
 
+def _course_title(cid: str) -> str:
+    """读取课程真实标题（从 enriched_courses 或 courses.json）。"""
+    data = _load_json("enriched_courses.json") or _load_json("courses.json") or []
+    for c in data:
+        if c.get("id") == cid:
+            return c.get("title", cid)
+    return cid
+
+
+def _project_title(pid: str) -> str:
+    """读取项目真实标题（从 projects.json）。"""
+    data = _load_json("projects.json") or []
+    for p in data:
+        if p.get("id") == pid:
+            title = p.get("title", pid)
+            # 去掉 "Project: " 前缀，得到中文展示名
+            return title.replace("Project: ", "", 1) if title.startswith("Project: ") else title
+    return pid
+
+
 def _build_path(direction: str) -> LearningPathItem:
     """Build a LearningPathItem for a recommended direction, grounded in real courses/projects."""
     courses, projects = _DIRECTION_PLAN.get(direction, _DEFAULT_PLAN)
-
-    course_titles = {
-        "course-5": "Python 编程基础",
-        "course-0": "机器学习入门",
-        "course-1": "深度学习与神经网络",
-        "course-2": "大模型应用开发",
-        "course-4": "数据分析与可视化",
-    }
-    project_titles = {
-        "project-8": "AI Chatbot 对话机器人",
-        "project-2": "RAG 问答系统",
-        "project-5": "LLM 微调实战",
-        "project-3": "客户流失预测",
-        "project-7": "推荐系统实战",
-        "project-0": "图像分类 CNN 实战",
-        "project-6": "时序预测实战",
-        "project-9": "数据管道 ETL 实战",
-    }
 
     nodes: list[LearningPathNode] = []
     for i, cid in enumerate(courses):
         nodes.append(
             LearningPathNode(
                 id=f"gen-{direction}-course-{i}",
-                title=course_titles.get(cid, cid),
+                title=_course_title(cid),
                 type="course",
                 items=[cid],
                 status="current" if i == 0 else "locked",
@@ -104,7 +111,7 @@ def _build_path(direction: str) -> LearningPathItem:
         nodes.append(
             LearningPathNode(
                 id=f"gen-{direction}-project-{j}",
-                title=project_titles.get(pid, pid),
+                title=_project_title(pid),
                 type="project",
                 items=[pid],
                 status="locked",
@@ -186,8 +193,8 @@ async def list_paths(direction: str | None = Query(None, description="Filter / g
     """List learning paths.
 
     - With ?direction=X: return a single path generated for that direction.
-    - Without params: return static enriched paths plus (if available) a
-      dynamically generated path for the user's recommended direction.
+    - Without params: return all direction plans (each with its own course/project set),
+      so the user can browse and switch between learning directions.
     """
     progress = _load_progress()
 
@@ -195,11 +202,17 @@ async def list_paths(direction: str | None = Query(None, description="Filter / g
         path = _build_path(direction)
         return [_apply_user_progress(path, set(progress.get(path.id, [])))]
 
-    paths = _load_paths()
+    paths = []
+    # 推荐方向排最前，其余方向按顺序列出
     rec_dir = _recommended_direction()
-    if rec_dir and not any(p.direction == rec_dir for p in paths):
-        paths.insert(0, _build_path(rec_dir))
-    return [_apply_user_progress(p, set(progress.get(p.id, []))) for p in paths]
+    directions = list(_DIRECTION_PLAN.keys())
+    if rec_dir and rec_dir in directions:
+        directions.remove(rec_dir)
+        directions.insert(0, rec_dir)
+    for d in directions:
+        path = _build_path(d)
+        paths.append(_apply_user_progress(path, set(progress.get(path.id, []))))
+    return paths
 
 
 @router.post("/{path_id}/nodes/{node_id}/complete")

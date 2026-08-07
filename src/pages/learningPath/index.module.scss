@@ -68,6 +68,35 @@
   padding: $spacing-lg $spacing-lg $spacing-md;
 }
 
+// 方向切换 tab
+.directionTabs {
+  display: flex;
+  gap: $spacing-sm;
+  padding: 0 $spacing-lg $spacing-md;
+  flex-wrap: wrap;
+}
+
+.directionTab {
+  padding: 10rpx 24rpx;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  white-space: nowrap;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.directionTabActive {
+  background: $gradient-primary;
+  border-color: transparent;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
 .pathList {
   padding: 0 $spacing-lg;
 }

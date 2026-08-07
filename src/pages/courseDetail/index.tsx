@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
 import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode } from '@/services/api';
 import { formatDuration } from '@/utils/index';
@@ -18,16 +18,18 @@ const CourseDetailPage: React.FC = () => {
   const [completed, setCompleted] = useState(false);
   const pathIdRef = useRef('');
   const nodeIdRef = useRef('');
+  const courseIdRef = useRef('');
 
-  useEffect(() => {
-    const loadCourse = async () => {
-      try {
-        const { id, pathId, nodeId } = Taro.getCurrentInstance().router?.params || {};
-        if (!id) { setLoading(false); return; }
+  const loadCourse = async (initial = false) => {
+    try {
+      const { id, pathId, nodeId } = Taro.getCurrentInstance().router?.params || {};
+      if (!id) { setLoading(false); return; }
 
-        if (pathId) pathIdRef.current = pathId;
-        if (nodeId) nodeIdRef.current = nodeId;
+      if (pathId) pathIdRef.current = pathId;
+      if (nodeId) nodeIdRef.current = nodeId;
+      if (id) courseIdRef.current = id;
 
+      if (initial) {
         const data = await fetchCourseDetail(id);
         if (data) {
           setCourse(data);
@@ -38,16 +40,25 @@ const CourseDetailPage: React.FC = () => {
             }
           }
         }
-        const courseVideos = await fetchCourseVideos(id);
-        setVideos(courseVideos);
-      } catch (err) {
-        console.error('[CourseDetail] load error:', err);
-      } finally {
-        setLoading(false);
       }
-    };
-    loadCourse();
+      // 每次显示都刷新视频（含看完状态），让学习进度实时更新
+      const courseVideos = await fetchCourseVideos(id);
+      setVideos(courseVideos);
+    } catch (err) {
+      console.error('[CourseDetail] load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCourse(true);
   }, []);
+
+  // 从视频页标记"已看完"后返回，刷新学习进度
+  useDidShow(() => {
+    if (courseIdRef.current) loadCourse(false);
+  });
 
   const toggleChapter = (chapterId: string) => {
     const next = new Set(expandedChapters);

@@ -149,7 +149,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
       <Canvas
         canvasId={canvasId}
         className={styles.canvas}
-        style={{ width: `${size / 2.5}rpx`, height: `${size / 2.5}rpx` }}
       />
     </View>
   );

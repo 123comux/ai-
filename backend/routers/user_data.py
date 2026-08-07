@@ -41,20 +41,33 @@ async def get_job_matching():
 
 @router.get("/learning-stats", response_model=LearningStats)
 async def get_learning_stats():
-    """Get learning statistics, computed dynamically from runtime progress data.
+    """Get learning statistics, computed from real user progress (video_progress).
 
-    - learningDays: 学习记录天数
-    - totalHours: 学习总时长（分钟转小时）
-    - completedLessons: 学习记录累计完成课程数
+    - learningDays: 已看完的视频数（真实学习行为）
+    - totalHours: 已看完视频的时长总和（秒转小时）
+    - completedLessons: 已看完视频数（与 learningDays 一致，表示已学内容量）
     - completedProjects: 各学习路径中已完成的项目节点数（实时）
     """
-    records = _load_json("learning_records.json") if (PROCESSED_DIR / "learning_records.json").exists() else []
-    if not isinstance(records, list):
-        records = []
+    videos = []
+    if (PROCESSED_DIR / "videos.json").exists():
+        try:
+            videos = _load_json("videos.json")
+        except Exception:
+            videos = []
+    if not isinstance(videos, list):
+        videos = []
 
-    days = len(records)
-    total_minutes = sum(r.get("duration", 0) for r in records if isinstance(r, dict))
-    lessons = sum(r.get("lessonsCompleted", 0) for r in records if isinstance(r, dict))
+    watched = set()
+    if (PROCESSED_DIR / "video_progress.json").exists():
+        try:
+            progress = _load_json("video_progress.json")
+            watched = set(progress.get("watched", []))
+        except Exception:
+            watched = set()
+
+    watched_videos = [v for v in videos if v.get("id") in watched]
+    watched_count = len(watched_videos)
+    total_seconds = sum(v.get("duration", 0) for v in watched_videos)
 
     # 完成项目：path_progress 中已完成的项目节点（type=project）数
     projects_done = 0
@@ -73,8 +86,8 @@ async def get_learning_stats():
                     projects_done += 1
 
     return LearningStats(
-        learningDays=days,
-        totalHours=round(total_minutes / 60),
+        learningDays=watched_count,
+        totalHours=round(total_seconds / 3600),
         completedProjects=projects_done,
-        completedLessons=lessons,
+        completedLessons=watched_count,
     )

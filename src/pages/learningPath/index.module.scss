@@ -24,8 +24,7 @@
 }
 
 .header {
-  background: $color-primary;
-  background: $gradient-primary;
+  background: $color-primary !important;
   padding: $spacing-lg $spacing-lg;
 }
 

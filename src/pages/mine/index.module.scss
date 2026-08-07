@@ -8,17 +8,11 @@
 .header {
   position: relative;
   padding: $spacing-lg $spacing-lg $spacing-xl;
+  background: $color-primary !important;
 }
 
 .headerBg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 240rpx;
-  background: $color-primary;
-  background: $gradient-primary;
-  border-radius: 0 0 $radius-xl $radius-xl;
+  display: none;
 }
 
 .userInfo {

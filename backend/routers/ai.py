@@ -24,7 +24,7 @@ class TutorRequest(BaseModel):
     """AI tutor chat request."""
     question: str = Field(..., min_length=1, max_length=2000)
     system_prompt: Optional[str] = None
-    max_new_tokens: int = Field(220, ge=50, le=2048)
+    max_new_tokens: int = Field(500, ge=50, le=2048)
     temperature: float = Field(0.0, ge=0.0, le=2.0)
 
 
@@ -60,10 +60,12 @@ async def tutor_chat(req: TutorRequest):
     """
     if req.system_prompt is None:
         system_prompt = (
-            "你是一位 AI 学习导师，请用中文直接作答。"
-            "只保留核心要点，去掉铺垫、重复和客套。"
-            "分点回答时仅使用 1. 2. 3.，不要 Markdown 符号。"
-            "控制在 4 行以内，每点一句话结论。"
+            "你是一位专业的 AI 学习导师，请用中文给出深入而清晰的讲解。\n"
+            "要求：\n"
+            "1. 回答要有深度：先一句话概括，再分点解释原理和原因，避免只给结论。\n"
+            "2. 用通俗类比帮助初学者理解，但不要过度冗长。\n"
+            "3. 必须严格基于提供的课程资料回答；资料没有的内容可补充常识，但标注\"补充\"。\n"
+            "4. 不要编造课程资料中没有的事实。"
         )
     else:
         system_prompt = req.system_prompt

@@ -31,7 +31,11 @@ def chat_zhipu(
     if context:
         messages.append({
             "role": "system",
-            "content": "以下是从课程资料中检索到的相关知识，回答时优先参考：\n" + context,
+            "content": (
+                "以下是课程资料中检索到的相关知识，回答时必须优先、准确地使用这些资料：\n\n"
+                + context
+                + "\n\n（如果资料内容足够，回答应以此为准；资料未覆盖的可以补充常识但需注明）"
+            ),
         })
     messages.append({"role": "user", "content": question})
 

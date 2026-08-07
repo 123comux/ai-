@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import ProgressBar from '@/components/ProgressBar';
-import { formatDuration } from '@/utils/index';
+import { formatMinutes } from '@/utils/index';
 import type { Course } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -23,7 +23,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
         <Text className={styles.desc}>{course.description}</Text>
         <View className={styles.meta}>
           <Text className={styles.metaText}>
-            {course.lessons}节 · {formatDuration(course.duration)}
+            {course.lessons}节 · {formatMinutes(course.duration)}
           </Text>
           {!course.isFree && (
             <View className={styles.proTag}>

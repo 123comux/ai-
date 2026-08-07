@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
 import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode } from '@/services/api';
-import { formatDuration } from '@/utils/index';
+import { formatDuration, formatMinutes } from '@/utils/index';
 import type { Chapter, Video } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -156,7 +156,7 @@ const CourseDetailPage: React.FC = () => {
         <View className={styles.meta}>
           <Text className={styles.metaText}>{course.lessons} 节课程</Text>
           <Text className={styles.metaDot}>·</Text>
-          <Text className={styles.metaText}>{formatDuration(course.duration || (course.estimated_hours || 0) * 60)}</Text>
+          <Text className={styles.metaText}>{formatMinutes(course.duration || (course.estimated_hours || 0) * 60)}</Text>
           {!course.isFree && (
             <>
               <Text className={styles.metaDot}>·</Text>

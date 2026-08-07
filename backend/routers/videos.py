@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from models.schemas import VideoItem
 
@@ -20,8 +21,13 @@ def _load_videos() -> list[VideoItem]:
     return [VideoItem(**v) for v in data]
 
 
-def _load_watched() -> dict[str, str]:
-    """Load watched videos: {video_id: watched_at_iso}. Empty dict if none."""
+def _load_watched() -> dict[str, dict]:
+    """Load watched videos: {video_id: {at, minutes}}. Empty dict if none.
+
+    Supports legacy formats:
+    - list ["video-1", ...] -> {"video-1": {"at": ""}}
+    - dict {"video-1": "2026-..."} -> {"video-1": {"at": "2026-..."}}
+    """
     path = PROCESSED_DIR / "video_progress.json"
     if not path.exists():
         return {}
@@ -29,18 +35,26 @@ def _load_watched() -> dict[str, str]:
         data = json.load(f)
     watched = data.get("watched", {})
     if isinstance(watched, list):
-        # 旧格式兼容：["video-1", ...] -> {"video-1": ""}
-        return {vid: "" for vid in watched}
-    return watched if isinstance(watched, dict) else {}
+        return {vid: {"at": "", "minutes": 0} for vid in watched}
+    if isinstance(watched, dict):
+        result = {}
+        for vid, val in watched.items():
+            if isinstance(val, dict):
+                result[vid] = val
+            else:
+                # 旧格式：值可能是时间字符串
+                result[vid] = {"at": val if isinstance(val, str) else "", "minutes": 0}
+        return result
+    return {}
 
 
-def _save_watched(watched: dict[str, str]) -> None:
+def _save_watched(watched: dict[str, dict]) -> None:
     path = PROCESSED_DIR / "video_progress.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"watched": watched}, f, ensure_ascii=False, indent=2)
 
 
-def _mark_completed(videos: list[VideoItem], watched: dict[str, str]) -> list[VideoItem]:
+def _mark_completed(videos: list[VideoItem], watched: dict[str, dict]) -> list[VideoItem]:
     for v in videos:
         v.completed = v.id in watched
     return videos
@@ -78,14 +92,23 @@ async def get_course_videos(course_id: str):
     return _mark_completed(result, watched)
 
 
+class CompleteRequest(BaseModel):
+    """Mark video as watched, with optional actual watch minutes."""
+    minutes: int = 0
+
+
 @router.post("/{video_id}/complete")
-async def complete_video(video_id: str):
-    """Mark a video as watched by the user (persisted), recording the timestamp."""
+async def complete_video(video_id: str, req: CompleteRequest | None = None):
+    """Mark a video as watched by the user (persisted), recording timestamp and watch minutes."""
     items = _load_videos()
     if not any(v.id == video_id for v in items):
         raise HTTPException(status_code=404, detail="Video not found")
     watched = _load_watched()
-    # 记录看完时间（自然日统计需要）
-    watched[video_id] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    minutes = (req.minutes if req else 0) or 0
+    # 记录看完时间与观看分钟（用于自然日/时长统计）
+    watched[video_id] = {
+        "at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "minutes": minutes,
+    }
     _save_watched(watched)
-    return {"video_id": video_id, "watched_count": len(watched)}
+    return {"video_id": video_id, "watched_count": len(watched), "minutes": minutes}

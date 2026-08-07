@@ -57,31 +57,41 @@ async def get_learning_stats():
     if not isinstance(videos, list):
         videos = []
 
-    # watched: {video_id: watched_at_str}
+    # watched: {video_id: {at, minutes}}（兼容旧格式 {video_id: ts}）
     watched = {}
     if (PROCESSED_DIR / "video_progress.json").exists():
         try:
             progress = _load_json("video_progress.json")
             raw = progress.get("watched", {})
             if isinstance(raw, dict):
-                watched = raw
+                for vid, val in raw.items():
+                    if isinstance(val, dict):
+                        watched[vid] = val
+                    else:
+                        watched[vid] = {"at": val if isinstance(val, str) else "", "minutes": 0}
             elif isinstance(raw, list):
-                watched = {vid: "" for vid in raw}
+                watched = {vid: {"at": "", "minutes": 0} for vid in raw}
         except Exception:
             watched = {}
 
     watched_videos = [v for v in videos if v.get("id") in watched]
     watched_count = len(watched_videos)
-    total_seconds = sum(v.get("duration", 0) for v in watched_videos)
+    # 总时长 = 实际观看分钟数累计（分钟转小时）
+    total_minutes = sum(
+        (w.get("minutes", 0) or 0) if isinstance(w, dict) else 0
+        for w in watched.values()
+    )
+    total_hours = round(total_minutes / 60)
 
     # 连续学习天数：从今天往前，统计连续有学习行为的自然日
     from datetime import datetime, timedelta
     learning_dates = set()
-    for ts in watched.values():
-        if not ts:
+    for w in watched.values():
+        at = w.get("at", "") if isinstance(w, dict) else ""
+        if not at:
             continue
         try:
-            d = datetime.strptime(ts[:10], "%Y-%m-%d").date()
+            d = datetime.strptime(at[:10], "%Y-%m-%d").date()
             learning_dates.add(d)
         except ValueError:
             continue
@@ -115,7 +125,7 @@ async def get_learning_stats():
 
     return LearningStats(
         learningDays=streak,
-        totalHours=round(total_seconds / 3600),
+        totalHours=total_hours,
         completedProjects=projects_done,
         completedLessons=watched_count,
     )

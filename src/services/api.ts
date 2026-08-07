@@ -138,9 +138,9 @@ export const fetchCourseVideos = async (courseId: string): Promise<Video[]> => {
   return apiGet<Video[]>(`/api/videos/course/${courseId}`);
 };
 
-/** 标记视频为已看完（持久化） */
-export const completeVideo = async (videoId: string): Promise<{ video_id: string; watched_count: number }> => {
-  return apiPost<{ video_id: string; watched_count: number }>(`/api/videos/${videoId}/complete`, {});
+/** 标记视频为已看完（持久化），minutes 为实际观看分钟数 */
+export const completeVideo = async (videoId: string, minutes: number = 0): Promise<{ video_id: string; watched_count: number; minutes: number }> => {
+  return apiPost<{ video_id: string; watched_count: number; minutes: number }>(`/api/videos/${videoId}/complete`, { minutes });
 };
 
 // ============ 测评系统 API ============

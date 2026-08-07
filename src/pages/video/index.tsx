@@ -40,6 +40,8 @@ const VideoPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [biliError, setBiliError] = useState(false);
   const [watchedLoading, setWatchedLoading] = useState(false);
+  // 记录进入视频页的时间，用于估算实际观看分钟数
+  const enterTimeRef = useRef<number>(Date.now());
   const iframeLoadedRef = useRef(false);
   const iframeTimerRef = useRef<any>(null);
 
@@ -171,7 +173,10 @@ const VideoPage: React.FC = () => {
     if (!currentVideo || watchedLoading) return;
     setWatchedLoading(true);
     try {
-      await completeVideo(currentVideo.id);
+      // 估算实际观看分钟数：进入视频页到点击"已看完"的停留时间
+      const elapsedMs = Date.now() - enterTimeRef.current;
+      const minutes = Math.max(1, Math.round(elapsedMs / 60000));
+      await completeVideo(currentVideo.id, minutes);
       setCurrentVideo((prev) => (prev ? { ...prev, completed: true } : prev));
       Taro.showToast({ title: '已确认看完本视频', icon: 'success' });
     } catch (err) {

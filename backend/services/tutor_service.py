@@ -106,6 +106,9 @@ def chat(
 ) -> dict:
     """Generate concise AI tutor response.
 
+    Preferred path: Zhipu GLM API (cloud) with course-RAG context.
+    Fallback: local Qwen LoRA model (requires GPU).
+
     Args:
         question: Student's question
         system_prompt: Optional custom system prompt
@@ -115,10 +118,6 @@ def chat(
     Returns:
         Response dict with answer and metadata
     """
-    cache = _load_model()
-    tokenizer = cache["tokenizer"]
-    model = cache["model"]
-
     if system_prompt is None:
         system_prompt = (
             "你是一位 AI 学习导师，请用中文直接作答。"
@@ -126,6 +125,68 @@ def chat(
             "分点回答时仅使用 1. 2. 3.，不要 Markdown 符号。"
             "控制在 4 行以内，每点一句话结论。"
         )
+
+    # 1. 优先走智谱 GLM API（若配置了 key）
+    try:
+        from config import ZHIPU_API_KEY
+        if ZHIPU_API_KEY:
+            return _chat_zhipu(question, system_prompt, max_new_tokens, temperature)
+    except Exception:
+        pass
+
+    # 2. 回退：本地 Qwen LoRA 模型
+    return _chat_local(question, system_prompt, max_new_tokens, temperature)
+
+
+def _chat_zhipu(question, system_prompt, max_new_tokens, temperature) -> dict:
+    """Call Zhipu GLM API with course-RAG context."""
+    import requests
+    from config import ZHIPU_API_KEY, ZHIPU_API_URL
+
+    # 检索课程知识库，把相关内容拼入上下文
+    context = ""
+    try:
+        from services.knowledge_base import retrieve_context
+        context = retrieve_context(question, k=4)
+    except Exception:
+        context = ""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    if context:
+        messages.append({
+            "role": "system",
+            "content": "以下是从课程资料中检索到的相关知识，回答时优先参考：\n" + context,
+        })
+    messages.append({"role": "user", "content": question})
+
+    resp = requests.post(
+        ZHIPU_API_URL,
+        headers={"Authorization": f"Bearer {ZHIPU_API_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": "glm-4-flash",
+            "messages": messages,
+            "max_tokens": max_new_tokens,
+            "temperature": temperature,
+        },
+        timeout=60,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    answer = data["choices"][0]["message"]["content"]
+
+    return {
+        "question": question,
+        "answer": _cleanup_response(answer),
+        "model": "glm-4-flash (Zhipu)",
+        "tokens_generated": data.get("usage", {}).get("total_tokens", 0),
+    }
+
+
+def _chat_local(question, system_prompt, max_new_tokens, temperature) -> dict:
+    """Fallback: local Qwen LoRA model."""
+    cache = _load_model()
+    tokenizer = cache["tokenizer"]
+    model = cache["model"]
 
     messages = [
         {"role": "system", "content": system_prompt},

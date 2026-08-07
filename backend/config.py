@@ -3,6 +3,11 @@
 import os
 from pathlib import Path
 
+# Load backend/.env (gitignored) — holds secrets like ZHIPU_API_KEY.
+from dotenv import load_dotenv
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
 # Project root
 BASE_DIR = Path(__file__).parent
 
@@ -18,6 +23,10 @@ for d in [RAW_DIR, PROCESSED_DIR, KNOWLEDGE_BASE_DIR]:
 # Server config
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
+
+# Zhipu AI (GLM) API key — loaded from backend/.env (gitignored). Never hardcode.
+ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
+ZHIPU_API_URL = os.getenv("ZHIPU_API_URL", "https://open.bigmodel.cn/api/paas/v4/chat/completions")
 
 # Dataset config
 FIREWEB_EDU_SAMPLE = "sample-10BT"  # Can also use "sample-100BT", "sample-350BT"

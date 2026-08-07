@@ -53,12 +53,41 @@ class AnalyzeResponse(BaseModel):
 
 @router.post("/tutor/chat", response_model=TutorResponse)
 async def tutor_chat(req: TutorRequest):
-    """AI tutor: answer student questions using fine-tuned Qwen model."""
+    """AI tutor: answer student questions.
+
+    Primary: Zhipu GLM API (fast, no local model loading) with course-RAG.
+    Fallback: local Qwen LoRA model (requires GPU).
+    """
+    if req.system_prompt is None:
+        system_prompt = (
+            "你是一位 AI 学习导师，请用中文直接作答。"
+            "只保留核心要点，去掉铺垫、重复和客套。"
+            "分点回答时仅使用 1. 2. 3.，不要 Markdown 符号。"
+            "控制在 4 行以内，每点一句话结论。"
+        )
+    else:
+        system_prompt = req.system_prompt
+
+    # 1. 智谱 GLM（轻量，不加载本地模型）
+    try:
+        from services.zhipu_service import chat_zhipu
+        if chat_zhipu.__module__:  # module importable
+            result = chat_zhipu(
+                question=req.question,
+                system_prompt=system_prompt,
+                max_new_tokens=req.max_new_tokens,
+                temperature=req.temperature,
+            )
+            return TutorResponse(**result)
+    except Exception:
+        pass
+
+    # 2. 回退：本地 Qwen LoRA（import 会加载 torch，慢）
     try:
         from services.tutor_service import chat
         result = chat(
             question=req.question,
-            system_prompt=req.system_prompt,
+            system_prompt=system_prompt,
             max_new_tokens=req.max_new_tokens,
             temperature=req.temperature,
         )

@@ -96,6 +96,11 @@ export const fetchProjects = async (difficulty?: string): Promise<Project[]> => 
   return apiGet<Project[]>(`/api/projects${query}`);
 };
 
+/** 推进项目一步（完成当前步骤），返回更新后的项目 */
+export const advanceProject = async (projectId: string): Promise<Project> => {
+  return apiPost<Project>(`/api/projects/${projectId}/advance`, {});
+};
+
 /** 获取项目分类 */
 export const fetchProjectCategories = async () => {
   const data = await apiGet<{ topics: string[] }>('/api/projects/topics');

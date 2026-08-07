@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchProjects } from '@/services/api';
+import { fetchProjects, advanceProject } from '@/services/api';
 import { getDifficultyLabel, getDifficultyColor } from '@/utils/index';
 import type { Project } from '@/types/index';
 import styles from './index.module.scss';
@@ -10,6 +10,7 @@ import styles from './index.module.scss';
 const ProjectDetailPage: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [advancing, setAdvancing] = useState(false);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -27,6 +28,20 @@ const ProjectDetailPage: React.FC = () => {
     loadProject();
   }, []);
 
+  const handleAdvance = async () => {
+    if (!project || advancing) return;
+    setAdvancing(true);
+    try {
+      const updated = await advanceProject(project.id);
+      setProject(updated);
+    } catch (err) {
+      console.error('[ProjectDetail] advance error:', err);
+      Taro.showToast({ title: '操作失败，请重试', icon: 'none' });
+    } finally {
+      setAdvancing(false);
+    }
+  };
+
   if (loading) {
     return (
       <View className={styles.page}>
@@ -43,14 +58,16 @@ const ProjectDetailPage: React.FC = () => {
     );
   }
 
-  // 项目分步指南：优先用项目数据里的 steps，否则回退到通用步骤
-  const steps: { id: number; title: string; desc: string; status: 'pending' | 'current' | 'completed' }[] =
+  // 项目分步指南：优先用项目数据里的 steps（含 guide/acceptance/status），否则回退通用
+  const steps: { id: number; title: string; desc: string; guide?: string; acceptance?: string; status: 'pending' | 'current' | 'completed' }[] =
     (project.steps && project.steps.length > 0
       ? project.steps.map((s, i) => ({
           id: i + 1,
           title: s.title,
           desc: (s as any).desc || (s as any).description || '',
-          status: (i === 0 ? 'current' : 'pending') as 'pending' | 'current' | 'completed',
+          guide: (s as any).guide || '',
+          acceptance: (s as any).acceptance || '',
+          status: ((s as any).status || (i === 0 ? 'current' : 'pending')) as 'pending' | 'current' | 'completed',
         }))
       : [
           { id: 1, title: '环境准备与项目初始化', desc: '安装依赖，创建项目骨架', status: 'completed' as const },
@@ -125,20 +142,32 @@ const ProjectDetailPage: React.FC = () => {
               <View className={styles.stepContent}>
                 <Text className={styles.stepTitle}>{step.title}</Text>
                 <Text className={styles.stepDesc}>{step.desc}</Text>
+                {step.status === 'current' && step.guide && (
+                  <View className={styles.stepGuide}>
+                    <Text className={styles.stepGuideLabel}>📋 操作指引</Text>
+                    <Text className={styles.stepGuideText}>{step.guide}</Text>
+                  </View>
+                )}
+                {step.status === 'current' && step.acceptance && (
+                  <View className={styles.stepAcceptance}>
+                    <Text className={styles.stepAcceptanceLabel}>✅ 验收标准</Text>
+                    <Text className={styles.stepAcceptanceText}>{step.acceptance}</Text>
+                  </View>
+                )}
               </View>
             </View>
           ))}
         </View>
 
-        <View className={styles.button} onClick={() => {
-          if (project.isFree || project.status !== 'locked') {
-            Taro.showToast({ title: '开始项目', icon: 'success' });
-          } else {
-            Taro.showToast({ title: '请先购买项目', icon: 'none' });
-          }
-        }}>
+        <View className={styles.button} onClick={handleAdvance}>
           <Text className={styles.buttonText}>
-            {project.status === 'locked' ? '未解锁' : '开始项目'}
+            {advancing
+              ? '处理中...'
+              : project.status === 'completed'
+                ? '🎉 项目已完成'
+                : project.progress > 0
+                  ? '完成当前步骤'
+                  : '开始项目'}
           </Text>
         </View>
       </View>

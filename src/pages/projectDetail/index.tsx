@@ -43,13 +43,22 @@ const ProjectDetailPage: React.FC = () => {
     );
   }
 
-  const steps = [
-    { id: 1, title: '环境准备与项目初始化', desc: '安装依赖，创建项目骨架', status: 'completed' as const },
-    { id: 2, title: '核心功能实现', desc: '实现主要业务逻辑', status: 'current' as const },
-    { id: 3, title: '代码测试与调试', desc: '运行测试，修复 Bug', status: 'pending' as const },
-    { id: 4, title: '项目优化与文档', desc: '代码优化，撰写文档', status: 'pending' as const },
-    { id: 5, title: '提交与展示', desc: '提交项目，生成作品集', status: 'pending' as const },
-  ];
+  // 项目分步指南：优先用项目数据里的 steps，否则回退到通用步骤
+  const steps: { id: number; title: string; desc: string; status: 'pending' | 'current' | 'completed' }[] =
+    (project.steps && project.steps.length > 0
+      ? project.steps.map((s, i) => ({
+          id: i + 1,
+          title: s.title,
+          desc: (s as any).desc || (s as any).description || '',
+          status: (i === 0 ? 'current' : 'pending') as 'pending' | 'current' | 'completed',
+        }))
+      : [
+          { id: 1, title: '环境准备与项目初始化', desc: '安装依赖，创建项目骨架', status: 'completed' as const },
+          { id: 2, title: '核心功能实现', desc: '实现主要业务逻辑', status: 'current' as const },
+          { id: 3, title: '代码测试与调试', desc: '运行测试，修复 Bug', status: 'pending' as const },
+          { id: 4, title: '项目优化与文档', desc: '代码优化，撰写文档', status: 'pending' as const },
+          { id: 5, title: '提交与展示', desc: '提交项目，生成作品集', status: 'pending' as const },
+        ]);
 
   const diffColor = getDifficultyColor(project.difficulty);
 

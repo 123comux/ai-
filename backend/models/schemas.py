@@ -115,6 +115,8 @@ class ProjectItem(BaseModel):
     progress: int = 0
     isFree: bool = True
     price: int = 0
+    # 项目分步实践指南
+    steps: list[dict] = Field(default=[])
 
 
 # ---- Learning Path ----

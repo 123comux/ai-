@@ -99,6 +99,8 @@ export interface Project {
   progress: number;
   isFree: boolean;
   price: number;
+  /** 项目分步实践指南 */
+  steps?: { title: string; desc?: string; description?: string }[];
 }
 
 // 项目步骤

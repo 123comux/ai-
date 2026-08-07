@@ -41,11 +41,11 @@ async def get_job_matching():
 
 @router.get("/learning-stats", response_model=LearningStats)
 async def get_learning_stats():
-    """Get learning statistics, computed from real user progress (video_progress).
+    """Get learning statistics from real user progress (video_progress).
 
-    - learningDays: 已看完的视频数（真实学习行为）
+    - learningDays: 连续学习天数（从今天往前，连续有学习行为的自然日数）
     - totalHours: 已看完视频的时长总和（秒转小时）
-    - completedLessons: 已看完视频数（与 learningDays 一致，表示已学内容量）
+    - completedLessons: 已看完视频数
     - completedProjects: 各学习路径中已完成的项目节点数（实时）
     """
     videos = []
@@ -57,17 +57,45 @@ async def get_learning_stats():
     if not isinstance(videos, list):
         videos = []
 
-    watched = set()
+    # watched: {video_id: watched_at_str}
+    watched = {}
     if (PROCESSED_DIR / "video_progress.json").exists():
         try:
             progress = _load_json("video_progress.json")
-            watched = set(progress.get("watched", []))
+            raw = progress.get("watched", {})
+            if isinstance(raw, dict):
+                watched = raw
+            elif isinstance(raw, list):
+                watched = {vid: "" for vid in raw}
         except Exception:
-            watched = set()
+            watched = {}
 
     watched_videos = [v for v in videos if v.get("id") in watched]
     watched_count = len(watched_videos)
     total_seconds = sum(v.get("duration", 0) for v in watched_videos)
+
+    # 连续学习天数：从今天往前，统计连续有学习行为的自然日
+    from datetime import datetime, timedelta
+    learning_dates = set()
+    for ts in watched.values():
+        if not ts:
+            continue
+        try:
+            d = datetime.strptime(ts[:10], "%Y-%m-%d").date()
+            learning_dates.add(d)
+        except ValueError:
+            continue
+
+    streak = 0
+    if learning_dates:
+        today = datetime.now().date()
+        cur = today
+        # 今天若还没有学习行为，从昨天开始算（保持 streak 展示，不因今天未学就清零）
+        if cur not in learning_dates:
+            cur -= timedelta(days=1)
+        while cur in learning_dates:
+            streak += 1
+            cur -= timedelta(days=1)
 
     # 完成项目：path_progress 中已完成的项目节点（type=project）数
     projects_done = 0
@@ -86,7 +114,7 @@ async def get_learning_stats():
                     projects_done += 1
 
     return LearningStats(
-        learningDays=watched_count,
+        learningDays=streak,
         totalHours=round(total_seconds / 3600),
         completedProjects=projects_done,
         completedLessons=watched_count,

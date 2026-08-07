@@ -1,6 +1,7 @@
 """Videos API router."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 
@@ -19,22 +20,27 @@ def _load_videos() -> list[VideoItem]:
     return [VideoItem(**v) for v in data]
 
 
-def _load_watched() -> set[str]:
+def _load_watched() -> dict[str, str]:
+    """Load watched videos: {video_id: watched_at_iso}. Empty dict if none."""
     path = PROCESSED_DIR / "video_progress.json"
     if not path.exists():
-        return set()
+        return {}
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    return set(data.get("watched", []))
+    watched = data.get("watched", {})
+    if isinstance(watched, list):
+        # 旧格式兼容：["video-1", ...] -> {"video-1": ""}
+        return {vid: "" for vid in watched}
+    return watched if isinstance(watched, dict) else {}
 
 
-def _save_watched(watched: set[str]) -> None:
+def _save_watched(watched: dict[str, str]) -> None:
     path = PROCESSED_DIR / "video_progress.json"
     with open(path, "w", encoding="utf-8") as f:
-        json.dump({"watched": sorted(watched)}, f, ensure_ascii=False, indent=2)
+        json.dump({"watched": watched}, f, ensure_ascii=False, indent=2)
 
 
-def _mark_completed(videos: list[VideoItem], watched: set[str]) -> list[VideoItem]:
+def _mark_completed(videos: list[VideoItem], watched: dict[str, str]) -> list[VideoItem]:
     for v in videos:
         v.completed = v.id in watched
     return videos
@@ -74,11 +80,12 @@ async def get_course_videos(course_id: str):
 
 @router.post("/{video_id}/complete")
 async def complete_video(video_id: str):
-    """Mark a video as watched by the user (persisted)."""
+    """Mark a video as watched by the user (persisted), recording the timestamp."""
     items = _load_videos()
     if not any(v.id == video_id for v in items):
         raise HTTPException(status_code=404, detail="Video not found")
     watched = _load_watched()
-    watched.add(video_id)
+    # 记录看完时间（自然日统计需要）
+    watched[video_id] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     _save_watched(watched)
     return {"video_id": video_id, "watched_count": len(watched)}

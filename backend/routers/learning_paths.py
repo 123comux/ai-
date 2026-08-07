@@ -156,23 +156,44 @@ def _save_progress(progress: dict[str, list[str]]) -> None:
 
 
 def _apply_user_progress(path: LearningPathItem, completed: set[str]) -> LearningPathItem:
-    """Merge user-completed node ids into a path's node statuses.
+    """Merge user-completed node ids + video-watched state into a path's nodes.
 
-    Recomputes a clean chain: completed nodes stay completed, the first
-    non-completed node becomes current, everything after stays locked.
+    - Course node progress = 该课程已看完视频 / 总视频数（视频粒度，看一个视频进度就涨）
+    - 课程视频全部看完的节点自动视为完成（无需手动"标记完成"），但仅在前面节点都已
+      完成时生效（保持顺序解锁），这样路径里重复出现的已学课程能直接解锁下一节。
     """
+    from routers.videos import _load_videos, _load_watched
+
+    videos = _load_videos()
+    watched = _load_watched()
+
+    node_progress: dict[str, int] = {}
+    auto_completed: set[str] = set()
+    for node in path.nodes:
+        if node.type == "course" and node.courseId:
+            course_videos = [v for v in videos if v.courseId == node.courseId]
+            if course_videos:
+                watched_count = sum(1 for v in course_videos if v.id in watched)
+                node_progress[node.id] = round(watched_count / len(course_videos) * 100)
+                if watched_count == len(course_videos):
+                    auto_completed.add(node.id)
+
     all_completed = {n.id for n in path.nodes if n.status == "completed"} | completed
     current_set = False
     for node in path.nodes:
-        if node.id in all_completed:
+        node_done = node.id in all_completed
+        # 自动完成仅当前面尚未出现未完成节点（保持顺序解锁）
+        auto_done = (not current_set) and (node.id in auto_completed)
+        if node_done or auto_done:
             node.status = "completed"
-            node.progress = 100
+            node.progress = node_progress.get(node.id, 100)
         elif not current_set:
             node.status = "current"
+            node.progress = node_progress.get(node.id, 0)
             current_set = True
         else:
             node.status = "locked"
-            node.progress = 0
+            node.progress = node_progress.get(node.id, 0)
     return path
 
 

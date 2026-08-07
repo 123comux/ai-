@@ -62,7 +62,9 @@ const LearningPathPage: React.FC = () => {
 
   const completedNodes = currentPath.nodes.filter((n) => n.status === 'completed').length;
   const totalNodes = currentPath.nodes.length;
-  const percent = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
+  // 整体进度按各节点视频粒度 progress 的平均值（看完一个视频，进度实时上涨）
+  const totalProgress = currentPath.nodes.reduce((sum, n) => sum + (n.progress || 0), 0);
+  const percent = totalNodes > 0 ? Math.round(totalProgress / totalNodes) : 0;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -87,7 +89,7 @@ const LearningPathPage: React.FC = () => {
               第 {currentPath.currentWeek}/{currentPath.totalWeeks} 周
             </Text>
             <Text className={styles.progressText}>
-              {completedNodes}/{totalNodes} 项完成
+              {percent}% · {completedNodes}/{totalNodes} 项完成
             </Text>
           </View>
           <ProgressBar percent={percent} height={8} />

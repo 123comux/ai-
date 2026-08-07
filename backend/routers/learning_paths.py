@@ -250,14 +250,15 @@ async def complete_node(path_id: str, node_id: str):
     if node is None:
         raise HTTPException(status_code=404, detail="Node not found in path")
 
-    # 解锁约束：只能完成当前（current）节点，locked 节点不可越级完成
+    # 解锁约束：locked 节点不可越级完成；auto-completed（视频看完自动完成）的节点
+    # 允许再次"标记完成"（幂等），避免误报"请先完成前一个节点"
     progress = _load_progress()
     completed = set(progress.get(path_id, []))
     if node.id in completed:
         return _apply_user_progress(base, completed)
     effective = _apply_user_progress(base, completed)
-    current_node = next((n for n in effective.nodes if n.status == "current"), None)
-    if current_node is None or current_node.id != node_id:
+    node_effective = next((n for n in effective.nodes if n.id == node_id), None)
+    if node_effective is None or node_effective.status == "locked":
         raise HTTPException(status_code=400, detail="请先完成前一个节点")
 
     # 课程节点：先校验该课程全部视频已看完

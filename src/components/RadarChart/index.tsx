@@ -14,13 +14,12 @@ const IS_WEAPP = process.env.TARO_ENV === 'weapp';
 const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
   const canvasId = useRef(`radar-${Math.random().toString(36).slice(2, 9)}`).current;
 
-  // 小程序端：Canvas 2d 绘制
+  // 小程序端：Canvas 绘制（用 createCanvasContext 经典 API，稳定跨端）
   useEffect(() => {
     if (!IS_WEAPP || !dimensions || dimensions.length === 0) return;
-    let ctx: any = null;
 
     const draw = () => {
-      if (!ctx) return;
+      const ctx = Taro.createCanvasContext(canvasId);
       const center = size / 2;
       const radius = size / 2 - 70;
       const angleStep = (Math.PI * 2) / dimensions.length;
@@ -31,9 +30,8 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
         return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
       };
 
-      ctx.clearRect(0, 0, size, size);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#e5e6eb';
+      ctx.setStrokeStyle('#e5e6eb');
+      ctx.setLineWidth(2);
       for (let level = 0.25; level <= 1; level += 0.25) {
         ctx.beginPath();
         dimensions.forEach((_, i) => {
@@ -59,47 +57,33 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
         else ctx.lineTo(p.x, p.y);
       });
       ctx.closePath();
-      ctx.fillStyle = 'rgba(22, 93, 255, 0.15)';
+      ctx.setFillStyle('rgba(22, 93, 255, 0.15)');
       ctx.fill();
-      ctx.strokeStyle = '#165dff';
-      ctx.lineWidth = 3;
+      ctx.setStrokeStyle('#165dff');
+      ctx.setLineWidth(3);
       ctx.stroke();
       dimensions.forEach((dim, i) => {
         const ratio = dim.maxScore > 0 ? dim.score / dim.maxScore : 0;
         const p = getPoint(i, ratio);
         ctx.beginPath();
         ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#165dff';
+        ctx.setFillStyle('#165dff');
         ctx.fill();
       });
-      ctx.font = '14px sans-serif';
-      ctx.fillStyle = '#4e5969';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.setFillStyle('#4e5969');
+      ctx.setTextAlign('center');
+      ctx.setTextBaseline('middle');
+      ctx.setFontSize(14);
       dimensions.forEach((dim, i) => {
         const p = getPoint(i, 1.18);
         ctx.fillText(dim.label, p.x, p.y);
       });
+      ctx.draw();
     };
 
-    const init = () => {
-      Taro.createSelectorQuery()
-        .select(`#${canvasId}`)
-        .fields({ node: true, size: true })
-        .exec((res) => {
-          const info = res && res[0];
-          if (!info || !info.node) return;
-          const canvas = info.node;
-          const dpr = Taro.getSystemInfoSync().pixelRatio || 1;
-          canvas.width = info.width * dpr;
-          canvas.height = info.height * dpr;
-          ctx = canvas.getContext('2d');
-          ctx.scale(dpr, dpr);
-          draw();
-        });
-    };
-
-    setTimeout(init, 50);
+    const t1 = setTimeout(draw, 100);
+    const t2 = setTimeout(draw, 400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [dimensions, size, canvasId]);
 
   // H5 端：SVG 绘制（小程序不支持 svg）
@@ -163,8 +147,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
   return (
     <View className={styles.chart}>
       <Canvas
-        id={canvasId}
-        type="2d"
+        canvasId={canvasId}
         className={styles.canvas}
         style={{ width: `${size / 2.5}rpx`, height: `${size / 2.5}rpx` }}
       />

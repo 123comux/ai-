@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image, Video } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { fetchVideos, fetchCourseDetail } from '@/services/api';
+import { fetchVideos, fetchCourseDetail, completeVideo } from '@/services/api';
 import { formatDuration } from '@/utils/index';
 import type { Video as VideoType, Chapter } from '@/types/index';
 import styles from './index.module.scss';
@@ -28,6 +28,7 @@ const VideoPage: React.FC = () => {
   const [currentVideo, setCurrentVideo] = useState<VideoType | null>(null);
   const [loading, setLoading] = useState(true);
   const [biliError, setBiliError] = useState(false);
+  const [watchedLoading, setWatchedLoading] = useState(false);
   const iframeLoadedRef = useRef(false);
   const iframeTimerRef = useRef<any>(null);
 
@@ -148,6 +149,21 @@ const VideoPage: React.FC = () => {
     setCurrentVideo(video);
     setBiliError(false);
     iframeLoadedRef.current = false;
+  };
+
+  const handleMarkWatched = async () => {
+    if (!currentVideo || watchedLoading) return;
+    setWatchedLoading(true);
+    try {
+      await completeVideo(currentVideo.id);
+      setCurrentVideo((prev) => (prev ? { ...prev, completed: true } : prev));
+      Taro.showToast({ title: '已确认看完本视频', icon: 'success' });
+    } catch (err) {
+      console.error('[Video] mark watched failed:', err);
+      Taro.showToast({ title: '确认失败，请重试', icon: 'none' });
+    } finally {
+      setWatchedLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -314,6 +330,16 @@ const VideoPage: React.FC = () => {
             <View className={styles.qualityTag}><Text>{currentVideo.quality.watermark}</Text></View>
           </View>
         )}
+
+        {/* 看完确认按钮 */}
+        <View
+          className={`${styles.watchedBtn} ${currentVideo.completed ? styles.watchedBtnDone : ''}`}
+          onClick={handleMarkWatched}
+        >
+          <Text className={styles.watchedBtnText}>
+            {currentVideo.completed ? '✓ 已看完' : watchedLoading ? '确认中...' : '我已看完本视频'}
+          </Text>
+        </View>
       </View>
 
       {/* 视频列表标题 */}

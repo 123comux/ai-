@@ -74,9 +74,11 @@ const CourseDetailPage: React.FC = () => {
       await completeLearningPathNode(pathId, nodeId);
       setCompleted(true);
       Taro.showToast({ title: '已完成，下一个已解锁', icon: 'success' });
-    } catch (err) {
+    } catch (err: any) {
       console.error('[CourseDetail] complete failed:', err);
-      Taro.showToast({ title: '标记失败，请重试', icon: 'none' });
+      const msg = err?.message || '标记失败，请重试';
+      // 后端 400 返回如"还有 n/m 个视频未看完"
+      Taro.showToast({ title: msg.slice(0, 40), icon: 'none' });
     } finally {
       setCompleting(false);
     }

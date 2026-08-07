@@ -142,6 +142,8 @@ export interface Video {
   duration: number;
   chapter: string;
   courseId: string;
+  /** 用户是否已确认看完本视频 */
+  completed?: boolean;
 }
 
 // 岗位对标结果

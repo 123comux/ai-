@@ -207,12 +207,27 @@ async def complete_node(path_id: str, node_id: str):
     """Mark a node as completed; the next locked node becomes current.
 
     Persists completion in path_progress.json so it survives restarts.
+    For course nodes, the course's videos must all be watched first.
     """
     base = _get_base_path(path_id)
     if base is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
-    if not any(n.id == node_id for n in base.nodes):
+    node = next((n for n in base.nodes if n.id == node_id), None)
+    if node is None:
         raise HTTPException(status_code=404, detail="Node not found in path")
+
+    # 课程节点：先校验该课程全部视频已看完
+    if node.type == "course" and node.courseId:
+        from routers.videos import _load_videos, _load_watched
+        course_videos = [v for v in _load_videos() if v.courseId == node.courseId]
+        if course_videos:
+            watched = _load_watched()
+            un_watched = [v for v in course_videos if v.id not in watched]
+            if un_watched:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"还有 {len(un_watched)}/{len(course_videos)} 个视频未看完：{', '.join(v.id for v in un_watched)}",
+                )
 
     progress = _load_progress()
     completed = set(progress.get(path_id, []))

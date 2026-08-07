@@ -306,6 +306,34 @@
   border-radius: $radius-round;
 }
 
+// 已看完按钮
+.watchedBtn {
+  margin-top: $spacing-md;
+  width: 100%;
+  height: $button-height-md;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.watchedBtnDone {
+  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
+  pointer-events: none;
+}
+
+.watchedBtnText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
 // 视频列表标题
 .listHeader {
   display: flex;

@@ -42,7 +42,12 @@ async function apiPost<T>(path: string, body: Record<string, unknown>, timeoutMs
     timeout: timeoutMs,
     dataType: 'json',
   });
-  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  if (res.statusCode !== 200) {
+    // 后端 FastAPI 错误响应带 detail 字段（如"还有 n/m 个视频未看完"）
+    const detail = (res.data as any)?.detail;
+    const msg = typeof detail === 'string' ? detail : `HTTP ${res.statusCode}`;
+    throw new Error(msg);
+  }
   return res.data;
 }
 
@@ -126,6 +131,11 @@ export const fetchVideos = async (courseId?: string): Promise<Video[]> => {
 /** 获取课程视频 */
 export const fetchCourseVideos = async (courseId: string): Promise<Video[]> => {
   return apiGet<Video[]>(`/api/videos/course/${courseId}`);
+};
+
+/** 标记视频为已看完（持久化） */
+export const completeVideo = async (videoId: string): Promise<{ video_id: string; watched_count: number }> => {
+  return apiPost<{ video_id: string; watched_count: number }>(`/api/videos/${videoId}/complete`, {});
 };
 
 // ============ 测评系统 API ============

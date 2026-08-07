@@ -19,6 +19,27 @@ def _load_videos() -> list[VideoItem]:
     return [VideoItem(**v) for v in data]
 
 
+def _load_watched() -> set[str]:
+    path = PROCESSED_DIR / "video_progress.json"
+    if not path.exists():
+        return set()
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return set(data.get("watched", []))
+
+
+def _save_watched(watched: set[str]) -> None:
+    path = PROCESSED_DIR / "video_progress.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"watched": sorted(watched)}, f, ensure_ascii=False, indent=2)
+
+
+def _mark_completed(videos: list[VideoItem], watched: set[str]) -> list[VideoItem]:
+    for v in videos:
+        v.completed = v.id in watched
+    return videos
+
+
 @router.get("", response_model=list[VideoItem])
 async def list_videos(
     course_id: str = Query(None, description="Filter by course ID"),
@@ -27,7 +48,8 @@ async def list_videos(
     items = _load_videos()
     if course_id:
         items = [v for v in items if v.courseId == course_id]
-    return items
+    watched = _load_watched()
+    return _mark_completed(items, watched)
 
 
 @router.get("/{video_id}", response_model=VideoItem)
@@ -36,13 +58,27 @@ async def get_video(video_id: str):
     items = _load_videos()
     for v in items:
         if v.id == video_id:
-            return v
+            watched = _load_watched()
+            return _mark_completed([v], watched)[0]
     raise HTTPException(status_code=404, detail="Video not found")
 
 
 @router.get("/course/{course_id}", response_model=list[VideoItem])
 async def get_course_videos(course_id: str):
-    """Get all videos for a course."""
+    """Get all videos for a course, with watched flags."""
     items = _load_videos()
     result = [v for v in items if v.courseId == course_id]
-    return result
+    watched = _load_watched()
+    return _mark_completed(result, watched)
+
+
+@router.post("/{video_id}/complete")
+async def complete_video(video_id: str):
+    """Mark a video as watched by the user (persisted)."""
+    items = _load_videos()
+    if not any(v.id == video_id for v in items):
+        raise HTTPException(status_code=404, detail="Video not found")
+    watched = _load_watched()
+    watched.add(video_id)
+    _save_watched(watched)
+    return {"video_id": video_id, "watched_count": len(watched)}

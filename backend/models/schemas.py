@@ -207,3 +207,4 @@ class VideoItem(BaseModel):
     duration: int
     chapter: str
     courseId: str
+    completed: bool = False  # 用户是否已确认看完本视频（来自 video_progress.json）

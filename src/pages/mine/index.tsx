@@ -3,28 +3,24 @@ import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
 import { useUserStore } from '@/store/useUserStore';
-import { fetchAbilityReport, fetchLearningRecords, fetchLearningStats, fetchMenuItems } from '@/services/api';
-import type { LearningRecord } from '@/types/index';
+import { fetchAbilityReport, fetchLearningStats, fetchMenuItems } from '@/services/api';
 import type { MenuItem } from '@/services/api';
 import styles from './index.module.scss';
 
 const MinePage: React.FC = () => {
-  const { nickname, avatar, grade, major, targetDirection } = useUserStore();
+  const { nickname, avatar } = useUserStore();
   const [abilityReport, setAbilityReport] = useState<any>(null);
-  const [records, setRecords] = useState<LearningRecord[]>([]);
   const [stats, setStats] = useState({ learningDays: 0, totalMinutes: 0, completedProjects: 0, completedLessons: 0 });
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
   const loadData = async () => {
     try {
-      const [reportData, recordData, statsData, menuData] = await Promise.all([
+      const [reportData, statsData, menuData] = await Promise.all([
         fetchAbilityReport(),
-        fetchLearningRecords(),
         fetchLearningStats(),
         fetchMenuItems('mine'),
       ]);
       setAbilityReport(reportData);
-      setRecords(recordData);
       setStats(statsData);
       setMenuItems(menuData);
     } catch (err) {
@@ -111,27 +107,6 @@ const MinePage: React.FC = () => {
           </View>
         </View>
       )}
-
-      {/* 学习记录 */}
-      <View className={styles.section}>
-        <View className={styles.sectionHeader}>
-          <Text className={styles.sectionTitle}>最近学习</Text>
-        </View>
-        <View className={styles.recordList}>
-          {records.slice(0, 5).map((record, index) => (
-            <View key={index} className={styles.recordItem}>
-              <Text className={styles.recordDate}>{record.date}</Text>
-              <View className={styles.recordBar}>
-                <View
-                  className={styles.recordFill}
-                  style={{ width: `${(record.duration / 80) * 100}%` }}
-                />
-              </View>
-              <Text className={styles.recordDuration}>{record.duration}分钟</Text>
-            </View>
-          ))}
-        </View>
-      </View>
 
       {/* 功能菜单 */}
       <View className={styles.menuSection}>

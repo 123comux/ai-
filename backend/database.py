@@ -211,6 +211,34 @@ def init_db():
         )
     """)
 
+    # Learning goals (mine page)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            target_date TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # Favorites (mine page: favorited courses/projects)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_type TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            title TEXT NOT NULL DEFAULT '',
+            cover_img TEXT NOT NULL DEFAULT '',
+            detail_path TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(item_type, item_id)
+        )
+    """)
+
     # Admin users
     cur.execute("""
         CREATE TABLE IF NOT EXISTS admin_users (
@@ -485,11 +513,11 @@ def seed_from_json():
     # Seed menu items
     default_menus = [
         {"icon": "📊", "label": "岗位能力对标", "path": "/pages/jobMatching/index", "section": "mine", "sort_order": 1},
-        {"icon": "📁", "label": "我的作品集", "path": "", "section": "mine", "sort_order": 2},
-        {"icon": "📝", "label": "学习记录", "path": "", "section": "mine", "sort_order": 3},
-        {"icon": "🎯", "label": "学习目标", "path": "", "section": "mine", "sort_order": 4},
-        {"icon": "⭐", "label": "我的收藏", "path": "", "section": "mine", "sort_order": 5},
-        {"icon": "⚙️", "label": "设置", "path": "", "section": "mine", "sort_order": 6},
+        {"icon": "📁", "label": "我的作品集", "path": "/pages/portfolio/index", "section": "mine", "sort_order": 2},
+        {"icon": "📝", "label": "学习记录", "path": "/pages/learningRecord/index", "section": "mine", "sort_order": 3},
+        {"icon": "🎯", "label": "学习目标", "path": "/pages/goals/index", "section": "mine", "sort_order": 4},
+        {"icon": "⭐", "label": "我的收藏", "path": "/pages/favorites/index", "section": "mine", "sort_order": 5},
+        {"icon": "⚙️", "label": "设置", "path": "/pages/settings/index", "section": "mine", "sort_order": 6},
     ]
     for m in default_menus:
         insert_row("menu_items", m)

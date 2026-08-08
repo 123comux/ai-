@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchJobMatchingResult } from '@/services/api';
+import { fetchJobMatchingResult, analyzeJobMatching } from '@/services/api';
 import type { JobMatchingResult } from '@/types/index';
 import styles from './index.module.scss';
 
 const JobMatchingPage: React.FC = () => {
   const [result, setResult] = useState<JobMatchingResult | null>(null);
+  const [jobDescription, setJobDescription] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
-    // 默认加载 mock 结果
+    // 默认加载已有结果
     const loadData = async () => {
       try {
         const data = await fetchJobMatchingResult();
@@ -21,6 +23,23 @@ const JobMatchingPage: React.FC = () => {
     };
     loadData();
   }, []);
+
+  const handleAnalyze = async () => {
+    if (!jobDescription.trim()) {
+      Taro.showToast({ title: '请输入岗位描述', icon: 'none' });
+      return;
+    }
+    setAnalyzing(true);
+    try {
+      const data = await analyzeJobMatching(jobDescription.trim());
+      setResult(data);
+    } catch (err) {
+      console.error('[JobMatching] analyze error:', err);
+      Taro.showToast({ title: '分析失败，请稍后重试', icon: 'none' });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   if (!result) {
     return (
@@ -38,13 +57,16 @@ const JobMatchingPage: React.FC = () => {
       {/* 输入区域 */}
       <View className={styles.inputSection}>
         <Text className={styles.inputLabel}>输入目标岗位描述</Text>
-        <View className={styles.inputBox}>
-          <Text className={styles.inputPlaceholder}>
-            {result.jobTitle} - {result.company}
-          </Text>
-        </View>
-        <View className={styles.analyzeButton}>
-          <Text className={styles.analyzeButtonText}>AI 分析</Text>
+        <Input
+          className={styles.inputBox}
+          placeholder="如：AI大模型应用开发实习生，要求Python、RAG、LangChain、Agent开发"
+          placeholderClass={styles.inputPlaceholder}
+          value={jobDescription}
+          onInput={(e) => setJobDescription(e.detail.value)}
+          disabled={analyzing}
+        />
+        <View className={styles.analyzeButton} onClick={handleAnalyze}>
+          <Text className={styles.analyzeButtonText}>{analyzing ? '分析中...' : 'AI 分析'}</Text>
         </View>
       </View>
 

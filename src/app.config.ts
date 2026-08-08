@@ -12,7 +12,12 @@ export default defineAppConfig({
     'pages/jobMatching/index',
     'pages/tutor/index',
     'pages/video/index',
-    'pages/webview/index'
+    'pages/webview/index',
+    'pages/portfolio/index',
+    'pages/learningRecord/index',
+    'pages/goals/index',
+    'pages/favorites/index',
+    'pages/settings/index'
   ],
   window: {
     backgroundTextStyle: 'light',

@@ -1,0 +1,100 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+}
+
+.navBar {
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.card {
+  margin: $spacing-md $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.label {
+  width: 160rpx;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.value {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  text-align: right;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.rowLabel {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.rowArrow {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.rowDanger {
+  color: $color-error;
+}
+
+.about {
+  text-align: center;
+  padding: $spacing-lg 0;
+}
+
+.appName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.appVersion {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: block;
+}

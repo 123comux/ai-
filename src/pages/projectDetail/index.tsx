@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchProjects, advanceProject } from '@/services/api';
+import { fetchProjects, advanceProject, addFavorite, removeFavorite, fetchFavorites } from '@/services/api';
 import { getDifficultyLabel, getDifficultyColor } from '@/utils/index';
 import type { Project } from '@/types/index';
 import styles from './index.module.scss';
@@ -11,6 +11,8 @@ const ProjectDetailPage: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [favorited, setFavorited] = useState(false);
+  const [favId, setFavId] = useState(0);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -19,6 +21,14 @@ const ProjectDetailPage: React.FC = () => {
         const projects = await fetchProjects();
         const found = projects.find((p) => p.id === id);
         setProject(found || null);
+        if (id) {
+          const favs = await fetchFavorites();
+          const foundFav = favs.find((f) => f.item_type === 'project' && f.item_id === id);
+          if (foundFav) {
+            setFavorited(true);
+            setFavId(foundFav.id);
+          }
+        }
       } catch (err) {
         console.error('[ProjectDetail] load error:', err);
       } finally {
@@ -27,6 +37,26 @@ const ProjectDetailPage: React.FC = () => {
     };
     loadProject();
   }, []);
+
+  const handleFavorite = async () => {
+    if (!project) return;
+    try {
+      if (favorited) {
+        await removeFavorite(favId);
+        setFavorited(false);
+        setFavId(0);
+        Taro.showToast({ title: '已取消收藏', icon: 'none' });
+      } else {
+        const fav = await addFavorite('project', project.id);
+        setFavorited(true);
+        setFavId(fav.id);
+        Taro.showToast({ title: '已收藏', icon: 'success' });
+      }
+    } catch (err) {
+      console.error('[ProjectDetail] favorite error:', err);
+      Taro.showToast({ title: '操作失败', icon: 'none' });
+    }
+  };
 
   const handleAdvance = async () => {
     if (!project || advancing) return;
@@ -89,6 +119,9 @@ const ProjectDetailPage: React.FC = () => {
     <ScrollView className={styles.page} scrollY>
       <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
         <Text className={styles.navBack}>← 返回</Text>
+      </View>
+      <View className={styles.favBtn} onClick={handleFavorite}>
+        <Text className={styles.favBtnText}>{favorited ? '⭐' : '☆'}</Text>
       </View>
       <Image className={styles.cover} src={project.coverImg} mode="aspectFill" />
       <View className={styles.body}>

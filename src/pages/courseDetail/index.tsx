@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode } from '@/services/api';
+import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode, addFavorite, removeFavorite, fetchFavorites } from '@/services/api';
 import { formatDuration, formatMinutes } from '@/utils/index';
 import type { Chapter, Video } from '@/types/index';
 import styles from './index.module.scss';
@@ -16,9 +16,47 @@ const CourseDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [favorited, setFavorited] = useState(false);
+  const [favId, setFavId] = useState(0);
   const pathIdRef = useRef('');
   const nodeIdRef = useRef('');
   const courseIdRef = useRef('');
+
+  const checkFavorite = async (courseId: string) => {
+    try {
+      const favs = await fetchFavorites();
+      const found = favs.find((f) => f.item_type === 'course' && f.item_id === courseId);
+      if (found) {
+        setFavorited(true);
+        setFavId(found.id);
+      } else {
+        setFavorited(false);
+        setFavId(0);
+      }
+    } catch (err) {
+      console.error('[CourseDetail] check favorite error:', err);
+    }
+  };
+
+  const handleFavorite = async () => {
+    if (!courseIdRef.current) return;
+    try {
+      if (favorited) {
+        await removeFavorite(favId);
+        setFavorited(false);
+        setFavId(0);
+        Taro.showToast({ title: '已取消收藏', icon: 'none' });
+      } else {
+        const fav = await addFavorite('course', courseIdRef.current);
+        setFavorited(true);
+        setFavId(fav.id);
+        Taro.showToast({ title: '已收藏', icon: 'success' });
+      }
+    } catch (err) {
+      console.error('[CourseDetail] favorite error:', err);
+      Taro.showToast({ title: '操作失败', icon: 'none' });
+    }
+  };
 
   const loadCourse = async (initial = false) => {
     try {
@@ -40,6 +78,7 @@ const CourseDetailPage: React.FC = () => {
             }
           }
         }
+        checkFavorite(id);
       }
       // 每次显示都刷新视频（含看完状态），让学习进度实时更新
       const courseVideos = await fetchCourseVideos(id);
@@ -148,6 +187,9 @@ const CourseDetailPage: React.FC = () => {
     <ScrollView className={styles.page} scrollY>
       <View className={styles.navBar} onClick={() => Taro.navigateBack()}>
         <Text className={styles.navBack}>← 返回</Text>
+      </View>
+      <View className={styles.favBtn} onClick={handleFavorite}>
+        <Text className={styles.favBtnText}>{favorited ? '⭐' : '☆'}</Text>
       </View>
       <Image className={styles.cover} src={course.coverImg || course.cover_img || ''} mode="aspectFill" />
       <View className={styles.body}>

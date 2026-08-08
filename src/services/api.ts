@@ -5,7 +5,7 @@
  * All data is fetched from the FastAPI backend (http://localhost:8000).
  */
 import Taro from '@tarojs/taro';
-import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video } from '@/types/index';
+import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem } from '@/types/index';
 
 // H5 dev mode & WeChat mini-program: both use direct backend URL.
 // CORS is fully configured in backend config.py (allow_origins includes localhost:10087).
@@ -48,6 +48,32 @@ async function apiPost<T>(path: string, body: Record<string, unknown>, timeoutMs
     const msg = typeof detail === 'string' ? detail : `HTTP ${res.statusCode}`;
     throw new Error(msg);
   }
+  return res.data;
+}
+
+/** PUT 辅助函数 */
+async function apiPut<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const res = await Taro.request<T>({
+    url: buildUrl(path),
+    method: 'PUT',
+    header: { 'Content-Type': 'application/json' },
+    data: body,
+    timeout: 30000,
+    dataType: 'json',
+  });
+  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  return res.data;
+}
+
+/** DELETE 辅助函数 */
+async function apiDelete<T>(path: string): Promise<T> {
+  const res = await Taro.request<T>({
+    url: buildUrl(path),
+    method: 'DELETE',
+    timeout: 15000,
+    dataType: 'json',
+  });
+  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
   return res.data;
 }
 
@@ -299,4 +325,49 @@ export const fetchDirections = async (): Promise<DirectionItem[]> => {
 /** 获取菜单项 */
 export const fetchMenuItems = async (section: string = 'mine'): Promise<MenuItem[]> => {
   return apiGet<MenuItem[]>(`/api/content/menu-items?section=${section}`);
+};
+
+/** 分析岗位描述（智谱 AI 岗位匹配） */
+export const analyzeJobMatching = async (jobDescription: string): Promise<JobMatchingResult> => {
+  return apiPost<JobMatchingResult>('/api/user/job-matching/analyze', { job_description: jobDescription }, 60000);
+};
+
+/** 获取作品集 */
+export const fetchPortfolio = async (): Promise<PortfolioItem[]> => {
+  return apiGet<PortfolioItem[]>('/api/mine/portfolio');
+};
+
+/** 获取学习目标列表 */
+export const fetchGoals = async (): Promise<Goal[]> => {
+  return apiGet<Goal[]>('/api/mine/goals');
+};
+
+/** 新建学习目标 */
+export const createGoal = async (data: { title: string; description?: string; target_date?: string }): Promise<Goal> => {
+  return apiPost<Goal>('/api/mine/goals', data);
+};
+
+/** 更新学习目标（含标记完成） */
+export const updateGoal = async (id: number, data: Partial<Goal>): Promise<Goal> => {
+  return apiPut<Goal>(`/api/mine/goals/${id}`, data);
+};
+
+/** 删除学习目标 */
+export const deleteGoal = async (id: number): Promise<{ ok: boolean }> => {
+  return apiDelete<{ ok: boolean }>(`/api/mine/goals/${id}`);
+};
+
+/** 获取收藏列表 */
+export const fetchFavorites = async (): Promise<FavoriteItem[]> => {
+  return apiGet<FavoriteItem[]>('/api/mine/favorites');
+};
+
+/** 添加收藏 */
+export const addFavorite = async (itemType: 'course' | 'project', itemId: string): Promise<FavoriteItem> => {
+  return apiPost<FavoriteItem>('/api/mine/favorites', { item_type: itemType, item_id: itemId });
+};
+
+/** 删除收藏 */
+export const removeFavorite = async (id: number): Promise<{ ok: boolean }> => {
+  return apiDelete<{ ok: boolean }>(`/api/mine/favorites/${id}`);
 };

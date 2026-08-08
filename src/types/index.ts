@@ -159,3 +159,39 @@ export interface JobMatchingResult {
   recommendedProjects: string[];
 }
 
+// 作品集项目
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  description: string;
+  coverImg: string;
+  techStack: string[];
+  difficulty: string;
+  status: 'in_progress' | 'completed';
+  completedSteps: number;
+  totalSteps: number;
+}
+
+// 学习目标
+export interface Goal {
+  id: number;
+  title: string;
+  description: string;
+  target_date: string;
+  status: 'pending' | 'done';
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// 收藏项
+export interface FavoriteItem {
+  id: number;
+  item_type: 'course' | 'project';
+  item_id: string;
+  title: string;
+  cover_img: string;
+  detail_path: string;
+  created_at: string;
+}
+

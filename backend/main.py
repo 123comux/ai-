@@ -20,7 +20,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, HOST, PORT
-from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel
+from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data
 
 app = FastAPI(
     title="AI Talent Training API",
@@ -59,6 +59,7 @@ app.include_router(videos.router)
 app.include_router(content.router)
 app.include_router(admin.router)
 app.include_router(admin_panel.router)
+app.include_router(mine_data.router)
 
 
 @app.get("/")

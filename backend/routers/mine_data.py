@@ -1,0 +1,172 @@
+"""Mine page data API router: portfolio, learning goals, favorites.
+
+Backed by SQLite cms.db (via database.py helpers) and processed JSON data files.
+"""
+import json
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException
+
+from database import get_connection, insert_row, query_all, query_one, update_row, delete_row, parse_json_field
+
+PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
+router = APIRouter(prefix="/api/mine", tags=["mine-data"])
+
+
+def _load_json(filename: str, default=None):
+    path = PROCESSED_DIR / filename
+    if not path.exists():
+        return default
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+# ============ Portfolio ============
+
+@router.get("/portfolio")
+async def get_portfolio():
+    """Get user's project portfolio: projects with progress > 0."""
+    projects = _load_json("enriched_projects.json") or _load_json("projects.json") or []
+    if not isinstance(projects, list):
+        projects = []
+    progress = _load_json("project_progress.json", {}) or {}
+    if not isinstance(progress, dict):
+        progress = {}
+
+    portfolio = []
+    for p in projects:
+        if not isinstance(p, dict):
+            continue
+        pid = p.get("id")
+        done = progress.get(pid, 0)
+        total = len(p.get("steps", []) or [])
+        if not done or not total:
+            continue
+        tech = p.get("techStack") or p.get("tech_stack") or []
+        portfolio.append({
+            "id": pid,
+            "title": p.get("title", ""),
+            "description": p.get("description", ""),
+            "coverImg": p.get("coverImg") or p.get("cover_img") or "",
+            "techStack": tech if isinstance(tech, list) else [],
+            "difficulty": p.get("difficulty", ""),
+            "status": "completed" if done >= total else "in_progress",
+            "completedSteps": done,
+            "totalSteps": total,
+        })
+    # 完成的排前面，再按进度降序
+    portfolio.sort(key=lambda x: (x["status"] != "completed", -x["completedSteps"]))
+    return portfolio
+
+
+# ============ Goals ============
+
+@router.get("/goals")
+async def list_goals():
+    return query_all("goals", order_by="sort_order ASC, id DESC")
+
+
+@router.post("/goals")
+async def create_goal(body: dict):
+    title = (body.get("title") or "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="标题不能为空")
+    row = {
+        "title": title,
+        "description": (body.get("description") or "").strip(),
+        "target_date": (body.get("target_date") or "").strip(),
+        "status": body.get("status") or "pending",
+        "sort_order": int(body.get("sort_order") or 0),
+    }
+    goal_id = insert_row("goals", row)
+    goal = query_one("goals", goal_id)
+    return goal
+
+
+@router.put("/goals/{goal_id}")
+async def update_goal(goal_id: int, body: dict):
+    existing = query_one("goals", goal_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="目标不存在")
+    updates = {}
+    for field in ("title", "description", "target_date", "status", "sort_order"):
+        if field in body:
+            updates[field] = body[field]
+    if "title" in updates:
+        title = (updates["title"] or "").strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="标题不能为空")
+        updates["title"] = title
+    update_row("goals", goal_id, updates)
+    return query_one("goals", goal_id)
+
+
+@router.delete("/goals/{goal_id}")
+async def delete_goal(goal_id: int):
+    ok = delete_row("goals", goal_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="目标不存在")
+    return {"ok": True}
+
+
+# ============ Favorites ============
+
+def _resolve_favorite(item_type: str, item_id: str) -> dict:
+    """Look up title/cover/detail_path from courses or projects table."""
+    conn = get_connection()
+    if item_type == "course":
+        row = conn.execute(
+            "SELECT id, title, cover_img AS coverImg, '/pages/courseDetail/index?id=' || id AS detail_path FROM courses WHERE id=?", (item_id,)
+        ).fetchone()
+    elif item_type == "project":
+        row = conn.execute(
+            "SELECT id, title, cover_img AS coverImg, '/pages/projectDetail/index?id=' || id AS detail_path FROM projects WHERE id=?", (item_id,)
+        ).fetchone()
+    else:
+        row = None
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"{item_type} 不存在")
+    return dict(row)
+
+
+@router.get("/favorites")
+async def list_favorites():
+    return query_all("favorites", order_by="id DESC")
+
+
+@router.post("/favorites")
+async def add_favorite(body: dict):
+    item_type = body.get("item_type")
+    item_id = str(body.get("item_id") or "")
+    if item_type not in ("course", "project") or not item_id:
+        raise HTTPException(status_code=400, detail="参数错误")
+    info = _resolve_favorite(item_type, item_id)
+    conn = get_connection()
+    exists = conn.execute(
+        "SELECT id FROM favorites WHERE item_type=? AND item_id=?",
+        (item_type, item_id),
+    ).fetchone()
+    conn.close()
+    if exists:
+        return query_one("favorites", exists["id"])
+    fav_id = insert_row("favorites", {
+        "item_type": item_type,
+        "item_id": item_id,
+        "title": info["title"],
+        "cover_img": info["coverImg"],
+        "detail_path": info["detail_path"],
+    })
+    return query_one("favorites", fav_id)
+
+
+@router.delete("/favorites/{fav_id}")
+async def remove_favorite(fav_id: int):
+    ok = delete_row("favorites", fav_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="收藏不存在")
+    return {"ok": True}

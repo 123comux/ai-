@@ -1,0 +1,106 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+}
+
+.navBar {
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.loadingText {
+  text-align: center;
+  padding: 200rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+.empty {
+  text-align: center;
+  padding: 160rpx 0;
+  color: $color-text-tertiary;
+}
+
+.emptyIcon {
+  display: block;
+  font-size: 64rpx;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+}
+
+.list {
+  padding: 0 $spacing-lg $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.cover {
+  width: 140rpx;
+  height: 96rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  flex-shrink: 0;
+}
+
+.coverFallback {
+  width: 140rpx;
+  height: 96rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  margin-bottom: $spacing-xs;
+}
+
+.typeTag {
+  display: inline-block;
+  font-size: $font-size-xs;
+  color: $color-primary;
+  background: rgba(22, 93, 255, 0.08);
+  padding: 2rpx 12rpx;
+  border-radius: $radius-round;
+}
+
+.removeBtn {
+  font-size: $font-size-sm;
+  color: $color-error;
+  padding: 8rpx 12rpx;
+  flex-shrink: 0;
+}

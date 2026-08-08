@@ -109,7 +109,7 @@ def _parse_ai_json(text: str) -> dict | None:
 
 # 技能关键词 → 能力报告维度 的映射（用于判定是否已掌握）
 SKILL_DIMENSION_MAP = [
-    (["python", "编程", "代码", "开发", "typescript", "javascript", "java", "c++", "go", "html", "css", "vue", "react", "框架", "接口"], "编程基础"),
+    (["python", "编程", "代码", "开发", "typescript", "javascript", "java", "c++", "go", "html", "css", "vue", "react", "接口", "数据结构"], "编程基础"),
     (["数学", "线性代数", "概率", "统计", "微积分", "离散"], "数学基础"),
     (["机器学习", "scikit", "sklearn", "回归", "分类", "聚类", "模型"], "机器学习"),
     (["深度学习", "神经网络", "cnn", "rnn", "transformer", "pytorch", "tensorflow", "bert"], "深度学习"),
@@ -117,12 +117,16 @@ SKILL_DIMENSION_MAP = [
     (["项目", "工程", "部署", "运维", "docker", "k8s", "ci", "架构", "微服务"], "项目经验"),
 ]
 
-# 匹配分权重（按能力报告维度）
-DIMENSION_SCORE_THRESHOLD = 30  # 维度得分 >= 该值视为"基础已具备"
+# 维度得分达标才视为"已掌握"：60 分（满分 100）为掌握线，40-59 为入门，<40 为待提升
+DIMENSION_MASTERED_THRESHOLD = 60
 
 
 def _skill_mastered(skill: str, dimensions: dict) -> bool:
-    """判断技能是否已掌握：技能关键词命中能力维度，且该维度得分 >= 阈值。"""
+    """判断技能是否已掌握：命中能力维度且该维度得分 >= 60 分才算掌握。
+
+    能力报告 30 分（初级）时所有维度都低于 60，技能应整体判定为待提升，
+    避免出现"30 分却大部分技能已掌握"的不合理结果。
+    """
     s = skill.lower()
     best_dimension = None
     best_score = 0
@@ -133,10 +137,27 @@ def _skill_mastered(skill: str, dimensions: dict) -> bool:
                 best_score = d
                 best_dimension = dim
     if best_dimension is None:
-        # 技能不在映射里，按整体水平（overall 平均维度分）判断
+        # 技能不在映射里，按整体平均分判断（同样要求 60 分）
         avg = sum(dimensions.values()) / len(dimensions) if dimensions else 0
-        return avg >= DIMENSION_SCORE_THRESHOLD
-    return best_score >= DIMENSION_SCORE_THRESHOLD
+        return avg >= DIMENSION_MASTERED_THRESHOLD
+    return best_score >= DIMENSION_MASTERED_THRESHOLD
+
+
+def _skill_dimension_score(skill: str, dimensions: dict) -> float:
+    """返回技能对应能力维度的得分（未命中时用平均分）。"""
+    s = skill.lower()
+    best_dimension = None
+    best_score = 0
+    for keywords, dim in SKILL_DIMENSION_MAP:
+        if any(kw in s for kw in keywords):
+            d = dimensions.get(dim, 0)
+            if d > best_score:
+                best_score = d
+                best_dimension = dim
+    if best_dimension is not None:
+        return best_score
+    # 技能不在映射里，用平均分
+    return sum(dimensions.values()) / len(dimensions) if dimensions else 0
 
 
 @router.post("/job-matching/analyze", response_model=JobMatchingResult)
@@ -167,10 +188,13 @@ async def analyze_job_matching(body: dict):
             required.append({"name": name, "mastered": _skill_mastered(name, dimensions)})
         if not required:
             required = [{"name": "Python", "mastered": _skill_mastered("Python", dimensions)}]
-        # 匹配分 = 已掌握技能占比 * 100（真实反映用户对岗位的匹配度）
-        mastered_count = sum(1 for s in required if s["mastered"])
-        calc_score = round(mastered_count / len(required) * 100) if required else 50
-        # 融合 AI 参考分（若 AI 提供），避免单来源偏差
+        # 匹配分 = 各技能对应维度得分的平均（反映真实能力水平，非"已掌握"二值）
+        # 30 分初级能力 → 匹配分整体中等偏低，不会出现"30 分却匹配 90%"的失真
+        skill_scores = [_skill_dimension_score(s["name"], dimensions) for s in required]
+        avg_score = sum(skill_scores) / len(skill_scores) if skill_scores else 50
+        # 已掌握技能加成（掌握技能的岗位匹配更可靠），小幅融合 AI 参考分
+        mastered_ratio = sum(1 for s in required if s["mastered"]) / len(required) if required else 0
+        calc_score = avg_score + mastered_ratio * 15
         final_score = int(calc_score * 0.7 + max(0, min(100, ai_match_score)) * 0.3)
         # 待提升技能 = 岗位未掌握技能；AI gaps 只保留非抽象维度名的项
         not_mastered = [s["name"] for s in required if not s["mastered"]]

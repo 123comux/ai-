@@ -514,10 +514,9 @@ def seed_from_json():
     default_menus = [
         {"icon": "📊", "label": "岗位能力对标", "path": "/pages/jobMatching/index", "section": "mine", "sort_order": 1},
         {"icon": "📁", "label": "我的作品集", "path": "/pages/portfolio/index", "section": "mine", "sort_order": 2},
-        {"icon": "📝", "label": "学习记录", "path": "/pages/learningRecord/index", "section": "mine", "sort_order": 3},
-        {"icon": "🎯", "label": "学习目标", "path": "/pages/goals/index", "section": "mine", "sort_order": 4},
-        {"icon": "⭐", "label": "我的收藏", "path": "/pages/favorites/index", "section": "mine", "sort_order": 5},
-        {"icon": "⚙️", "label": "设置", "path": "/pages/settings/index", "section": "mine", "sort_order": 6},
+        {"icon": "🎯", "label": "学习目标", "path": "/pages/goals/index", "section": "mine", "sort_order": 3},
+        {"icon": "⭐", "label": "我的收藏", "path": "/pages/favorites/index", "section": "mine", "sort_order": 4},
+        {"icon": "⚙️", "label": "设置", "path": "/pages/settings/index", "section": "mine", "sort_order": 5},
     ]
     for m in default_menus:
         insert_row("menu_items", m)

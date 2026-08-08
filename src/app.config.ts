@@ -14,7 +14,6 @@ export default defineAppConfig({
     'pages/video/index',
     'pages/webview/index',
     'pages/portfolio/index',
-    'pages/learningRecord/index',
     'pages/goals/index',
     'pages/favorites/index',
     'pages/settings/index'

@@ -72,6 +72,23 @@
   color: $color-text-white;
 }
 
+.emptyState {
+  padding: 120rpx $spacing-lg;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: block;
+  font-size: 72rpx;
+  margin-bottom: $spacing-lg;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  line-height: $line-height-loose;
+}
+
 .resultSection {
   padding: $spacing-lg;
 }

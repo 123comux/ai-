@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchJobMatchingResult, analyzeJobMatching } from '@/services/api';
+import { analyzeJobMatching } from '@/services/api';
 import type { JobMatchingResult } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -10,19 +10,6 @@ const JobMatchingPage: React.FC = () => {
   const [result, setResult] = useState<JobMatchingResult | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
-
-  useEffect(() => {
-    // 默认加载已有结果
-    const loadData = async () => {
-      try {
-        const data = await fetchJobMatchingResult();
-        setResult(data);
-      } catch (err) {
-        console.error('[JobMatching] load error:', err);
-      }
-    };
-    loadData();
-  }, []);
 
   const handleAnalyze = async () => {
     if (!jobDescription.trim()) {
@@ -33,21 +20,14 @@ const JobMatchingPage: React.FC = () => {
     try {
       const data = await analyzeJobMatching(jobDescription.trim());
       setResult(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[JobMatching] analyze error:', err);
-      Taro.showToast({ title: '分析失败，请稍后重试', icon: 'none' });
+      const msg = err?.message || '分析失败，请稍后重试';
+      Taro.showToast({ title: msg.slice(0, 40), icon: 'none' });
     } finally {
       setAnalyzing(false);
     }
   };
-
-  if (!result) {
-    return (
-      <View className={styles.page}>
-        <Text className={styles.loadingText}>加载中...</Text>
-      </View>
-    );
-  }
 
   return (
     <ScrollView className={styles.page} scrollY>
@@ -70,33 +50,43 @@ const JobMatchingPage: React.FC = () => {
         </View>
       </View>
 
+      {/* 空状态：未分析时提示 */}
+      {!result && !analyzing && (
+        <View className={styles.emptyState}>
+          <Text className={styles.emptyIcon}>📊</Text>
+          <Text className={styles.emptyText}>输入目标岗位描述，AI 将结合你的能力报告分析匹配度</Text>
+        </View>
+      )}
+
       {/* 匹配结果 */}
-      <View className={styles.resultSection}>
-        <View className={styles.matchHeader}>
-          <Text className={styles.matchTitle}>匹配结果</Text>
-          <View className={styles.matchScore}>
-            <Text className={styles.matchScoreValue}>{result.matchScore}</Text>
-            <Text className={styles.matchScoreUnit}>%</Text>
+      {result && (
+        <View className={styles.resultSection}>
+          <View className={styles.matchHeader}>
+            <Text className={styles.matchTitle}>匹配结果</Text>
+            <View className={styles.matchScore}>
+              <Text className={styles.matchScoreValue}>{result.matchScore}</Text>
+              <Text className={styles.matchScoreUnit}>%</Text>
+            </View>
+          </View>
+          <ProgressBar percent={result.matchScore} height={12} color={result.matchScore >= 70 ? '#00b42a' : '#ff7d00'} />
+
+          <Text className={styles.sectionTitle}>技能分析</Text>
+          <View className={styles.skillList}>
+            {result.requiredSkills.map((skill, index) => (
+              <View key={index} className={styles.skillItem}>
+                <Text className={styles.skillIcon}>{skill.mastered ? '✅' : '❌'}</Text>
+                <Text className={styles.skillName}>{skill.name}</Text>
+                <Text className={styles.skillStatus}>
+                  {skill.mastered ? '已掌握' : '待提升'}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
-        <ProgressBar percent={result.matchScore} height={12} color={result.matchScore >= 70 ? '#00b42a' : '#ff7d00'} />
-
-        <Text className={styles.sectionTitle}>技能分析</Text>
-        <View className={styles.skillList}>
-          {result.requiredSkills.map((skill, index) => (
-            <View key={index} className={styles.skillItem}>
-              <Text className={styles.skillIcon}>{skill.mastered ? '✅' : '❌'}</Text>
-              <Text className={styles.skillName}>{skill.name}</Text>
-              <Text className={styles.skillStatus}>
-                {skill.mastered ? '已掌握' : '待提升'}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      )}
 
       {/* 差距分析 */}
-      {result.gapSkills.length > 0 && (
+      {result && result.gapSkills.length > 0 && (
         <View className={styles.section}>
           <Text className={styles.sectionTitle}>待提升技能</Text>
           <View className={styles.gapList}>
@@ -111,27 +101,31 @@ const JobMatchingPage: React.FC = () => {
       )}
 
       {/* 推荐补齐 */}
-      <View className={styles.section}>
-        <Text className={styles.sectionTitle}>推荐课程</Text>
-        <View className={styles.recommendChips}>
-          {result.recommendedCourses.map((course, index) => (
-            <View key={index} className={styles.chip}>
-              <Text className={styles.chipText}>📚 {course}</Text>
-            </View>
-          ))}
+      {result && (
+        <View className={styles.section}>
+          <Text className={styles.sectionTitle}>推荐课程</Text>
+          <View className={styles.recommendChips}>
+            {result.recommendedCourses.map((course, index) => (
+              <View key={index} className={styles.chip}>
+                <Text className={styles.chipText}>📚 {course}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
-      <View className={styles.section}>
-        <Text className={styles.sectionTitle}>推荐项目</Text>
-        <View className={styles.recommendChips}>
-          {result.recommendedProjects.map((project, index) => (
-            <View key={index} className={styles.chip}>
-              <Text className={styles.chipText}>🛠️ {project}</Text>
-            </View>
-          ))}
+      {result && (
+        <View className={styles.section}>
+          <Text className={styles.sectionTitle}>推荐项目</Text>
+          <View className={styles.recommendChips}>
+            {result.recommendedProjects.map((project, index) => (
+              <View key={index} className={styles.chip}>
+                <Text className={styles.chipText}>🛠️ {project}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
     </ScrollView>
   );
 };

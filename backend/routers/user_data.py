@@ -107,34 +107,100 @@ def _parse_ai_json(text: str) -> dict | None:
         return None
 
 
+# 技能关键词 → 能力报告维度 的映射（用于判定是否已掌握）
+SKILL_DIMENSION_MAP = [
+    (["python", "编程", "代码", "开发", "typescript", "javascript", "java", "c++", "go", "html", "css", "vue", "react", "框架", "接口"], "编程基础"),
+    (["数学", "线性代数", "概率", "统计", "微积分", "离散"], "数学基础"),
+    (["机器学习", "scikit", "sklearn", "回归", "分类", "聚类", "模型"], "机器学习"),
+    (["深度学习", "神经网络", "cnn", "rnn", "transformer", "pytorch", "tensorflow", "bert"], "深度学习"),
+    (["大模型", "llm", "langchain", "rag", "agent", "prompt", "微调", "gpt", "生成式", "aigc"], "大模型应用"),
+    (["项目", "工程", "部署", "运维", "docker", "k8s", "ci", "架构", "微服务"], "项目经验"),
+]
+
+# 匹配分权重（按能力报告维度）
+DIMENSION_SCORE_THRESHOLD = 30  # 维度得分 >= 该值视为"基础已具备"
+
+
+def _skill_mastered(skill: str, dimensions: dict) -> bool:
+    """判断技能是否已掌握：技能关键词命中能力维度，且该维度得分 >= 阈值。"""
+    s = skill.lower()
+    best_dimension = None
+    best_score = 0
+    for keywords, dim in SKILL_DIMENSION_MAP:
+        if any(kw in s for kw in keywords):
+            d = dimensions.get(dim, 0)
+            if d > best_score:
+                best_score = d
+                best_dimension = dim
+    if best_dimension is None:
+        # 技能不在映射里，按整体水平（overall 平均维度分）判断
+        avg = sum(dimensions.values()) / len(dimensions) if dimensions else 0
+        return avg >= DIMENSION_SCORE_THRESHOLD
+    return best_score >= DIMENSION_SCORE_THRESHOLD
+
+
 @router.post("/job-matching/analyze", response_model=JobMatchingResult)
 async def analyze_job_matching(body: dict):
     """Analyze a job description against the user's ability report.
 
-    - Empty description -> fall back to default job_matching.json
-    - Uses Zhipu GLM-4-flash when key is available; falls back to keyword matching.
+    - Empty description -> raise 400 (需要输入)
+    - AI (Zhipu GLM) 提取岗位技能清单、推荐课程/项目、匹配分
+    - mastered 由后端基于能力报告维度得分判定（避免 AI 误判）
+    - AI 失败时回退到关键词提取
     """
     job_description = (body.get("job_description") or "").strip()
     if not job_description:
-        data = _load_json("job_matching.json")
-        return JobMatchingResult(**data)
+        raise HTTPException(status_code=400, detail="请输入岗位描述")
 
     ability = _load_json("ability_report.json")
     dimensions = {d.get("label"): d.get("score", 0) for d in ability.get("dimensions", [])}
     weaknesses = ability.get("weaknesses", [])
     strengths = ability.get("strengths", [])
 
-    # ---- 尝试智谱 AI ----
+    def _build_result(job_title: str, ai_match_score: int, raw_skills: list, gaps: list, courses: list, projects: list) -> JobMatchingResult:
+        """从 AI 提取的原始技能列表，结合能力报告判定 mastered，并由后端计算 matchScore。"""
+        required = []
+        for s in raw_skills:
+            name = s.get("name") if isinstance(s, dict) else str(s)
+            if not name:
+                continue
+            required.append({"name": name, "mastered": _skill_mastered(name, dimensions)})
+        if not required:
+            required = [{"name": "Python", "mastered": _skill_mastered("Python", dimensions)}]
+        # 匹配分 = 已掌握技能占比 * 100（真实反映用户对岗位的匹配度）
+        mastered_count = sum(1 for s in required if s["mastered"])
+        calc_score = round(mastered_count / len(required) * 100) if required else 50
+        # 融合 AI 参考分（若 AI 提供），避免单来源偏差
+        final_score = int(calc_score * 0.7 + max(0, min(100, ai_match_score)) * 0.3)
+        # 待提升技能 = 岗位未掌握技能；AI gaps 只保留非抽象维度名的项
+        not_mastered = [s["name"] for s in required if not s["mastered"]]
+        ai_gaps = [g for g in gaps if g and g not in dimensions]
+        gap = list(dict.fromkeys(not_mastered + ai_gaps))
+        if not gap:
+            gap = ["持续提升专业技能"]
+        return JobMatchingResult(
+            jobTitle=job_title,
+            company="目标公司",
+            matchScore=max(0, min(100, final_score)),
+            requiredSkills=required,
+            gapSkills=gap[:8],
+            recommendedCourses=[c for c in courses if c][:5],
+            recommendedProjects=[p for p in projects if p][:5],
+        )
+
+    # ---- 尝试智谱 AI：提取技能清单 + 推荐 ----
     ai_result = None
     try:
         from services.zhipu_service import chat_zhipu
         system_prompt = (
-            "你是资深 AI 岗位分析专家。根据给定的岗位描述和用户能力报告，输出 JSON（不要输出其他文字），"
-            "字段：jobTitle(岗位名称), company(公司或'目标公司'), matchScore(0-100 匹配度整数), "
-            "requiredSkills([{name, mastered}] 岗位必备技能及用户是否已掌握, 依据能力报告判断), "
-            "gapSkills(用户缺失的技能字符串数组), "
+            "你是资深 AI 岗位分析专家。根据给定的岗位描述，输出 JSON（不要输出其他文字），"
+            "字段：jobTitle(岗位名称), matchScore(0-100 匹配度整数，考虑用户能力报告), "
+            "requiredSkills(岗位必备技能的字符串数组), gapSkills(用户可能缺失的技能字符串数组), "
             "recommendedCourses(建议学习的课程名数组), recommendedProjects(建议做的项目名数组)。"
-            f"用户能力报告维度与得分：{json.dumps(dimensions, ensure_ascii=False)}；优势：{json.dumps(strengths, ensure_ascii=False)}；待提升：{json.dumps(weaknesses, ensure_ascii=False)}。"
+            "注意：requiredSkills 只列技能名，不要判断是否掌握（掌握与否由系统判断）。"
+            f"用户能力报告维度与得分：{json.dumps(dimensions, ensure_ascii=False)}；"
+            f"待提升：{json.dumps(weaknesses, ensure_ascii=False)}。"
+            f"请结合这些维度评估 matchScore（用户能力越匹配得分越高）。"
         )
         resp = chat_zhipu(job_description, system_prompt, max_new_tokens=600, temperature=0.3)
         ai_result = _parse_ai_json(resp.get("answer", ""))
@@ -142,25 +208,13 @@ async def analyze_job_matching(body: dict):
         ai_result = None
 
     if ai_result:
-        required = ai_result.get("requiredSkills") or []
-        required_norm = []
-        for s in required:
-            if isinstance(s, dict):
-                required_norm.append({
-                    "name": s.get("name", ""),
-                    "mastered": bool(s.get("mastered", False)),
-                })
-            elif isinstance(s, str):
-                mastered = any(k in s for k in dimensions)
-                required_norm.append({"name": s, "mastered": mastered})
-        return JobMatchingResult(
-            jobTitle=str(ai_result.get("jobTitle") or "目标岗位"),
-            company=str(ai_result.get("company") or "目标公司"),
-            matchScore=max(0, min(100, int(ai_result.get("matchScore") or 0))),
-            requiredSkills=required_norm,
-            gapSkills=[str(s) for s in (ai_result.get("gapSkills") or [])],
-            recommendedCourses=[str(s) for s in (ai_result.get("recommendedCourses") or [])],
-            recommendedProjects=[str(s) for s in (ai_result.get("recommendedProjects") or [])],
+        return _build_result(
+            job_title=str(ai_result.get("jobTitle") or "目标岗位"),
+            ai_match_score=int(ai_result.get("matchScore") or 50),
+            raw_skills=ai_result.get("requiredSkills") or [],
+            gaps=ai_result.get("gapSkills") or [],
+            courses=ai_result.get("recommendedCourses") or [],
+            projects=ai_result.get("recommendedProjects") or [],
         )
 
     # ---- 关键词 fallback ----
@@ -169,23 +223,17 @@ async def analyze_job_matching(body: dict):
         recs = recommend_courses_keyword_only(job_description, limit=4) or []
     except Exception:
         recs = []
-    required_skills = []
+    raw_skills = []
     for kw in ["Python", "大模型", "LLM", "RAG", "机器学习", "深度学习", "SQL", "数据分析", "Agent", "微服务", "算法"]:
         if kw.lower() in job_description.lower():
-            mastered = any(kw in w for w in strengths) or any(kw in d for d in dimensions)
-            required_skills.append({"name": kw, "mastered": mastered})
-    if not required_skills:
-        required_skills = [{"name": s, "mastered": any(s in d for d in dimensions)} for s in dimensions]
-
-    gap = [g for g in weaknesses if g] or ["岗位技能待提升"]
-    return JobMatchingResult(
-        jobTitle="AI 岗位",
-        company="目标公司",
-        matchScore=50,
-        requiredSkills=required_skills,
-        gapSkills=gap,
-        recommendedCourses=[c.get("title") for c in recs if c.get("title")][:4],
-        recommendedProjects=["完成一个与大模型相关的实战项目"],
+            raw_skills.append(kw)
+    return _build_result(
+        job_title="目标岗位",
+        ai_match_score=50,
+        raw_skills=raw_skills,
+        gaps=[g for g in weaknesses if g],
+        courses=[c.get("title") for c in recs if c.get("title")],
+        projects=["完成一个与目标岗位相关的实战项目"],
     )
 
 

@@ -195,3 +195,64 @@ export interface FavoriteItem {
   created_at: string;
 }
 
+
+// ============ 登录 / 用户体系 ============
+export interface AuthUser {
+  id: number;
+  openid: string;
+  nickname: string;
+  avatar: string;
+}
+
+export interface LoginResult {
+  token: string;
+  user: AuthUser;
+}
+
+// ============ 押金式培训（押金 / 三锁 / 退费） ============
+export interface DepositConfig {
+  amount: number;
+  currency: string;
+  time_lock_days: number;
+  stages: number;
+  pass_score: number;
+  refund_working_days: number;
+  locks: { time: string; process: string; assess: string };
+  refund_rules: { amount: string; timing: string; failed: string; anti_fraud: string };
+}
+
+export interface DepositLock {
+  passed: boolean;
+  label: string;
+  [k: string]: any;
+}
+
+export interface DepositStatus {
+  enrolled: boolean;
+  config?: DepositConfig;
+  deposit?: {
+    amount: number;
+    currency: string;
+    status: string;
+    enrolled_at: string;
+    deadline_at: string;
+    refund_amount: number;
+    refund_at: string;
+  };
+  status?: {
+    completion_rate: number;
+    watched_videos: number;
+    total_videos: number;
+    stage_scores: number[];
+    stages_recorded: number;
+    assessment_avg: number;
+    deadline_at: string;
+    days_left: number | null;
+    time_lock: DepositLock;
+    process_lock: DepositLock;
+    assess_lock: DepositLock;
+    refund_eligible: boolean;
+  };
+}
+
+

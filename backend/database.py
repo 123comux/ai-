@@ -250,6 +250,113 @@ def init_db():
         )
     """)
 
+    # ============ 用户体系（多用户隔离） ============
+
+    # Users - 微信授权登录后的真实用户
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            openid TEXT NOT NULL UNIQUE,
+            unionid TEXT NOT NULL DEFAULT '',
+            nickname TEXT NOT NULL DEFAULT '',
+            avatar TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # 按用户隔离的学习进度（替代全局 JSON 单例）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_video_progress (
+            user_id INTEGER NOT NULL,
+            video_id TEXT NOT NULL,
+            watched_at TEXT NOT NULL DEFAULT (datetime('now')),
+            minutes INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, video_id)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_project_progress (
+            user_id INTEGER NOT NULL,
+            project_id TEXT NOT NULL,
+            completed_steps INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (user_id, project_id)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_path_progress (
+            user_id INTEGER NOT NULL,
+            path_id TEXT NOT NULL,
+            completed_nodes TEXT NOT NULL DEFAULT '[]',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (user_id, path_id)
+        )
+    """)
+
+    # 五阶段考核成绩（考核锁用）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_stage_assessments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            stage INTEGER NOT NULL,
+            score REAL NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # 用户能力报告存档（按用户隔离）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_ability_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            overall_score REAL NOT NULL DEFAULT 0,
+            level TEXT NOT NULL DEFAULT '',
+            dimensions TEXT NOT NULL DEFAULT '[]',
+            strengths TEXT NOT NULL DEFAULT '[]',
+            weaknesses TEXT NOT NULL DEFAULT '[]',
+            recommended_direction TEXT NOT NULL DEFAULT '',
+            estimated_hours INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # 押金 / 报名（押金式培训核心）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_deposits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            amount REAL NOT NULL DEFAULT 0,
+            currency TEXT NOT NULL DEFAULT 'CNY',
+            status TEXT NOT NULL DEFAULT 'active',
+            enrolled_at TEXT NOT NULL DEFAULT (datetime('now')),
+            deadline_at TEXT NOT NULL DEFAULT '',
+            time_lock_passed INTEGER NOT NULL DEFAULT 0,
+            course_completion_rate REAL NOT NULL DEFAULT 0,
+            homework_passed INTEGER NOT NULL DEFAULT 0,
+            assessment_avg_score REAL NOT NULL DEFAULT 0,
+            project_submitted INTEGER NOT NULL DEFAULT 0,
+            project_passed INTEGER NOT NULL DEFAULT 0,
+            refund_eligible INTEGER NOT NULL DEFAULT 0,
+            refund_amount REAL NOT NULL DEFAULT 0,
+            refund_at TEXT NOT NULL DEFAULT '',
+            refund_txn TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # goals / favorites 增加 user_id，实现多用户隔离（默认 0 = 历史全局数据）
+    try:
+        cur.execute("ALTER TABLE goals ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE favorites ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
     print(f"✅ Database initialized at {DB_PATH}")
@@ -331,6 +438,165 @@ def parse_json_field(value: str, default=None):
         return json.loads(value) if value else (default or [])
     except (json.JSONDecodeError, TypeError):
         return default or []
+
+
+# ============ 用户体系 Helpers ============
+
+def get_user_by_openid(openid: str) -> Optional[dict]:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM users WHERE openid=?", (openid,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user(user_id: int) -> Optional[dict]:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def create_user(openid: str, nickname: str = "", avatar: str = "", unionid: str = "") -> dict:
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO users (openid, nickname, avatar, unionid) VALUES (?,?,?,?)",
+        (openid, nickname, avatar, unionid),
+    )
+    conn.commit()
+    uid = cur.lastrowid
+    conn.close()
+    return get_user(uid)
+
+
+def record_user_video(user_id: int, video_id: str, minutes: int = 0) -> None:
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO user_video_progress (user_id, video_id, minutes) VALUES (?,?,?) "
+        "ON CONFLICT(user_id, video_id) DO UPDATE SET watched_at=datetime('now'), minutes=excluded.minutes",
+        (user_id, video_id, minutes),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_user_watched_video_ids(user_id: int) -> set:
+    conn = get_connection()
+    rows = conn.execute("SELECT video_id FROM user_video_progress WHERE user_id=?", (user_id,)).fetchall()
+    conn.close()
+    return {r["video_id"] for r in rows}
+
+
+def count_user_watched_videos(user_id: int) -> int:
+    conn = get_connection()
+    row = conn.execute("SELECT COUNT(DISTINCT video_id) AS c FROM user_video_progress WHERE user_id=?", (user_id,)).fetchone()
+    conn.close()
+    return int(row["c"]) if row else 0
+
+
+def record_user_project(user_id: int, project_id: str, completed_steps: int) -> None:
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO user_project_progress (user_id, project_id, completed_steps) VALUES (?,?,?) "
+        "ON CONFLICT(user_id, project_id) DO UPDATE SET completed_steps=excluded.completed_steps, updated_at=datetime('now')",
+        (user_id, project_id, completed_steps),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_user_project_progress(user_id: int) -> dict:
+    conn = get_connection()
+    rows = conn.execute("SELECT project_id, completed_steps FROM user_project_progress WHERE user_id=?", (user_id,)).fetchall()
+    conn.close()
+    return {r["project_id"]: r["completed_steps"] for r in rows}
+
+
+def record_user_path_node(user_id: int, path_id: str, node_id: str) -> list:
+    conn = get_connection()
+    row = conn.execute("SELECT completed_nodes FROM user_path_progress WHERE user_id=? AND path_id=?", (user_id, path_id)).fetchone()
+    nodes = parse_json_field(row["completed_nodes"]) if row else []
+    if node_id not in nodes:
+        nodes.append(node_id)
+    conn.execute(
+        "INSERT INTO user_path_progress (user_id, path_id, completed_nodes) VALUES (?,?,?) "
+        "ON CONFLICT(user_id, path_id) DO UPDATE SET completed_nodes=excluded.completed_nodes, updated_at=datetime('now')",
+        (user_id, path_id, json.dumps(nodes, ensure_ascii=False)),
+    )
+    conn.commit()
+    conn.close()
+    return nodes
+
+
+def get_user_path_completed(user_id: int, path_id: str) -> list:
+    conn = get_connection()
+    row = conn.execute("SELECT completed_nodes FROM user_path_progress WHERE user_id=? AND path_id=?", (user_id, path_id)).fetchone()
+    conn.close()
+    return parse_json_field(row["completed_nodes"]) if row else []
+
+
+def record_stage_assessment(user_id: int, stage: int, score: float) -> None:
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO user_stage_assessments (user_id, stage, score) VALUES (?,?,?)",
+        (user_id, stage, score),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_stage_assessments(user_id: int) -> list:
+    conn = get_connection()
+    rows = conn.execute("SELECT stage, score FROM user_stage_assessments WHERE user_id=? ORDER BY stage", (user_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def save_user_ability_report(user_id: int, data: dict) -> None:
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO user_ability_reports (user_id, overall_score, level, dimensions, strengths, weaknesses, recommended_direction, estimated_hours) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (
+            user_id,
+            data.get("overall_score", data.get("overallScore", 0)),
+            data.get("level", ""),
+            json.dumps(data.get("dimensions", []), ensure_ascii=False),
+            json.dumps(data.get("strengths", []), ensure_ascii=False),
+            json.dumps(data.get("weaknesses", []), ensure_ascii=False),
+            data.get("recommended_direction", data.get("recommendedDirection", "")),
+            data.get("estimated_hours", data.get("estimatedHours", 0)),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_deposit(user_id: int) -> Optional[dict]:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM user_deposits WHERE user_id=?", (user_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def upsert_deposit(user_id: int, fields: dict) -> dict:
+    """Create or update a user's deposit row. Never overwrites created_at/id/user_id."""
+    fields = {k: v for k, v in fields.items() if k not in ("id", "user_id", "created_at")}
+    fields["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM user_deposits WHERE user_id=?", (user_id,)).fetchone()
+    if existing:
+        sets = ", ".join(f"{k}=?" for k in fields)
+        conn.execute(f"UPDATE user_deposits SET {sets} WHERE user_id=?", list(fields.values()) + [user_id])
+    else:
+        cols = ["user_id"] + list(fields.keys())
+        placeholders = ["?"] + ["?"] * len(fields)
+        conn.execute(
+            f"INSERT INTO user_deposits ({', '.join(cols)}) VALUES ({', '.join(placeholders)})",
+            [user_id] + list(fields.values()),
+        )
+    conn.commit()
+    conn.close()
+    return get_deposit(user_id)
 
 
 # ============ Seed Data ============

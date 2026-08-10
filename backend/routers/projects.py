@@ -2,9 +2,11 @@
 
 import json
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import ProjectItem
+from auth_utils import get_optional_user
+from database import record_user_project
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -100,22 +102,28 @@ async def get_project(project_id: str):
 
 
 @router.post("/{project_id}/advance")
-async def advance_project(project_id: str):
+async def advance_project(project_id: str, request: Request):
     """Advance a project by one step (user completes the current step).
 
     Persists completed-step count in project_progress.json.
+    When authenticated, also records per-user progress (data isolation).
     """
     project = _get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    user = await get_optional_user(request)
     progress = _load_progress()
     completed = progress.get(project_id, 0)
     total = len(project.steps)
     if completed >= total:
+        if user:
+            record_user_project(user["id"], project_id, completed)
         return _apply_progress(project, completed)  # 已完成，幂等返回
 
     completed += 1
     progress[project_id] = completed
     _save_progress(progress)
+    if user:
+        record_user_project(user["id"], project_id, completed)
     return _apply_progress(project, completed)

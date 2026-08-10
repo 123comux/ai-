@@ -1,0 +1,228 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+  padding-bottom: 160rpx;
+}
+
+.navBar {
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.loadingText {
+  text-align: center;
+  padding: 200rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+// 顶部金额卡
+.hero {
+  margin: $spacing-lg;
+  background: $gradient-primary;
+  border-radius: $radius-xl;
+  padding: $spacing-xl $spacing-lg;
+  box-shadow: $shadow-card;
+  color: $color-text-white;
+}
+
+.heroLabel {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.heroAmount {
+  font-size: 64rpx;
+  font-weight: $font-weight-bold;
+  margin: $spacing-xs 0;
+}
+
+.heroSub {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+}
+
+.heroDeadline {
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+  background: rgba(255, 255, 255, 0.18);
+  display: inline-block;
+  padding: 4rpx 20rpx;
+  border-radius: $radius-round;
+}
+
+// 区块
+.section {
+  margin: 0 $spacing-lg $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+// 三锁
+.lockItem {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-md 0;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.lockIcon {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: $color-text-white;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+}
+
+.lockPassed {
+  background: $color-success;
+}
+
+.lockFailed {
+  background: $color-text-tertiary;
+}
+
+.lockBody {
+  flex: 1;
+}
+
+.lockTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.lockDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+  line-height: $line-height-normal;
+}
+
+.lockMetric {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  margin-top: 4rpx;
+}
+
+// 进度条
+.progressBar {
+  height: 12rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-round;
+  overflow: hidden;
+  margin-top: $spacing-sm;
+}
+
+.progressFill {
+  height: 100%;
+  background: $gradient-primary;
+  border-radius: $radius-round;
+}
+
+// 按钮
+.bigBtn {
+  margin: $spacing-lg;
+  height: $button-height-md;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: $shadow-float;
+}
+
+.bigBtnText {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
+.bigBtnDisabled {
+  background: $color-bg-hover;
+  box-shadow: none;
+}
+
+.bigBtnDisabledText {
+  color: $color-text-tertiary;
+}
+
+// 提示
+.notice {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: $line-height-normal;
+  margin: $spacing-md $spacing-lg;
+}
+
+.result {
+  margin: $spacing-md $spacing-lg;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-lg;
+  font-size: $font-size-md;
+}
+
+.resultOk {
+  background: rgba(0, 180, 42, 0.1);
+  color: $color-success;
+}
+
+.resultErr {
+  background: rgba(255, 77, 79, 0.1);
+  color: $color-error;
+}
+
+// 开发调试
+.devBar {
+  margin: $spacing-md $spacing-lg;
+  padding: $spacing-md;
+  background: #fff7e6;
+  border: 1px dashed #ffb74d;
+  border-radius: $radius-lg;
+}
+
+.devTitle {
+  font-size: $font-size-sm;
+  color: #b26a00;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.devBtn {
+  display: inline-block;
+  margin: 0 $spacing-sm $spacing-sm 0;
+  padding: 12rpx 24rpx;
+  background: #ffb74d;
+  color: #fff;
+  font-size: $font-size-sm;
+  border-radius: $radius-md;
+}

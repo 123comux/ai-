@@ -52,3 +52,32 @@ CORS_ORIGINS = [
     "https://trae.mobile.volcapp.com",
 ]
 CORS_ORIGIN_REGEX = r"https://.*\.(mobile\.volcapp\.com|volceapi\.com|apigateway.*\.volceapi\.com)"
+
+# ============ WeChat Mini-Program Auth ============
+# 微信小程序登录：code2session 换取 openid/session_key。
+# 真实上线需在小程序后台填写 AppID / AppSecret（写入 backend/.env，勿提交）。
+WECHAT_APPID = os.getenv("WECHAT_APPID", "")
+WECHAT_SECRET = os.getenv("WECHAT_SECRET", "")
+WECHAT_CODE2SESSION_URL = "https://api.weixin.qq.com/sns/jscode2session"
+
+# 开发模式：未配置 AppID/Secret 或显式 DEV_MODE=true 时，
+# /api/auth/wechat-login 接受任意 code 并生成开发用户（openid=dev_<code>），
+# 便于本地联调，无需真实微信环境。生产环境务必设为 false 并配置 AppID/Secret。
+DEV_MODE = os.getenv("DEV_MODE", "true").lower() in ("1", "true", "yes", "on")
+
+# ============ Auth Token (HMAC-signed, dependency-free) ============
+# 用于签发登录态 token 的密钥，生产环境务必替换为强随机值并写入 .env。
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-insecure-secret-change-me")
+TOKEN_EXPIRE_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
+
+# ============ 押金式培训（Deposit-style training）参数 ============
+# 与商业评审报告《押金式培训版》对齐：
+# 三锁门槛：时间锁 90 天 / 过程锁 完课率 100% + 作业 / 考核锁 均分 ≥85 + 实战项目
+DEPOSIT_DEFAULT_AMOUNT = float(os.getenv("DEPOSIT_AMOUNT", "199.00"))  # 默认培训押金（元）
+DEPOSIT_CURRENCY = "CNY"
+DEPOSIT_TIME_LOCK_DAYS = 90          # 时间锁：报名后 90 天内须完成全部课程与考核
+DEPOSIT_STAGES = 5                   # 五阶段课程 / 五阶段考核
+DEPOSIT_PASS_SCORE = 85              # 考核锁：五阶段考核均分达标线
+DEPOSIT_REFUND_WORKING_DAYS = 15     # 退费时效：最终考核通过后 15 个工作日内到账
+DEPOSIT_REFUND_RATE_LOW = 0.15       # 预估真实退费率区间（收入测算用）
+DEPOSIT_REFUND_RATE_HIGH = 0.25

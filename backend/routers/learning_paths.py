@@ -6,9 +6,11 @@ dynamically from the user's ability report recommendation direction.
 
 import json
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import LearningPathItem, LearningPathNode
+from auth_utils import get_optional_user
+from database import record_user_path_node
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/learning-paths", tags=["learning-paths"])
@@ -237,7 +239,7 @@ async def list_paths(direction: str | None = Query(None, description="Filter / g
 
 
 @router.post("/{path_id}/nodes/{node_id}/complete")
-async def complete_node(path_id: str, node_id: str):
+async def complete_node(path_id: str, node_id: str, request: Request):
     """Mark a node as completed; the next locked node becomes current.
 
     Persists completion in path_progress.json so it survives restarts.
@@ -277,6 +279,11 @@ async def complete_node(path_id: str, node_id: str):
     completed.add(node_id)
     progress[path_id] = sorted(completed)
     _save_progress(progress)
+
+    # 按用户隔离：登录态下同步写入 user_path_progress（供押金三锁/学习档案）
+    user = await get_optional_user(request)
+    if user:
+        record_user_path_node(user["id"], path_id, node_id)
 
     return _apply_user_progress(base, completed)
 

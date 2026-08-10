@@ -2,10 +2,21 @@ import { useEffect } from 'react';
 import { useDidShow, useDidHide } from '@tarojs/taro';
 // 全局样式
 import './app.scss';
+import { useUserStore } from '@/store/useUserStore';
 
 function App(props) {
-  // 可以使用所有的 React Hooks
-  useEffect(() => {});
+  const restore = useUserStore((s) => s.restore);
+  const login = useUserStore((s) => s.login);
+
+  // 启动即恢复登录态；未登录则自动登录（建立真实用户，支撑多用户数据隔离）
+  useEffect(() => {
+    (async () => {
+      await restore();
+      if (!useUserStore.getState().isLoggedIn) {
+        await login();
+      }
+    })();
+  }, []);
 
   // 对应 onShow
   useDidShow(() => {});

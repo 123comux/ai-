@@ -92,6 +92,41 @@
   background: $color-divider;
 }
 
+.depositEntry {
+  margin: 0 $spacing-lg $spacing-md;
+  background: $gradient-primary;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: $shadow-card;
+}
+
+.depositEntryLeft {
+  flex: 1;
+}
+
+.depositEntryTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+  display: block;
+}
+
+.depositEntryDesc {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 4rpx;
+  display: block;
+}
+
+.depositEntryArrow {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  margin-left: $spacing-md;
+}
+
 .section {
   padding: 0 $spacing-lg $spacing-md;
 }

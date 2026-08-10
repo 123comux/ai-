@@ -16,7 +16,8 @@ export default defineAppConfig({
     'pages/portfolio/index',
     'pages/goals/index',
     'pages/favorites/index',
-    'pages/settings/index'
+    'pages/settings/index',
+    'pages/deposit/index'
   ],
   window: {
     backgroundTextStyle: 'light',

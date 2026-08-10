@@ -79,6 +79,15 @@ const MinePage: React.FC = () => {
         </View>
       </View>
 
+      {/* 押金式培训入口 */}
+      <View className={styles.depositEntry} onClick={() => Taro.navigateTo({ url: '/pages/deposit/index' })}>
+        <View className={styles.depositEntryLeft}>
+          <Text className={styles.depositEntryTitle}>押金式培训 · 退费进度</Text>
+          <Text className={styles.depositEntryDesc}>先收培训费，达标全额退，学会不花钱</Text>
+        </View>
+        <Text className={styles.depositEntryArrow}>→</Text>
+      </View>
+
       {/* 能力报告 */}
       {abilityReport && (
         <View className={styles.section}>

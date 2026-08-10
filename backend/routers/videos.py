@@ -3,10 +3,12 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from models.schemas import VideoItem
+from auth_utils import get_optional_user
+from database import record_user_video
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/videos", tags=["videos"])
@@ -98,7 +100,7 @@ class CompleteRequest(BaseModel):
 
 
 @router.post("/{video_id}/complete")
-async def complete_video(video_id: str, req: CompleteRequest | None = None):
+async def complete_video(video_id: str, request: Request, req: CompleteRequest | None = None):
     """Mark a video as watched by the user (persisted), recording timestamp and watch minutes."""
     items = _load_videos()
     if not any(v.id == video_id for v in items):
@@ -111,4 +113,8 @@ async def complete_video(video_id: str, req: CompleteRequest | None = None):
         "minutes": minutes,
     }
     _save_watched(watched)
+    # 按用户隔离：登录态下同步写入 user_video_progress（供押金三锁计算）
+    user = await get_optional_user(request)
+    if user:
+        record_user_video(user["id"], video_id, minutes)
     return {"video_id": video_id, "watched_count": len(watched), "minutes": minutes}

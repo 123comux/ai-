@@ -6,9 +6,16 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from database import get_connection, insert_row, query_all, query_one, update_row, delete_row, parse_json_field
+from auth_utils import get_optional_user
+
+
+async def _uid(request: Request) -> int:
+    """Current user id, or 0 for the legacy global/demo scope (no auth)."""
+    user = await get_optional_user(request)
+    return user["id"] if user else 0
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/mine", tags=["mine-data"])
@@ -66,16 +73,22 @@ async def get_portfolio():
 # ============ Goals ============
 
 @router.get("/goals")
-async def list_goals():
-    return query_all("goals", order_by="sort_order ASC, id DESC")
+async def list_goals(request: Request):
+    uid = await _uid(request)
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM goals WHERE user_id=? ORDER BY sort_order ASC, id DESC", (uid,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 @router.post("/goals")
-async def create_goal(body: dict):
+async def create_goal(body: dict, request: Request):
+    uid = await _uid(request)
     title = (body.get("title") or "").strip()
     if not title:
         raise HTTPException(status_code=400, detail="标题不能为空")
     row = {
+        "user_id": uid,
         "title": title,
         "description": (body.get("description") or "").strip(),
         "target_date": (body.get("target_date") or "").strip(),
@@ -83,13 +96,15 @@ async def create_goal(body: dict):
         "sort_order": int(body.get("sort_order") or 0),
     }
     goal_id = insert_row("goals", row)
-    goal = query_one("goals", goal_id)
-    return goal
+    return query_one("goals", goal_id)
 
 
 @router.put("/goals/{goal_id}")
-async def update_goal(goal_id: int, body: dict):
-    existing = query_one("goals", goal_id)
+async def update_goal(goal_id: int, body: dict, request: Request):
+    uid = await _uid(request)
+    conn = get_connection()
+    existing = conn.execute("SELECT * FROM goals WHERE id=? AND user_id=?", (goal_id, uid)).fetchone()
+    conn.close()
     if not existing:
         raise HTTPException(status_code=404, detail="目标不存在")
     updates = {}
@@ -106,10 +121,14 @@ async def update_goal(goal_id: int, body: dict):
 
 
 @router.delete("/goals/{goal_id}")
-async def delete_goal(goal_id: int):
-    ok = delete_row("goals", goal_id)
-    if not ok:
+async def delete_goal(goal_id: int, request: Request):
+    uid = await _uid(request)
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM goals WHERE id=? AND user_id=?", (goal_id, uid)).fetchone()
+    conn.close()
+    if not existing:
         raise HTTPException(status_code=404, detail="目标不存在")
+    delete_row("goals", goal_id)
     return {"ok": True}
 
 
@@ -135,12 +154,17 @@ def _resolve_favorite(item_type: str, item_id: str) -> dict:
 
 
 @router.get("/favorites")
-async def list_favorites():
-    return query_all("favorites", order_by="id DESC")
+async def list_favorites(request: Request):
+    uid = await _uid(request)
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM favorites WHERE user_id=? ORDER BY id DESC", (uid,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 @router.post("/favorites")
-async def add_favorite(body: dict):
+async def add_favorite(body: dict, request: Request):
+    uid = await _uid(request)
     item_type = body.get("item_type")
     item_id = str(body.get("item_id") or "")
     if item_type not in ("course", "project") or not item_id:
@@ -148,13 +172,14 @@ async def add_favorite(body: dict):
     info = _resolve_favorite(item_type, item_id)
     conn = get_connection()
     exists = conn.execute(
-        "SELECT id FROM favorites WHERE item_type=? AND item_id=?",
-        (item_type, item_id),
+        "SELECT id FROM favorites WHERE item_type=? AND item_id=? AND user_id=?",
+        (item_type, item_id, uid),
     ).fetchone()
     conn.close()
     if exists:
         return query_one("favorites", exists["id"])
     fav_id = insert_row("favorites", {
+        "user_id": uid,
         "item_type": item_type,
         "item_id": item_id,
         "title": info["title"],
@@ -165,8 +190,12 @@ async def add_favorite(body: dict):
 
 
 @router.delete("/favorites/{fav_id}")
-async def remove_favorite(fav_id: int):
-    ok = delete_row("favorites", fav_id)
-    if not ok:
+async def remove_favorite(fav_id: int, request: Request):
+    uid = await _uid(request)
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM favorites WHERE id=? AND user_id=?", (fav_id, uid)).fetchone()
+    conn.close()
+    if not existing:
         raise HTTPException(status_code=404, detail="收藏不存在")
+    delete_row("favorites", fav_id)
     return {"ok": True}

@@ -5,13 +5,19 @@
  * All data is fetched from the FastAPI backend (http://localhost:8000).
  */
 import Taro from '@tarojs/taro';
-import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem } from '@/types/index';
+import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem, LoginResult, AuthUser, DepositConfig, DepositStatus } from '@/types/index';
 
 // H5 dev mode & WeChat mini-program: both use direct backend URL.
 // CORS is fully configured in backend config.py (allow_origins includes localhost:10087).
 // This approach avoids Taro devServer proxy reliability issues.
 // NOTE: WeChat mini-program requires HTTPS and domain whitelist — update this for production.
 const API_BASE = 'http://localhost:8000';
+
+/** 读取本地登录态 token（与 useUserStore 共用同一 key） */
+function authHeaders(): Record<string, string> {
+  const t = Taro.getStorageSync('aishi_token');
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
 
 /** 规范化 URL，避免双斜杠等问题 */
 function buildUrl(path: string): string {
@@ -25,6 +31,7 @@ async function apiGet<T>(path: string, timeoutMs: number = 15000): Promise<T> {
   const res = await Taro.request<T>({
     url: buildUrl(path),
     method: 'GET',
+    header: { ...authHeaders() },
     timeout: timeoutMs,
     dataType: 'json',
   });
@@ -37,7 +44,7 @@ async function apiPost<T>(path: string, body: Record<string, unknown>, timeoutMs
   const res = await Taro.request<T>({
     url: buildUrl(path),
     method: 'POST',
-    header: { 'Content-Type': 'application/json' },
+    header: { 'Content-Type': 'application/json', ...authHeaders() },
     data: body,
     timeout: timeoutMs,
     dataType: 'json',
@@ -56,7 +63,7 @@ async function apiPut<T>(path: string, body: Record<string, unknown>): Promise<T
   const res = await Taro.request<T>({
     url: buildUrl(path),
     method: 'PUT',
-    header: { 'Content-Type': 'application/json' },
+    header: { 'Content-Type': 'application/json', ...authHeaders() },
     data: body,
     timeout: 30000,
     dataType: 'json',
@@ -70,6 +77,7 @@ async function apiDelete<T>(path: string): Promise<T> {
   const res = await Taro.request<T>({
     url: buildUrl(path),
     method: 'DELETE',
+    header: { ...authHeaders() },
     timeout: 15000,
     dataType: 'json',
   });
@@ -370,4 +378,53 @@ export const addFavorite = async (itemType: 'course' | 'project', itemId: string
 /** 删除收藏 */
 export const removeFavorite = async (id: number): Promise<{ ok: boolean }> => {
   return apiDelete<{ ok: boolean }>(`/api/mine/favorites/${id}`);
+};
+
+// ============ 登录 / 用户体系 API ============
+
+/** 微信登录：用 wx.login 拿到的 code 换取登录态 token */
+export const wechatLogin = async (code: string): Promise<LoginResult> => {
+  return apiPost<LoginResult>('/api/auth/wechat-login', { code });
+};
+
+/** 获取当前登录用户信息 */
+export const fetchMe = async (): Promise<AuthUser> => {
+  return apiGet<AuthUser>('/api/auth/me');
+};
+
+// ============ 押金式培训 API ============
+
+/** 押金模型配置（金额、三锁规则、退费规则） */
+export const fetchDepositConfig = async (): Promise<DepositConfig> => {
+  return apiGet<DepositConfig>('/api/deposit/config');
+};
+
+/** 报名收押金（先收培训费） */
+export const enrollDeposit = async (): Promise<any> => {
+  return apiPost<any>('/api/deposit/enroll', {});
+};
+
+/** 查询押金状态、三锁进度与是否达标 */
+export const fetchDepositStatus = async (): Promise<DepositStatus> => {
+  return apiGet<DepositStatus>('/api/deposit/status');
+};
+
+/** 达标后全额退费 */
+export const requestRefund = async (): Promise<any> => {
+  return apiPost<any>('/api/deposit/refund', {});
+};
+
+/** 录入五阶段考核成绩（考核锁用） */
+export const recordStageAssessment = async (stage: number, score: number): Promise<any> => {
+  return apiPost<any>('/api/deposit/stage-assessment', { stage, score });
+};
+
+/** 提交实战项目（考核锁用） */
+export const submitProject = async (passed: boolean): Promise<any> => {
+  return apiPost<any>('/api/deposit/project-submit', { passed });
+};
+
+/** 标记作业通过（过程锁用） */
+export const passHomework = async (passed: boolean): Promise<any> => {
+  return apiPost<any>('/api/deposit/homework', { passed });
 };

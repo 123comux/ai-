@@ -85,10 +85,6 @@ const AssessmentPage: React.FC = () => {
     setSelfDescription('');
   };
 
-  const handleBack = () => {
-    Taro.navigateBack();
-  };
-
   const getLevelLabel = (level: string) => {
     const map: Record<string, string> = {
       expert: '专家',

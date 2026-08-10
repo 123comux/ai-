@@ -42,3 +42,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# WorkBuddy internal state (not project source)
+.workbuddy/
+
+# Frontend H5 build output (regenerable via npm run build:h5)
+dist-h5/
+
+# User scripts / binary docs (per project agreement, not committed)
+scripts/
+*.docx

@@ -1,103 +1,109 @@
-"""User data API router."""
+"""User data API router.
+
+All endpoints are multi-tenant aware: when a valid Bearer token is present the
+data is scoped to that user (from the user_* tables); when absent, a global
+demo fallback (data/processed/*.json) is used so the product still renders.
+"""
 
 import json
 import re
+from datetime import datetime, timedelta
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Request, Depends
 
 from models.schemas import AbilityReport, LearningRecord, JobMatchingResult, LearningStats
+from database import (
+    get_latest_user_ability_report,
+    get_user_video_progress,
+    get_user_completed_project_count,
+    parse_json_field,
+    safe_load_json,
+)
+from auth_utils import get_optional_user
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/user", tags=["user-data"])
 
 
 def _load_json(filename: str):
-    path = PROCESSED_DIR / filename
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Data file not found: {filename}")
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Load a processed JSON file; returns None on missing/malformed (no 500)."""
+    return safe_load_json(PROCESSED_DIR / filename, None)
 
 
 @router.get("/ability-report", response_model=AbilityReport)
-async def get_ability_report():
-    """Get user ability report."""
+async def get_ability_report(request: Request):
+    """User's latest ability report (per-user), with global demo fallback."""
+    user = await get_optional_user(request)
+    if user:
+        row = get_latest_user_ability_report(user["id"])
+        if row:
+            return AbilityReport(
+                overallScore=row["overall_score"],
+                level=row["level"],
+                dimensions=parse_json_field(row["dimensions"], []),
+                strengths=parse_json_field(row["strengths"], []),
+                weaknesses=parse_json_field(row["weaknesses"], []),
+                recommendedDirection=row["recommended_direction"],
+                estimatedHours=row["estimated_hours"],
+            )
+    # Fallback to the seeded global demo report
     data = _load_json("ability_report.json")
+    if not data:
+        return AbilityReport(
+            overallScore=0, level="初级", dimensions=[],
+            strengths=[], weaknesses=[], recommendedDirection="", estimatedHours=0,
+        )
     return AbilityReport(**data)
 
 
 @router.get("/learning-records", response_model=list[LearningRecord])
-async def get_learning_records():
-    """Get learning records from real watched videos (video_progress).
-
-    Groups watched videos by date: duration = 观看分钟累计, lessonsCompleted = 该日看完视频数。
-    """
-    videos = []
-    if (PROCESSED_DIR / "videos.json").exists():
-        try:
-            videos = _load_json("videos.json")
-        except Exception:
-            videos = []
-    if not isinstance(videos, list):
-        videos = []
-
-    watched = {}
-    if (PROCESSED_DIR / "video_progress.json").exists():
-        try:
-            progress = _load_json("video_progress.json")
-            raw = progress.get("watched", {})
-            if isinstance(raw, dict):
-                for vid, val in raw.items():
-                    if isinstance(val, dict):
-                        watched[vid] = val
-                    else:
-                        watched[vid] = {"at": val if isinstance(val, str) else "", "minutes": 0}
-        except Exception:
-            watched = {}
-
-    # 按日期聚合：date -> {duration, lessons}
-    from datetime import datetime
+async def get_learning_records(request: Request):
+    """Per-user learning records aggregated from watched-video timestamps."""
+    user = await get_optional_user(request)
+    if not user:
+        return []
+    rows = get_user_video_progress(user["id"])
     day_map: dict[str, dict] = {}
-    video_ids = {v.get("id") for v in videos}
-    for vid, w in watched.items():
-        if vid not in video_ids:
+    for r in rows:
+        at = (r.get("watched_at") or "")[:10]
+        if not at:
             continue
-        at = w.get("at", "") if isinstance(w, dict) else ""
-        minutes = (w.get("minutes", 0) or 0) if isinstance(w, dict) else 0
-        date = at[:10] if at else ""
-        if not date:
-            continue
-        day_map.setdefault(date, {"duration": 0, "lessons": 0})
-        day_map[date]["duration"] += minutes
-        day_map[date]["lessons"] += 1
-
-    records = []
-    for date in sorted(day_map.keys(), reverse=True):
-        d = day_map[date]
-        records.append(LearningRecord(
-            date=date[5:],  # MM-DD
-            duration=d["duration"],
-            lessonsCompleted=d["lessons"],
+        minutes = int(r.get("minutes") or 0)
+        day_map.setdefault(at, {"duration": 0, "lessons": 0})
+        day_map[at]["duration"] += minutes
+        day_map[at]["lessons"] += 1
+    records = [
+        LearningRecord(
+            date=d[5:],  # MM-DD
+            duration=v["duration"],
+            lessonsCompleted=v["lessons"],
             exercisesDone=0,
-        ))
+        )
+        for d, v in sorted(day_map.keys(), reverse=True)
+    ]
     return records[:30]
 
 
 @router.get("/job-matching", response_model=JobMatchingResult)
 async def get_job_matching():
-    """Get job matching result."""
+    """Get the seeded job matching result (demo)."""
     data = _load_json("job_matching.json")
+    if not data:
+        return JobMatchingResult(
+            jobTitle="", company="", matchScore=0, requiredSkills=[],
+            gapSkills=[], recommendedCourses=[], recommendedProjects=[],
+        )
     return JobMatchingResult(**data)
 
 
 def _parse_ai_json(text: str) -> dict | None:
     """Extract a JSON object from AI output (tolerates markdown fences/extra text)."""
     text = text.strip()
-    # 去掉 ```json ... ``` 围栏
     m = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.S)
     if m:
         text = m.group(1).strip()
-    # 找到第一个 { 到最后一个 }
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end == -1 or end <= start:
         return None
@@ -122,11 +128,6 @@ DIMENSION_MASTERED_THRESHOLD = 60
 
 
 def _skill_mastered(skill: str, dimensions: dict) -> bool:
-    """判断技能是否已掌握：命中能力维度且该维度得分 >= 60 分才算掌握。
-
-    能力报告 30 分（初级）时所有维度都低于 60，技能应整体判定为待提升，
-    避免出现"30 分却大部分技能已掌握"的不合理结果。
-    """
     s = skill.lower()
     best_dimension = None
     best_score = 0
@@ -137,14 +138,12 @@ def _skill_mastered(skill: str, dimensions: dict) -> bool:
                 best_score = d
                 best_dimension = dim
     if best_dimension is None:
-        # 技能不在映射里，按整体平均分判断（同样要求 60 分）
         avg = sum(dimensions.values()) / len(dimensions) if dimensions else 0
         return avg >= DIMENSION_MASTERED_THRESHOLD
     return best_score >= DIMENSION_MASTERED_THRESHOLD
 
 
 def _skill_dimension_score(skill: str, dimensions: dict) -> float:
-    """返回技能对应能力维度的得分（未命中时用平均分）。"""
     s = skill.lower()
     best_dimension = None
     best_score = 0
@@ -156,30 +155,42 @@ def _skill_dimension_score(skill: str, dimensions: dict) -> float:
                 best_dimension = dim
     if best_dimension is not None:
         return best_score
-    # 技能不在映射里，用平均分
     return sum(dimensions.values()) / len(dimensions) if dimensions else 0
 
 
 @router.post("/job-matching/analyze", response_model=JobMatchingResult)
-async def analyze_job_matching(body: dict):
+async def analyze_job_matching(body: dict, request: Request):
     """Analyze a job description against the user's ability report.
 
     - Empty description -> raise 400 (需要输入)
     - AI (Zhipu GLM) 提取岗位技能清单、推荐课程/项目、匹配分
     - mastered 由后端基于能力报告维度得分判定（避免 AI 误判）
     - AI 失败时回退到关键词提取
+    - Ability report is resolved per-user when authenticated.
     """
     job_description = (body.get("job_description") or "").strip()
     if not job_description:
         raise HTTPException(status_code=400, detail="请输入岗位描述")
 
-    ability = _load_json("ability_report.json")
-    dimensions = {d.get("label"): d.get("score", 0) for d in ability.get("dimensions", [])}
-    weaknesses = ability.get("weaknesses", [])
-    strengths = ability.get("strengths", [])
+    # Resolve the user's own ability report when authenticated, else the global demo.
+    user = await get_optional_user(request)
+    dimensions = None
+    weaknesses = []
+    strengths = []
+    if user:
+        row = get_latest_user_ability_report(user["id"])
+        if row:
+            dims = parse_json_field(row["dimensions"], [])
+            dimensions = {d.get("label"): d.get("score", 0) for d in dims}
+            weaknesses = parse_json_field(row["weaknesses"], [])
+            strengths = parse_json_field(row["strengths"], [])
+    if dimensions is None:
+        ability = _load_json("ability_report.json") or {}
+        dimensions = {d.get("label"): d.get("score", 0) for d in ability.get("dimensions", [])}
+        weaknesses = ability.get("weaknesses", [])
+        strengths = ability.get("strengths", [])
 
     def _build_result(job_title: str, ai_match_score: int, raw_skills: list, gaps: list, courses: list, projects: list) -> JobMatchingResult:
-        """从 AI 提取的原始技能列表，结合能力报告判定 mastered，并由后端计算 matchScore。"""
         required = []
         for s in raw_skills:
             name = s.get("name") if isinstance(s, dict) else str(s)
@@ -188,15 +199,11 @@ async def analyze_job_matching(body: dict):
             required.append({"name": name, "mastered": _skill_mastered(name, dimensions)})
         if not required:
             required = [{"name": "Python", "mastered": _skill_mastered("Python", dimensions)}]
-        # 匹配分 = 各技能对应维度得分的平均（反映真实能力水平，非"已掌握"二值）
-        # 30 分初级能力 → 匹配分整体中等偏低，不会出现"30 分却匹配 90%"的失真
         skill_scores = [_skill_dimension_score(s["name"], dimensions) for s in required]
         avg_score = sum(skill_scores) / len(skill_scores) if skill_scores else 50
-        # 已掌握技能加成（掌握技能的岗位匹配更可靠），小幅融合 AI 参考分
         mastered_ratio = sum(1 for s in required if s["mastered"]) / len(required) if required else 0
         calc_score = avg_score + mastered_ratio * 15
         final_score = int(calc_score * 0.7 + max(0, min(100, ai_match_score)) * 0.3)
-        # 待提升技能 = 岗位未掌握技能；AI gaps 只保留非抽象维度名的项
         not_mastered = [s["name"] for s in required if not s["mastered"]]
         ai_gaps = [g for g in gaps if g and g not in dimensions]
         gap = list(dict.fromkeys(not_mastered + ai_gaps))
@@ -262,58 +269,30 @@ async def analyze_job_matching(body: dict):
 
 
 @router.get("/learning-stats", response_model=LearningStats)
-async def get_learning_stats():
-    """Get learning statistics from real user progress (video_progress).
+async def get_learning_stats(request: Request):
+    """Per-user learning statistics aggregated from user_video_progress + project progress.
 
     - learningDays: 连续学习天数（从今天往前，连续有学习行为的自然日数）
-    - totalHours: 已看完视频的时长总和（秒转小时）
+    - totalMinutes: 已看完视频的时长总和（分钟）
     - completedLessons: 已看完视频数
-    - completedProjects: 各学习路径中已完成的项目节点数（实时）
+    - completedProjects: 完成全部步骤的项目数
     """
-    videos = []
-    if (PROCESSED_DIR / "videos.json").exists():
-        try:
-            videos = _load_json("videos.json")
-        except Exception:
-            videos = []
-    if not isinstance(videos, list):
-        videos = []
+    user = await get_optional_user(request)
+    if not user:
+        return LearningStats(learningDays=0, totalMinutes=0, completedProjects=0, completedLessons=0)
 
-    # watched: {video_id: {at, minutes}}（兼容旧格式 {video_id: ts}）
-    watched = {}
-    if (PROCESSED_DIR / "video_progress.json").exists():
-        try:
-            progress = _load_json("video_progress.json")
-            raw = progress.get("watched", {})
-            if isinstance(raw, dict):
-                for vid, val in raw.items():
-                    if isinstance(val, dict):
-                        watched[vid] = val
-                    else:
-                        watched[vid] = {"at": val if isinstance(val, str) else "", "minutes": 0}
-            elif isinstance(raw, list):
-                watched = {vid: {"at": "", "minutes": 0} for vid in raw}
-        except Exception:
-            watched = {}
-
-    watched_videos = [v for v in videos if v.get("id") in watched]
-    watched_count = len(watched_videos)
-    # 总时长 = 实际观看分钟数累计
-    total_minutes = sum(
-        (w.get("minutes", 0) or 0) if isinstance(w, dict) else 0
-        for w in watched.values()
-    )
+    rows = get_user_video_progress(user["id"])
+    watched_count = len(rows)
+    total_minutes = sum(int(r.get("minutes") or 0) for r in rows)
 
     # 连续学习天数：从今天往前，统计连续有学习行为的自然日
-    from datetime import datetime, timedelta
     learning_dates = set()
-    for w in watched.values():
-        at = w.get("at", "") if isinstance(w, dict) else ""
+    for r in rows:
+        at = (r.get("watched_at") or "")[:10]
         if not at:
             continue
         try:
-            d = datetime.strptime(at[:10], "%Y-%m-%d").date()
-            learning_dates.add(d)
+            learning_dates.add(datetime.strptime(at, "%Y-%m-%d").date())
         except ValueError:
             continue
 
@@ -321,56 +300,17 @@ async def get_learning_stats():
     if learning_dates:
         today = datetime.now().date()
         cur = today
-        # 今天若还没有学习行为，从昨天开始算（保持 streak 展示，不因今天未学就清零）
         if cur not in learning_dates:
             cur -= timedelta(days=1)
         while cur in learning_dates:
             streak += 1
             cur -= timedelta(days=1)
 
-    # 完成项目 = 路径中已完成的项目节点 + 项目页完成全部步骤的项目数
-    projects_done = 0
-    path_progress = None
-    if (PROCESSED_DIR / "path_progress.json").exists():
-        try:
-            path_progress = _load_json("path_progress.json")
-        except Exception:
-            path_progress = None
-    if isinstance(path_progress, dict):
-        for path_id, node_ids in path_progress.items():
-            if not isinstance(node_ids, list):
-                continue
-            for nid in node_ids:
-                if "-project-" in nid:
-                    projects_done += 1
-
-    # 项目页直接完成的项目（project_progress 中完成步骤数 == 项目总步骤数）
-    project_progress = None
-    if (PROCESSED_DIR / "project_progress.json").exists():
-        try:
-            project_progress = _load_json("project_progress.json")
-        except Exception:
-            project_progress = None
-    if isinstance(project_progress, dict):
-        projects_data = []
-        if (PROCESSED_DIR / "enriched_projects.json").exists():
-            try:
-                projects_data = _load_json("enriched_projects.json")
-            except Exception:
-                projects_data = []
-        elif (PROCESSED_DIR / "projects.json").exists():
-            try:
-                projects_data = _load_json("projects.json")
-            except Exception:
-                projects_data = []
-        total_steps = {p.get("id"): len(p.get("steps", []) or []) for p in projects_data if isinstance(p, dict)}
-        for pid, done in project_progress.items():
-            if total_steps.get(pid, 0) and done >= total_steps[pid]:
-                projects_done += 1
+    completed_projects = get_user_completed_project_count(user["id"])
 
     return LearningStats(
         learningDays=streak,
         totalMinutes=total_minutes,
-        completedProjects=projects_done,
+        completedProjects=completed_projects,
         completedLessons=watched_count,
     )

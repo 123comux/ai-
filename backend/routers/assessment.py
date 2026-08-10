@@ -2,11 +2,14 @@
 
 import concurrent.futures
 
-from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 
 from models.schemas import AssessmentQuestion, AssessmentQuestionPublic, AssessmentResult
 from services.assessment_service import get_assessment, score_assessment
+from auth_utils import get_optional_user
 
 router = APIRouter(prefix="/api/assessment", tags=["assessment"])
 
@@ -40,14 +43,14 @@ async def get_questions(
 
 
 @router.post("/submit", response_model=AssessmentResult)
-async def submit_assessment(req: SubmitRequest):
+async def submit_assessment(req: SubmitRequest, user: Optional[dict] = Depends(get_optional_user)):
     """Submit assessment answers, get scored result, optionally fused with AI text analysis."""
     if len(req.answers) != len(req.question_ids):
         raise HTTPException(status_code=400, detail="Answers and question_ids must have same length")
     if not req.answers:
         raise HTTPException(status_code=400, detail="No answers provided")
 
-    result = score_assessment(req.answers, req.question_ids)
+    result = score_assessment(req.answers, req.question_ids, user_id=user["id"] if user else None)
 
     # AI fusion: if the user wrote a self-description, let the BERT analyzer
     # refine the recommended direction. Runs in a thread with a hard timeout so

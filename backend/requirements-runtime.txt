@@ -1,0 +1,9 @@
+# 运行时依赖（精简版）——仅 API 服务所需。
+# 说明：本地 torch / transformers 模型（services/tutor_service.py、
+# services/assessment_ai_service.py、training/*）只是 AI 能力的「兜底」实现，
+# 线上主路径走智谱 GLM API，因此镜像里不需要这些重依赖，启动更快、体积更小。
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.0
+httpx==0.27.2
+python-dotenv==1.0.1

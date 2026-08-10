@@ -107,7 +107,7 @@ def _recommend_direction(dim_scores: dict[str, int]) -> str:
     return best if best_score > 0 else "AI 应用开发"
 
 
-def score_assessment(answers: list[int], question_ids: list[str]) -> AssessmentResult:
+def score_assessment(answers: list[int], question_ids: list[str], user_id: int = None) -> AssessmentResult:
     """Score answers, build a per-dimension ability report, persist it, and return it."""
     all_q = load_questions()
     q_map = {q.id: q for q in all_q}
@@ -160,7 +160,7 @@ def score_assessment(answers: list[int], question_ids: list[str]) -> AssessmentR
     )
 
     # Persist a full AbilityReport so home/mine pages reflect fresh assessment.
-    _persist_ability_report(dim_scores, overall, level, strengths, weaknesses, recommended)
+    _persist_ability_report(dim_scores, overall, level, strengths, weaknesses, recommended, user_id=user_id)
 
     return result
 
@@ -172,8 +172,12 @@ def _persist_ability_report(
     strengths: list[str],
     weaknesses: list[str],
     recommended: str,
+    user_id: int = None,
 ) -> None:
-    """Write the latest assessment into ability_report.json (dynamic, not hard-coded)."""
+    """Write the latest assessment into ability_report.json (global demo fallback)
+    AND, when a user is identified, into the per-user user_ability_reports table
+    so each user's 我的页 reflects their own result (multi-tenant isolation).
+    """
     # Fixed order for a stable radar chart
     order = ["编程基础", "数学基础", "机器学习", "深度学习", "大模型应用", "项目经验"]
     dimensions = [
@@ -195,6 +199,24 @@ def _persist_ability_report(
         "recommendedDirection": recommended,
         "estimatedHours": 100 + max(0, overall) * 2,
     }
+
+    # 1) Global demo fallback (used by job-matching when no per-user report exists)
     path = PROCESSED_DIR / "ability_report.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
+
+    # 2) Per-user persistence (multi-tenant isolation)
+    if user_id is not None:
+        try:
+            from database import save_user_ability_report
+            save_user_ability_report(user_id, {
+                "overall_score": overall,
+                "level": level_cn,
+                "dimensions": dimensions,
+                "strengths": report["strengths"],
+                "weaknesses": report["weaknesses"],
+                "recommended_direction": recommended,
+                "estimated_hours": report["estimatedHours"],
+            })
+        except Exception:
+            pass  # never let persistence break the assessment response

@@ -65,8 +65,13 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
     completion_rate = round(watched / total_videos * 100) if total_videos else 0
 
     stages = get_stage_assessments(user_id)
-    scores = [s["score"] for s in stages]
-    assess_avg = round(sum(scores) / len(scores), 1) if scores else 0.0
+    # 同一阶段多次录入只取最新一次，避免"已录 25 阶段"这种重复计数
+    latest_by_stage: dict[int, float] = {}
+    for s in stages:
+        latest_by_stage[s["stage"]] = s["score"]  # 列表按时间升序，后者覆盖
+    stage_scores = list(latest_by_stage.values())
+    stages_recorded = len(latest_by_stage)
+    assess_avg = round(sum(stage_scores) / len(stage_scores), 1) if stage_scores else 0.0
 
     # 时间锁
     deadline = deposit.get("deadline_at") or ""
@@ -85,7 +90,12 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
     project_passed = bool(deposit.get("project_passed"))
 
     process_passed = completion_rate >= 100 and homework_passed
-    assess_passed = assess_avg >= DEPOSIT_PASS_SCORE and project_submitted and project_passed
+    assess_passed = (
+        stages_recorded >= DEPOSIT_STAGES
+        and assess_avg >= DEPOSIT_PASS_SCORE
+        and project_submitted
+        and project_passed
+    )
     eligible = (
         deposit.get("status") == "active"
         and time_passed
@@ -97,8 +107,8 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
         "completion_rate": completion_rate,
         "watched_videos": watched,
         "total_videos": total_videos,
-        "stage_scores": scores,
-        "stages_recorded": len(scores),
+        "stage_scores": stage_scores,
+        "stages_recorded": stages_recorded,
         "assessment_avg": assess_avg,
         "deadline_at": deadline,
         "days_left": max(days_left, 0) if days_left is not None else None,

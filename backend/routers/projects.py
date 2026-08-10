@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import ProjectItem
 from auth_utils import get_optional_user
-from database import record_user_project
+from database import record_user_project, safe_load_json
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -17,20 +17,13 @@ def _load_projects() -> list[ProjectItem]:
     path = PROCESSED_DIR / "enriched_projects.json"
     if not path.exists():
         path = PROCESSED_DIR / "projects.json"
-    if not path.exists():
-        return []
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = safe_load_json(path, [])
     return [ProjectItem(**p) for p in data]
 
 
 def _load_progress() -> dict[str, int]:
     """Load project progress: {project_id: completed_steps_count}."""
-    path = PROCESSED_DIR / "project_progress.json"
-    if not path.exists():
-        return {}
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = safe_load_json(PROCESSED_DIR / "project_progress.json", {})
     return data if isinstance(data, dict) else {}
 
 

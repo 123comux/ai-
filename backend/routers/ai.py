@@ -94,10 +94,25 @@ async def tutor_chat(req: TutorRequest):
             temperature=req.temperature,
         )
         return TutorResponse(**result)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=503, detail=f"Model not available: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+    except Exception:
+        # 本地模型缺失/加载失败：进入兜底，不抛 5xx，保证导师页不崩溃
+        pass
+
+    # 3. 兜底：未配置任何 AI 模型（智谱 key 缺失且无本地模型）时，
+    #    返回一段有用的规则化引导，前端可正常展示，避免 503/500。
+    fallback_answer = (
+        "同学你好～我是 AI 学习导师。当前服务端尚未配置 AI 模型（需设置 ZHIPU_API_KEY "
+        "或部署本地 Qwen 模型），所以暂时无法实时生成详解。\n\n"
+        "你可以先按课程中心的学习路径系统学习；配置好模型后，这里就能针对你的问题给出深入解答。\n\n"
+        f"你刚才的问题是：「{req.question}」\n建议从基础概念入手，结合课程里的实操项目动手练习，"
+        "遇到具体报错再把信息发给我，我会帮你定位。"
+    )
+    return TutorResponse(
+        question=req.question,
+        answer=fallback_answer,
+        model="rule-fallback",
+        tokens_generated=0,
+    )
 
 
 @router.post("/assessment/analyze", response_model=AnalyzeResponse)

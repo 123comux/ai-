@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import LearningPathItem, LearningPathNode
 from auth_utils import get_optional_user
-from database import record_user_path_node
+from database import record_user_path_node, safe_load_json
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/learning-paths", tags=["learning-paths"])
@@ -21,19 +21,12 @@ def _load_paths() -> list[LearningPathItem]:
     path = PROCESSED_DIR / "enriched_learning_paths.json"
     if not path.exists():
         path = PROCESSED_DIR / "learning_paths.json"
-    if not path.exists():
-        return []
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = safe_load_json(path, [])
     return [LearningPathItem(**p) for p in data]
 
 
 def _load_json(filename: str):
-    path = PROCESSED_DIR / filename
-    if not path.exists():
-        return None
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return safe_load_json(PROCESSED_DIR / filename, None)
 
 
 # direction family -> (course ids in order, project ids in order)

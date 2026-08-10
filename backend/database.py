@@ -430,6 +430,19 @@ def delete_row(table: str, id_value: Any) -> bool:
     return affected
 
 
+def safe_load_json(path, default=None):
+    """Load JSON from a path, returning `default` on missing OR corrupt file.
+
+    Used by content routers so a missing/garbled processed JSON never raises a 500.
+    """
+    import json as _json
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return _json.load(f)
+    except (FileNotFoundError, OSError, _json.JSONDecodeError, ValueError):
+        return default
+
+
 def parse_json_field(value: str, default=None):
     """Parse a JSON string field."""
     if isinstance(value, (list, dict)):
@@ -484,6 +497,42 @@ def get_user_watched_video_ids(user_id: int) -> set:
     rows = conn.execute("SELECT video_id FROM user_video_progress WHERE user_id=?", (user_id,)).fetchall()
     conn.close()
     return {r["video_id"] for r in rows}
+
+
+def get_user_video_progress(user_id: int) -> list:
+    """Return per-user video progress rows: {video_id, watched_at, minutes}."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT video_id, watched_at, minutes FROM user_video_progress WHERE user_id=? ORDER BY watched_at",
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_user_completed_project_count(user_id: int) -> int:
+    """Count projects whose completed steps >= total steps (fully done by this user)."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT p.step_count, COALESCE(up.completed_steps, 0) AS done "
+        "FROM projects p LEFT JOIN user_project_progress up "
+        "ON up.project_id=p.id AND up.user_id=? "
+        "WHERE p.step_count > 0",
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    return sum(1 for r in rows if r["done"] >= r["step_count"])
+
+
+def get_latest_user_ability_report(user_id: int) -> Optional[dict]:
+    """Return the user's most recent ability report row, or None."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM user_ability_reports WHERE user_id=? ORDER BY id DESC LIMIT 1",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def count_user_watched_videos(user_id: int) -> int:

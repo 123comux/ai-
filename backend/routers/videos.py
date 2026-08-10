@@ -8,18 +8,14 @@ from pydantic import BaseModel
 
 from models.schemas import VideoItem
 from auth_utils import get_optional_user
-from database import record_user_video
+from database import record_user_video, safe_load_json
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 
 def _load_videos() -> list[VideoItem]:
-    path = PROCESSED_DIR / "videos.json"
-    if not path.exists():
-        return []
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = safe_load_json(PROCESSED_DIR / "videos.json", [])
     return [VideoItem(**v) for v in data]
 
 
@@ -30,11 +26,9 @@ def _load_watched() -> dict[str, dict]:
     - list ["video-1", ...] -> {"video-1": {"at": ""}}
     - dict {"video-1": "2026-..."} -> {"video-1": {"at": "2026-..."}}
     """
-    path = PROCESSED_DIR / "video_progress.json"
-    if not path.exists():
+    data = safe_load_json(PROCESSED_DIR / "video_progress.json", {})
+    if not isinstance(data, dict):
         return {}
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
     watched = data.get("watched", {})
     if isinstance(watched, list):
         return {vid: {"at": "", "minutes": 0} for vid in watched}

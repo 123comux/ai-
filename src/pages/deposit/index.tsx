@@ -4,6 +4,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import {
   fetchDepositStatus, fetchDepositConfig, enrollDeposit,
   requestRefund, recordStageAssessment, passHomework, submitProject,
+  fetchVideos, completeVideo,
 } from '@/services/api';
 import { useUserStore } from '@/store/useUserStore';
 import type { DepositStatus, DepositConfig } from '@/types/index';
@@ -61,12 +62,19 @@ const DepositPage: React.FC = () => {
     } finally { setBusy(false); }
   };
 
-  // 开发调试：一键模拟"达标"（仅用于本地演示三锁与退费闭环）
-  const devStage = async () => {
+  // 开发调试：一键模拟"全部三锁达标"（仅本地演示用，会自动看完所有视频 + 五阶段 90 分 + 作业通过 + 项目通过）
+  const devSimulateAll = async () => {
+    // 1) 把所有视频标记为看完（过程锁需要完课率 100%）
+    const videos = await fetchVideos();
+    for (const v of videos) {
+      await completeVideo(v.id, 1);
+    }
+    // 2) 五阶段考核各录 90 分
     for (let s = 1; s <= 5; s++) await recordStageAssessment(s, 90);
+    // 3) 作业 + 项目通过
     await passHomework(true);
     await submitProject(true);
-    Taro.showToast({ title: '已模拟达标进度', icon: 'none' });
+    Taro.showToast({ title: '已模拟全部三锁达标，可申请退费', icon: 'success' });
     await load();
   };
 
@@ -192,7 +200,7 @@ const DepositPage: React.FC = () => {
               <Text className={styles.lockTitle}>考核锁（均分 ≥{config?.pass_score ?? 85}）</Text>
               <Text className={styles.lockDesc}>{st.assess_lock.label}</Text>
               <Text className={styles.lockMetric}>
-                已录 {st.stages_recorded} 阶段 · 均分 {st.assessment_avg} · 项目{st.assess_lock.project_passed ? '已通过' : (st.assess_lock.project_submitted ? '待评审' : '未提交')}
+                已录 {st.stages_recorded} / {config?.stages ?? 5} 阶段 · 均分 {st.assessment_avg} · 项目{st.assess_lock.project_passed ? '已通过' : (st.assess_lock.project_submitted ? '待评审' : '未提交')}
               </Text>
               <View className={styles.progressBar}>
                 <View className={styles.progressFill} style={{ width: `${st.assessment_avg}%` }} />
@@ -224,10 +232,10 @@ const DepositPage: React.FC = () => {
         </View>
       )}
 
-      {/* 开发调试：一键模拟达标，便于演示退费闭环 */}
+      {/* 开发调试：一键模拟全部三锁达标，便于演示退费闭环 */}
       <View className={styles.devBar}>
         <Text className={styles.devTitle}>开发调试（本地演示用）</Text>
-        <View className={styles.devBtn} onClick={devStage}><Text>模拟五阶段考核90分+作业+项目</Text></View>
+        <View className={styles.devBtn} onClick={devSimulateAll}><Text>一键模拟：看完所有视频 + 5 阶段 90 分 + 作业 + 项目</Text></View>
       </View>
     </ScrollView>
   );

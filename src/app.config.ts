@@ -19,7 +19,8 @@ export default defineAppConfig({
     'pages/settings/index',
     'pages/deposit/index',
     'pages/community/index',
-    'pages/communityPost/index'
+    'pages/communityPost/index',
+    'pages/learningTool/index'
   ],
   window: {
     backgroundTextStyle: 'light',

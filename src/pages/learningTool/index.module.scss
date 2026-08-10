@@ -1,0 +1,230 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+}
+
+.navBar {
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.tabs {
+  display: flex;
+  padding: 0 $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tabActive {
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+  border-bottom-color: $color-primary;
+}
+
+/* 模板库 */
+.section {
+  padding: 0 $spacing-lg $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.catTabs {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.catTab {
+  padding: 8rpx 24rpx;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.catTabActive {
+  background: $gradient-primary;
+  border-color: transparent;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+.templateList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.templateItem {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.templateTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.templateBody {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  background: $color-bg-hover;
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.copyBtn {
+  display: inline-flex;
+  padding: 8rpx 32rpx;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+/* 实操练习台 */
+.practiceBox {
+  margin: 0 $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.practiceInput {
+  height: 120rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  margin-bottom: $spacing-md;
+}
+
+.practiceBtn {
+  height: $button-height-sm;
+  background: $gradient-ai;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $spacing-lg;
+}
+
+.practiceBtnText {
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+.resultBox {
+  margin: 0 $spacing-lg;
+}
+
+.resultLabel {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.resultText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+/* 成长曲线 */
+.chartCard {
+  margin: 0 $spacing-lg $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.scoreItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child { border-bottom: none; }
+}
+
+.scoreDate {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  width: 100rpx;
+}
+
+.scoreValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  width: 80rpx;
+}
+
+.scoreLevel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.scoreBar {
+  flex: 1;
+  height: 12rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-round;
+  overflow: hidden;
+}
+
+.scoreFill {
+  height: 100%;
+  background: $gradient-primary;
+  border-radius: $radius-round;
+}
+
+.empty {
+  text-align: center;
+  padding: 80rpx 0;
+  color: $color-text-tertiary;
+  font-size: $font-size-md;
+}

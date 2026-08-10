@@ -97,6 +97,15 @@ const MinePage: React.FC = () => {
         <Text className={styles.depositEntryArrow}>→</Text>
       </View>
 
+      {/* 学习工具入口 */}
+      <View className={styles.depositEntry} onClick={() => Taro.navigateTo({ url: '/pages/learningTool/index' })}>
+        <View className={styles.depositEntryLeft}>
+          <Text className={styles.depositEntryTitle}>学习工具 · 模板/实操/成长</Text>
+          <Text className={styles.depositEntryDesc}>提示词模板库，AI 实操练习台，能力成长曲线</Text>
+        </View>
+        <Text className={styles.depositEntryArrow}>→</Text>
+      </View>
+
       {/* 能力报告 */}
       {abilityReport && (
         <View className={styles.section}>

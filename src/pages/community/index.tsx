@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Input, Textarea } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import {
   doCheckin, fetchCheckinStatus, fetchLeaderboard,
   fetchPosts, createPost,
@@ -12,6 +12,12 @@ const TABS = [
   { key: 'rank', label: '排行榜' },
   { key: 'community', label: '社区' },
 ];
+
+// 小程序专属：右上角转发分享（分享学习激励页，拉新裂变）
+useShareAppMessage(() => ({
+  title: '一起学 AI，每日打卡领提示词模板！',
+  path: '/pages/community/index',
+}));
 
 const CommunityPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('checkin');

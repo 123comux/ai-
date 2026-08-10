@@ -314,12 +314,12 @@ class TestKnowledge(unittest.TestCase):
 
 class TestAdmin(unittest.TestCase):
     def test_login_and_crud(self):
-        # 注意：admin 路由的鉴权头字段名为 `auth`（见 admin.py 中 `auth: str = Header(None)`），
-        # 而非标准 `Authorization`。必须用 `auth` 头携带 Bearer token。
+        # admin 路由鉴权：用标准 Authorization header 携带 Bearer token
+        # （已修复：此前用 `auth` header 是非标准用法，现已统一为 Authorization）
         r = client.post("/api/admin/login", params={"username": "admin", "password": "admin123"})
         self.assertEqual(r.status_code, 200, r.text)
         token = r.json()["token"]
-        h = {"auth": f"Bearer {token}"}
+        h = {"Authorization": f"Bearer {token}"}
         # 列出表
         r = client.get("/api/admin/tables")
         self.assertEqual(r.status_code, 200)
@@ -401,6 +401,81 @@ class TestCommunity(unittest.TestCase):
         r = client.post(f"/api/community/posts/{pid}/like", headers=h)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["likes"], 1)
+
+
+class TestContentPromptTemplates(unittest.TestCase):
+    """提示词模板库。"""
+
+    def test_prompt_templates(self):
+        r = client.get("/api/content/prompt-templates")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIsInstance(data, list)
+        self.assertTrue(len(data) > 0)
+        cats = {t["category"] for t in data}
+        self.assertTrue({"学生", "职场", "编程", "求职"}.issubset(cats))
+        # 按分类过滤
+        r = client.get("/api/content/prompt-templates?category=" + "学生")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(all(t["category"] == "学生" for t in r.json()))
+        # 分类列表
+        r = client.get("/api/content/prompt-templates/categories")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("categories", r.json())
+
+
+class TestPractice(unittest.TestCase):
+    """在线 AI 实操练习台（提示词优化）。"""
+
+    def test_practice_analyze(self):
+        r = client.post("/api/practice/analyze", json={"question": "帮我写周报"})
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("improved_prompt", data)
+        self.assertIn("suggestion", data)
+        # 空问题 422（pydantic 校验）
+        r = client.post("/api/practice/analyze", json={"question": ""})
+        self.assertEqual(r.status_code, 422)
+
+
+class TestAbilityHistory(unittest.TestCase):
+    """能力成长曲线（测评历史）。"""
+
+    def test_history(self):
+        token, user = self._login("hist_user")
+        h = {"Authorization": f"Bearer {token}"}
+        r = client.get("/api/user/ability-history", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("history", r.json())
+        self.assertIn("count", r.json())
+
+    def _login(self, nickname):
+        code = f"hist_{int(time.time()*1000)}_{nickname}"
+        r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
+        self.assertEqual(r.status_code, 200)
+        return r.json()["token"], r.json()["user"]
+
+
+class TestAdminDashboard(unittest.TestCase):
+    """后台数据看板 + 泛型表管理（含 prefix Header 修复回归）。"""
+
+    def test_dashboard_and_tables(self):
+        r = client.post("/api/admin/login?username=admin&password=admin123")
+        self.assertEqual(r.status_code, 200)
+        token = r.json()["token"]
+        h = {"Authorization": f"Bearer {token}"}
+        # 数据看板（回归：带 prefix 的 Header 注入修复）
+        r = client.get("/api/admin/dashboard", headers=h)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        for k in ("users", "checkins", "posts", "assessments"):
+            self.assertIn(k, data)
+        # 泛型表管理：新表 users 可读
+        r = client.get("/api/admin/users", headers=h)
+        self.assertEqual(r.status_code, 200)
+        # 无 token 应 401
+        r = client.get("/api/admin/dashboard")
+        self.assertEqual(r.status_code, 401)
 
 
 if __name__ == "__main__":

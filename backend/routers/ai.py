@@ -182,3 +182,71 @@ async def model_info():
             info["models"][key] = {"status": "not available", "reason": "model not found"}
 
     return info
+
+
+# ---- 实操练习台：用户输入提问 → AI 对比优质提示词 → 优化建议 ----
+
+class PracticeRequest(BaseModel):
+    """Prompt practice request."""
+    question: str = Field(..., min_length=1, max_length=1000)  # 用户当前想法的提问
+
+
+class PracticeResponse(BaseModel):
+    question: str
+    improved_prompt: str   # 优化后的优质提示词
+    suggestion: str        # 优化建议（为什么这样改）
+    model: str
+    tokens_generated: int
+
+
+@router.post("/practice/analyze", response_model=PracticeResponse)
+async def practice_analyze(req: PracticeRequest):
+    """提示词实操：把用户粗糙的提问，改写成高质量提示词并说明优化点。
+
+    This is the core of the "在线 AI 实操练习台" — 用户输入自己写的提问，
+    AI 给出优化后的提示词 + 优化建议，帮助用户学会写出高质量提示词。
+    """
+    try:
+        from services.zhipu_service import chat_zhipu
+    except Exception:
+        chat_zhipu = None
+
+    system_prompt = (
+        "你是一位提示词工程教练。用户会给出一条粗糙的提问（prompt），"
+        "请你输出两段内容，用分隔符分开：\n"
+        "【优化后提示词】把用户的提问改写成一个高质量、可直接使用的最佳提示词，"
+        "应包含角色、场景、目标、约束等要素。\n"
+        "【优化建议】用 2-3 条说明你改进了什么、为什么这样改更好。"
+    )
+
+    if chat_zhipu is not None:
+        try:
+            resp = chat_zhipu(question=req.question, system_prompt=system_prompt,
+                              max_new_tokens=400, temperature=0.4)
+            raw = resp.get("answer", "")
+            # 解析两段
+            improved = req.question
+            suggestion = "优化提示词可加入角色、场景、目标、约束四要素。"
+            if "【优化后提示词】" in raw:
+                seg = raw.split("【优化后提示词】", 1)[1]
+                if "【优化建议】" in seg:
+                    improved, sug = seg.split("【优化建议】", 1)
+                    suggestion = sug.strip() or suggestion
+                else:
+                    improved = seg.strip()
+            return PracticeResponse(
+                question=req.question, improved_prompt=improved.strip(),
+                suggestion=suggestion, model=resp.get("model", "zhipu"),
+                tokens_generated=resp.get("tokens_generated", 0),
+            )
+        except Exception:
+            pass
+
+    # 兜底：本地规则优化（无 AI 时仍可用）
+    improved = f"你是一名{req.question.strip()[:8]}方面的专家。\n目标：{req.question}\n要求：请给出清晰、具体、可执行的回答。"
+    return PracticeResponse(
+        question=req.question, improved_prompt=improved,
+        suggestion="优质提示词应包含：①角色设定 ②明确目标 ③具体约束 ④期望输出格式。",
+        model="rule-fallback", tokens_generated=0,
+    )
+

@@ -9,7 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Header, Request
 from pydantic import BaseModel, Field
 
-from database import query_all, query_one, insert_row, update_row, delete_row, parse_json_field
+from database import query_all, query_one, insert_row, update_row, delete_row, parse_json_field, get_connection
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -18,11 +18,16 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 ADMIN_TOKEN_CACHE: dict[str, str] = {}
 
 
-def verify_token(authorization: str = Header(None)) -> str:
-    """Verify admin auth token."""
-    if not authorization:
+def verify_token(request: Request) -> str:
+    """Verify admin auth token (read Authorization header from Request).
+
+    注意：必须用 Request 手动读 header——带 prefix 的 APIRouter 里 Header(None)
+    参数注入会失效（FastAPI 已知行为），导致 auth 恒为 None。
+    """
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if not auth:
         raise HTTPException(401, "Missing authorization header")
-    token = authorization.replace("Bearer ", "")
+    token = auth.replace("Bearer ", "")
     username = ADMIN_TOKEN_CACHE.get(token)
     if not username:
         raise HTTPException(401, "Invalid or expired token")
@@ -59,6 +64,14 @@ TABLE_CONFIG = {
     "job_matching": {"fields": ["job_title", "company", "match_score", "required_skills", "gap_skills", "recommended_courses", "recommended_projects", "is_active"], "label": "Job Matching"},
     "learning_stats": {"fields": ["learning_days", "total_hours", "completed_projects", "completed_lessons"], "label": "Learning Stats"},
     "learning_records": {"fields": ["date", "duration", "lessons_completed", "exercises_done"], "label": "Learning Records"},
+    # 用户体系
+    "users": {"fields": ["id", "openid", "nickname", "avatar", "created_at"], "label": "用户"},
+    "user_deposits": {"fields": ["user_id", "amount", "currency", "status", "enrolled_at", "deadline_at", "refund_amount", "refund_at"], "label": "押金记录"},
+    "user_ability_reports": {"fields": ["user_id", "overall_score", "level", "dimensions", "recommended_direction", "created_at"], "label": "能力报告"},
+    # 平台化：打卡/社区
+    "checkins": {"fields": ["user_id", "checkin_date", "note", "created_at"], "label": "打卡记录"},
+    "community_posts": {"fields": ["user_id", "title", "content", "category", "likes", "created_at"], "label": "社区帖子"},
+    "community_replies": {"fields": ["post_id", "user_id", "content", "created_at"], "label": "社区回复"},
 }
 
 
@@ -68,19 +81,49 @@ def list_tables():
     return [{"name": k, "label": v["label"], "fields": v["fields"]} for k, v in TABLE_CONFIG.items()]
 
 
+@router.get("/dashboard")
+def dashboard(request: Request):
+    """运营数据看板：用户数、完课率、测评分布、答疑量、押金退费率。"""
+    verify_token(request)
+    conn = get_connection()
+    def count(sql, *args):
+        row = conn.execute(sql, args).fetchone()
+        return int(row["c"]) if row else 0
+
+    data = {
+        "users": count("SELECT COUNT(*) c FROM users"),
+        "enrolled_users": count("SELECT COUNT(DISTINCT user_id) c FROM user_deposits WHERE status='active'"),
+        "refunded": count("SELECT COUNT(*) c FROM user_deposits WHERE status='refunded'"),
+        "checkins": count("SELECT COUNT(*) c FROM checkins"),
+        "posts": count("SELECT COUNT(*) c FROM community_posts"),
+        "replies": count("SELECT COUNT(*) c FROM community_replies"),
+        "videos_watched": count("SELECT COUNT(*) c FROM user_video_progress"),
+        "assessments": count("SELECT COUNT(*) c FROM user_ability_reports"),
+        "avg_score": None,
+        "assess_levels": {},
+    }
+    row = conn.execute("SELECT AVG(overall_score) a FROM user_ability_reports").fetchone()
+    if row and row["a"] is not None:
+        data["avg_score"] = round(float(row["a"]), 1)
+    lv = conn.execute("SELECT level, COUNT(*) c FROM user_ability_reports GROUP BY level").fetchall()
+    data["assess_levels"] = {r["level"]: int(r["c"]) for r in lv}
+    conn.close()
+    return data
+
+
 @router.get("/{table}")
-def read_all(table: str, auth: str = Header(None)):
+def read_all(table: str, request: Request):
     """Read all rows from a table."""
-    verify_token(auth)
+    verify_token(request)
     if table not in TABLE_CONFIG:
         raise HTTPException(404, f"Unknown table: {table}")
     return query_all(table)
 
 
 @router.get("/{table}/{item_id}")
-def read_one(table: str, item_id, auth: str = Header(None)):
+def read_one(table: str, item_id, request: Request):
     """Read a single row."""
-    verify_token(auth)
+    verify_token(request)
     if table not in TABLE_CONFIG:
         raise HTTPException(404, f"Unknown table: {table}")
     row = query_one(table, item_id)
@@ -90,9 +133,9 @@ def read_one(table: str, item_id, auth: str = Header(None)):
 
 
 @router.post("/{table}")
-def create_item(table: str, data: dict, auth: str = Header(None)):
+def create_item(table: str, data: dict, request: Request):
     """Create a new item."""
-    verify_token(auth)
+    verify_token(request)
     if table not in TABLE_CONFIG:
         raise HTTPException(404, f"Unknown table: {table}")
     # Filter to allowed fields
@@ -109,9 +152,9 @@ def create_item(table: str, data: dict, auth: str = Header(None)):
 
 
 @router.put("/{table}/{item_id}")
-def update_item(table: str, item_id, data: dict, auth: str = Header(None)):
+def update_item(table: str, item_id, data: dict, request: Request):
     """Update an existing item."""
-    verify_token(auth)
+    verify_token(request)
     if table not in TABLE_CONFIG:
         raise HTTPException(404, f"Unknown table: {table}")
     allowed = TABLE_CONFIG[table]["fields"]
@@ -128,9 +171,9 @@ def update_item(table: str, item_id, data: dict, auth: str = Header(None)):
 
 
 @router.delete("/{table}/{item_id}")
-def delete_item(table: str, item_id, auth: str = Header(None)):
+def delete_item(table: str, item_id, request: Request):
     """Delete an item."""
-    verify_token(auth)
+    verify_token(request)
     if table not in TABLE_CONFIG:
         raise HTTPException(404, f"Unknown table: {table}")
     ok = delete_row(table, item_id)

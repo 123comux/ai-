@@ -470,3 +470,49 @@ export const replyPost = async (postId: number, content: string): Promise<any> =
 export const likePost = async (postId: number): Promise<any> => {
   return apiPost<any>(`/api/community/posts/${postId}/like`, {});
 };
+
+// ============ 提示词模板库 ============
+
+export interface PromptTemplate {
+  category: string;
+  title: string;
+  template: string;
+}
+
+/** 获取提示词模板（可按分类过滤） */
+export const fetchPromptTemplates = async (category: string = ''): Promise<PromptTemplate[]> => {
+  const q = category ? `?category=${encodeURIComponent(category)}` : '';
+  return apiGet<PromptTemplate[]>(`/api/content/prompt-templates${q}`);
+};
+
+/** 获取模板分类 */
+export const fetchPromptCategories = async (): Promise<{ categories: string[] }> => {
+  return apiGet<any>('/api/content/prompt-templates/categories');
+};
+
+// ============ 在线 AI 实操练习台 ============
+
+export interface PracticeResult {
+  question: string;
+  improved_prompt: string;
+  suggestion: string;
+  model: string;
+  tokens_generated: number;
+}
+
+/** 提示词实操：优化用户提问并给建议 */
+export const analyzePromptPractice = async (question: string): Promise<PracticeResult> => {
+  return apiPost<PracticeResult>('/api/practice/analyze', { question });
+};
+
+// ============ 能力成长曲线 ============
+
+export interface AbilityHistory {
+  history: { id: number; score: number; level: string; dimensions: any[]; recommended_direction: string; created_at: string }[];
+  count: number;
+}
+
+/** 测评历史 + 能力成长曲线数据 */
+export const fetchAbilityHistory = async (): Promise<AbilityHistory> => {
+  return apiGet<AbilityHistory>('/api/user/ability-history');
+};

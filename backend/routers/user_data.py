@@ -20,6 +20,7 @@ from database import (
     get_user_completed_project_count,
     parse_json_field,
     safe_load_json,
+    get_connection,
 )
 from auth_utils import get_optional_user
 
@@ -314,3 +315,33 @@ async def get_learning_stats(request: Request):
         completedProjects=completed_projects,
         completedLessons=watched_count,
     )
+
+
+@router.get("/ability-history")
+async def get_ability_history(request: Request):
+    """个人学习档案：测评历史 + 能力成长曲线数据。
+
+    返回按时间排序的历次能力测评记录（分数、等级、六维得分），
+    前端据此绘制能力成长曲线。
+    """
+    user = await get_optional_user(request)
+    user_id = user["id"] if user else 0
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, overall_score, level, dimensions, recommended_direction, created_at "
+        "FROM user_ability_reports WHERE user_id=? ORDER BY id",
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    history = []
+    for r in rows:
+        dims = parse_json_field(r["dimensions"], [])
+        history.append({
+            "id": r["id"],
+            "score": round(r["overall_score"]),
+            "level": r["level"],
+            "dimensions": dims,
+            "recommended_direction": r["recommended_direction"],
+            "created_at": r["created_at"][:10],  # YYYY-MM-DD
+        })
+    return {"history": history, "count": len(history)}

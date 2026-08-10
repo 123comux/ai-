@@ -206,17 +206,17 @@ const HomePage: React.FC = () => {
           <Text className={styles.sectionTitle}>AI 智能工具</Text>
         </View>
         <View className={styles.aiTools}>
-          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#7c3aed,#a78bfa)" onClick={() => Taro.navigateTo({ url: '/pages/tutor/index' })}>
+          <View className={styles.aiToolCard} style={{ background: 'linear-gradient(135deg, #7c3aed, #a78bfa)' }} onClick={() => Taro.navigateTo({ url: '/pages/tutor/index' })}>
             <Text className={styles.aiToolIcon}>💬</Text>
             <Text className={styles.aiToolName}>AI 导师</Text>
             <Text className={styles.aiToolDesc}>问答学习</Text>
           </View>
-          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#165dff,#4080ff)" onClick={handleStartAssessment}>
+          <View className={styles.aiToolCard} style={{ background: 'linear-gradient(135deg, #165dff, #4080ff)' }} onClick={handleStartAssessment}>
             <Text className={styles.aiToolIcon}>🧠</Text>
             <Text className={styles.aiToolName}>能力分析</Text>
             <Text className={styles.aiToolDesc}>AI 精准评估</Text>
           </View>
-          <View className={styles.aiToolCard} style="background:linear-gradient(135deg,#00b42a,#27c346)" onClick={handleCourseRecommend}>
+          <View className={styles.aiToolCard} style={{ background: 'linear-gradient(135deg, #00b42a, #27c346)' }} onClick={handleCourseRecommend}>
             <Text className={styles.aiToolIcon}>📚</Text>
             <Text className={styles.aiToolName}>课程推荐</Text>
             <Text className={styles.aiToolDesc}>AI 智能匹配</Text>

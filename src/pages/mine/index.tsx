@@ -88,6 +88,15 @@ const MinePage: React.FC = () => {
         <Text className={styles.depositEntryArrow}>→</Text>
       </View>
 
+      {/* 学习激励入口 */}
+      <View className={styles.depositEntry} onClick={() => Taro.navigateTo({ url: '/pages/community/index' })}>
+        <View className={styles.depositEntryLeft}>
+          <Text className={styles.depositEntryTitle}>学习激励 · 打卡/排行/社区</Text>
+          <Text className={styles.depositEntryDesc}>每日打卡领模板，排行榜比拼，社区互助答疑</Text>
+        </View>
+        <Text className={styles.depositEntryArrow}>→</Text>
+      </View>
+
       {/* 能力报告 */}
       {abilityReport && (
         <View className={styles.section}>

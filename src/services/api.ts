@@ -428,3 +428,45 @@ export const submitProject = async (passed: boolean): Promise<any> => {
 export const passHomework = async (passed: boolean): Promise<any> => {
   return apiPost<any>('/api/deposit/homework', { passed });
 };
+// ============ 平台化：打卡 / 排行榜 / 社区 ============
+
+/** 每日打卡 */
+export const doCheckin = async (note: string = ''): Promise<{ ok: boolean; checkin_date: string; streak: number }> => {
+  return apiPost<any>('/api/community/checkin', { note });
+};
+
+/** 打卡状态（今日是否已打、连续天数） */
+export const fetchCheckinStatus = async (): Promise<{ today_checked: boolean; streak: number; recent_dates: string[] }> => {
+  return apiGet<any>('/api/community/checkin/status');
+};
+
+/** 学习排行榜 */
+export const fetchLeaderboard = async (limit: number = 20): Promise<{ ranking: any[]; my_rank: number | null; my_total_minutes: number }> => {
+  return apiGet<any>(`/api/community/leaderboard?limit=${limit}`);
+};
+
+/** 社区发帖 */
+export const createPost = async (data: { title: string; content?: string; category?: string }): Promise<any> => {
+  return apiPost<any>('/api/community/posts', data);
+};
+
+/** 帖子列表 */
+export const fetchPosts = async (category: string = ''): Promise<any[]> => {
+  const q = category ? `?category=${encodeURIComponent(category)}` : '';
+  return apiGet<any[]>(`/api/community/posts${q}`);
+};
+
+/** 帖子详情 + 回复 */
+export const fetchPostDetail = async (postId: number): Promise<{ post: any; replies: any[] }> => {
+  return apiGet<any>(`/api/community/posts/${postId}`);
+};
+
+/** 回复帖子 */
+export const replyPost = async (postId: number, content: string): Promise<any> => {
+  return apiPost<any>(`/api/community/posts/${postId}/reply`, { content });
+};
+
+/** 点赞帖子 */
+export const likePost = async (postId: number): Promise<any> => {
+  return apiPost<any>(`/api/community/posts/${postId}/like`, {});
+};

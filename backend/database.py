@@ -250,6 +250,42 @@ def init_db():
         )
     """)
 
+    # 每日 AI 打卡（学习激励）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS checkins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            checkin_date TEXT NOT NULL,  -- YYYY-MM-DD
+            note TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(user_id, checkin_date)
+        )
+    """)
+
+    # 学习社区帖子
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS community_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL DEFAULT 'general',
+            likes INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # 学习社区回复
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS community_replies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
     # ============ 用户体系（多用户隔离） ============
 
     # Users - 微信授权登录后的真实用户
@@ -359,7 +395,8 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print(f"✅ Database initialized at {DB_PATH}")
+    # 注意：Windows 默认 GBK 控制台无法输出 emoji，用 ASCII 避免 UnicodeEncodeError
+    print(f"[DB] initialized at {DB_PATH}")
 
 
 # ============ CRUD Helpers ============
@@ -855,4 +892,4 @@ if __name__ == "__main__":
         print(f"Removed old database: {DB_PATH}")
     init_db()
     seed_from_json()
-    print("✅ Database initialization complete!")
+    print("[DB] initialization complete!")

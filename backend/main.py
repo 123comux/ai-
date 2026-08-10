@@ -20,7 +20,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, HOST, PORT
-from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data, auth, deposit
+from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data, auth, deposit, community
 from database import init_db
 
 app = FastAPI(
@@ -63,6 +63,7 @@ app.include_router(admin_panel.router)
 app.include_router(mine_data.router)
 app.include_router(auth.router)
 app.include_router(deposit.router)
+app.include_router(community.router)
 
 # Ensure DB tables (incl. users / deposit) exist on startup.
 init_db()

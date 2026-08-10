@@ -1,0 +1,306 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $gradient-page;
+}
+
+.navBar {
+  padding: 20rpx $spacing-lg;
+}
+
+.navBack {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.tabs {
+  display: flex;
+  padding: 0 $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tabActive {
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+  border-bottom-color: $color-primary;
+}
+
+/* 打卡区 */
+.checkinCard {
+  margin: 0 $spacing-lg $spacing-md;
+  background: $gradient-primary;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  color: $color-text-white;
+}
+
+.checkinDate {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.checkinTitle {
+  display: block;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  margin: $spacing-xs 0 $spacing-md;
+}
+
+.streakRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  margin-bottom: $spacing-md;
+}
+
+.streakNum {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+}
+
+.streakLabel {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.checkinBtn {
+  height: $button-height-md;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkinBtnText {
+  color: $color-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+}
+
+.checkinBtnDone {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.checkinBtnDoneText {
+  color: $color-text-white;
+}
+
+/* 排行榜 */
+.section {
+  padding: 0 $spacing-lg $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.myRank {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.rankItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-sm;
+}
+
+.rankNum {
+  width: 60rpx;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-tertiary;
+  text-align: center;
+}
+
+.rankNumTop1 { color: #f53f3f; }
+.rankNumTop2 { color: #ff7d00; }
+.rankNumTop3 { color: #ffb400; }
+
+.rankName {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.rankMinutes {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+/* 社区 */
+.postList {
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.postItem {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.postTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.postContent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-md;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.postMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.postCategory {
+  background: rgba(22, 93, 255, 0.08);
+  color: $color-primary;
+  padding: 2rpx 12rpx;
+  border-radius: $radius-round;
+}
+
+.addBtn {
+  position: fixed;
+  left: $spacing-lg;
+  right: $spacing-lg;
+  bottom: 40rpx;
+  height: $button-height-md;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: $shadow-float;
+}
+
+.addBtnText {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+}
+
+/* 发帖弹层 */
+.mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: $color-bg-card;
+  border-radius: $radius-xl $radius-xl 0 0;
+  padding: $spacing-lg;
+  z-index: 101;
+}
+
+.sheetTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+  display: block;
+  margin-bottom: $spacing-lg;
+}
+
+.input {
+  height: 80rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: 0 $spacing-md;
+  font-size: $font-size-md;
+  margin-bottom: $spacing-md;
+}
+
+.textarea {
+  min-height: 140rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  margin-bottom: $spacing-lg;
+}
+
+.sheetActions {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.btnCancel {
+  flex: 1;
+  height: $button-height-sm;
+  background: $color-bg-hover;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnCancelText { font-size: $font-size-md; color: $color-text-secondary; }
+
+.btnSave {
+  flex: 1;
+  height: $button-height-sm;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnSaveText { font-size: $font-size-md; color: $color-text-white; font-weight: $font-weight-medium; }
+
+/* 空态 */
+.empty {
+  text-align: center;
+  padding: 100rpx 0;
+  color: $color-text-tertiary;
+}
+
+.emptyText { font-size: $font-size-md; }

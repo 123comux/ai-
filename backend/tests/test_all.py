@@ -337,5 +337,71 @@ class TestAdmin(unittest.TestCase):
             self.assertEqual(rr.status_code, 200)
 
 
+class TestCommunity(unittest.TestCase):
+    """平台化：每日打卡 / 学习排行榜 / 学习社区。"""
+
+    def _login(self, nickname):
+        code = f"comm_{int(time.time()*1000)}_{nickname}"
+        r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
+        self.assertEqual(r.status_code, 200)
+        return r.json()["token"], r.json()["user"]
+
+    def test_checkin_flow(self):
+        token, user = self._login("comm_user")
+        h = {"Authorization": f"Bearer {token}"}
+        # 首次打卡成功，streak=1
+        r = client.post("/api/community/checkin", headers=h, json={"note": "学提示词"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["streak"], 1)
+        # 状态显示今日已打
+        r = client.get("/api/community/checkin/status", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["today_checked"])
+        self.assertEqual(r.json()["streak"], 1)
+        # 重复打卡应 400
+        r = client.post("/api/community/checkin", headers=h, json={})
+        self.assertEqual(r.status_code, 400)
+
+    def test_checkin_requires_auth(self):
+        r = client.post("/api/community/checkin", json={})
+        self.assertEqual(r.status_code, 401)
+
+    def test_leaderboard(self):
+        token, user = self._login("rank_user")
+        h = {"Authorization": f"Bearer {token}"}
+        r = client.get("/api/community/leaderboard", headers=h)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("ranking", data)
+        self.assertIsInstance(data["ranking"], list)
+
+    def test_posts_and_replies(self):
+        token, user = self._login("post_user")
+        h = {"Authorization": f"Bearer {token}"}
+        # 发帖
+        r = client.post("/api/community/posts", headers=h,
+                        json={"title": "测试帖", "content": "内容", "category": "提问"})
+        self.assertEqual(r.status_code, 200)
+        pid = r.json()["id"]
+        # 空标题 400
+        r = client.post("/api/community/posts", headers=h, json={"title": " ", "content": "x"})
+        self.assertEqual(r.status_code, 400)
+        # 列表
+        r = client.get("/api/community/posts", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(any(p["id"] == pid for p in r.json()))
+        # 详情
+        r = client.get(f"/api/community/posts/{pid}", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["post"]["title"], "测试帖")
+        # 回复
+        r = client.post(f"/api/community/posts/{pid}/reply", headers=h, json={"content": "回复1"})
+        self.assertEqual(r.status_code, 200)
+        # 点赞
+        r = client.post(f"/api/community/posts/{pid}/like", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["likes"], 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -238,123 +238,123 @@ KNOWLEDGE_ITEMS = [
 
 ASSESSMENT_QUESTIONS = [
     {
-        "id": "q-001", "question": "What is the primary goal of machine learning?",
-        "options": ["Enable computers to learn from data without explicit programming", "Replace all human decision-making", "Create faster processors", "Store large amounts of data"],
-        "correct_answer": 0, "explanation": "Machine learning enables systems to learn from data and improve from experience without being explicitly programmed for every scenario.",
+        "id": "q-001", "question": "机器学习的主要目标是什么？",
+        "options": ["让计算机无需显式编程即可从数据中学习", "取代所有人类决策", "制造更快的处理器", "存储大量数据"],
+        "correct_answer": 0, "explanation": "机器学习使系统能够从数据中学习并从经验中改进，无需为每种场景显式编程。",
         "topic": "Machine Learning", "difficulty": "beginner"
     },
     {
-        "id": "q-002", "question": "What is the key difference between supervised and unsupervised learning?",
-        "options": ["Supervised uses labeled data, unsupervised uses unlabeled data", "Supervised is faster than unsupervised", "Unsupervised needs more data", "Supervised doesn't use algorithms"],
-        "correct_answer": 0, "explanation": "Supervised learning trains on labeled input-output pairs, while unsupervised learning finds patterns in unlabeled data.",
+        "id": "q-002", "question": "监督学习与无监督学习的关键区别是什么？",
+        "options": ["监督学习使用有标签数据，无监督学习使用无标签数据", "监督学习比无监督学习更快", "无监督学习需要更多数据", "监督学习不使用算法"],
+        "correct_answer": 0, "explanation": "监督学习使用有标签的输入输出对进行训练，而无监督学习在无标签数据中发现模式。",
         "topic": "Machine Learning", "difficulty": "beginner"
     },
     {
-        "id": "q-003", "question": "What is the vanishing gradient problem in deep learning?",
-        "options": ["Gradients become very small in early layers, slowing learning", "Gradients become too large", "Loss function disappears", "The model runs out of memory"],
-        "correct_answer": 0, "explanation": "In deep networks, gradients can become exponentially small as they backpropagate through many layers, making early layers learn very slowly.",
+        "id": "q-003", "question": "深度学习中的梯度消失问题是什么？",
+        "options": ["早期层的梯度变得非常小，导致学习缓慢", "梯度变得过大", "损失函数消失", "模型内存不足"],
+        "correct_answer": 0, "explanation": "在深层网络中，梯度在通过多层反向传播时可能呈指数级缩小，使早期层学习非常缓慢。",
         "topic": "Deep Learning", "difficulty": "intermediate"
     },
     {
-        "id": "q-004", "question": "What is the key innovation of the Transformer architecture?",
-        "options": ["Self-attention mechanism", "Recurrent connections", "Convolutional layers", "Long Short-Term Memory"],
-        "correct_answer": 0, "explanation": "The Transformer introduced self-attention, which computes attention scores between all pairs of positions in the input, replacing recurrence.",
+        "id": "q-004", "question": "Transformer 架构的关键创新是什么？",
+        "options": ["自注意力机制", "循环连接", "卷积层", "长短期记忆网络（LSTM）"],
+        "correct_answer": 0, "explanation": "Transformer 引入了自注意力机制，计算输入中所有位置对之间的注意力分数，取代了循环结构。",
         "topic": "Deep Learning", "difficulty": "intermediate"
     },
     {
-        "id": "q-005", "question": "What does RAG stand for in LLM systems?",
-        "options": ["Retrieval-Augmented Generation", "Random Access Generation", "Recurrent Attention Graph", "Rapid Automated Grading"],
-        "correct_answer": 0, "explanation": "RAG combines information retrieval with text generation, fetching relevant documents to ground the LLM's response.",
+        "id": "q-005", "question": "在 LLM 系统中，RAG 代表什么？",
+        "options": ["检索增强生成（Retrieval-Augmented Generation）", "随机访问生成（Random Access Generation）", "循环注意力图（Recurrent Attention Graph）", "快速自动评分（Rapid Automated Grading）"],
+        "correct_answer": 0, "explanation": "RAG 将信息检索与文本生成相结合，检索相关文档以支撑 LLM 的回答。",
         "topic": "Large Language Models", "difficulty": "intermediate"
     },
     {
-        "id": "q-006", "question": "What is the purpose of dropout in neural networks?",
-        "options": ["Prevent overfitting by randomly dropping neurons", "Increase model speed", "Reduce memory usage", "Improve data loading"],
-        "correct_answer": 0, "explanation": "Dropout randomly drops units during training to prevent co-adaptation, forcing the network to learn more robust features.",
+        "id": "q-006", "question": "神经网络中 dropout 的作用是什么？",
+        "options": ["通过随机丢弃神经元来防止过拟合", "提高模型速度", "减少内存使用", "改善数据加载"],
+        "correct_answer": 0, "explanation": "dropout 在训练时随机丢弃部分单元，防止神经元之间过度依赖，迫使网络学习更鲁棒的特征。",
         "topic": "Deep Learning", "difficulty": "intermediate"
     },
     {
-        "id": "q-007", "question": "What does the Central Limit Theorem state?",
-        "options": ["Sample means are approximately normally distributed for large sample sizes", "All data is normally distributed", "The mean equals the median", "Variance is always constant"],
-        "correct_answer": 0, "explanation": "The CLT states that the sampling distribution of the mean approaches a normal distribution as sample size increases, regardless of the population distribution.",
+        "id": "q-007", "question": "中心极限定理（CLT）说明了什么？",
+        "options": ["当样本量足够大时，样本均值近似服从正态分布", "所有数据都服从正态分布", "均值等于中位数", "方差恒为常数"],
+        "correct_answer": 0, "explanation": "CLT 指出，无论总体分布如何，随着样本量增大，均值的抽样分布趋近于正态分布。",
         "topic": "Data Science", "difficulty": "intermediate"
     },
     {
-        "id": "q-008", "question": "What is the difference between L1 and L2 regularization?",
-        "options": ["L1 produces sparse solutions, L2 distributes penalty across all coefficients", "L1 is for regression, L2 is for classification", "L1 is faster than L2", "L1 uses squared penalties, L2 uses absolute penalties"],
-        "correct_answer": 0, "explanation": "L1 (Lasso) adds absolute value penalties, producing sparse solutions useful for feature selection. L2 (Ridge) adds squared penalties, distributing them across all coefficients.",
+        "id": "q-008", "question": "L1 与 L2 正则化的区别是什么？",
+        "options": ["L1 产生稀疏解，L2 将惩罚分摊到所有系数上", "L1 用于回归，L2 用于分类", "L1 比 L2 更快", "L1 使用平方惩罚，L2 使用绝对值惩罚"],
+        "correct_answer": 0, "explanation": "L1（Lasso）添加绝对值惩罚，产生稀疏解，适合特征选择；L2（Ridge）添加平方惩罚，将惩罚分摊到所有系数上。",
         "topic": "Machine Learning", "difficulty": "intermediate"
     },
     {
-        "id": "q-009", "question": "What is a key benefit of using LoRA for fine-tuning?",
-        "options": ["It trains only small adapter modules, saving computation", "It improves data quality", "It reduces model size permanently", "It eliminates the need for training data"],
-        "correct_answer": 0, "explanation": "LoRA (Low-Rank Adaptation) freezes most model parameters and trains only small adapter modules, making fine-tuning computationally efficient.",
+        "id": "q-009", "question": "使用 LoRA 进行微调的一个关键好处是什么？",
+        "options": ["只训练小型适配模块，节省计算资源", "提高数据质量", "永久减小模型体积", "无需训练数据"],
+        "correct_answer": 0, "explanation": "LoRA（低秩适配）冻结大部分模型参数，只训练小型适配模块，使微调计算高效。",
         "topic": "Large Language Models", "difficulty": "advanced"
     },
     {
-        "id": "q-010", "question": "What does EDA stand for in data science?",
-        "options": ["Exploratory Data Analysis", "Enhanced Data Algorithm", "Exponential Data Aggregation", "External Data Access"],
-        "correct_answer": 0, "explanation": "EDA is the process of analyzing datasets to summarize their main characteristics, often using visual methods to uncover patterns and anomalies.",
+        "id": "q-010", "question": "在数据科学中，EDA 代表什么？",
+        "options": ["探索性数据分析（Exploratory Data Analysis）", "增强数据算法（Enhanced Data Algorithm）", "指数数据聚合（Exponential Data Aggregation）", "外部数据访问（External Data Access）"],
+        "correct_answer": 0, "explanation": "EDA 是分析数据集以概括其主要特征的过程，常借助可视化方法发现模式与异常。",
         "topic": "Data Science", "difficulty": "beginner"
     },
     {
-        "id": "q-011", "question": "What is the main advantage of PyTorch over TensorFlow in research?",
-        "options": ["More Pythonic dynamic computation graph for easier debugging", "Faster training speed", "Better deployment tools", "Larger community"],
-        "correct_answer": 0, "explanation": "PyTorch's dynamic computation graph makes debugging easier and is more intuitive for researchers, though both frameworks are now quite similar.",
+        "id": "q-011", "question": "在研究中，PyTorch 相比 TensorFlow 的主要优势是什么？",
+        "options": ["更符合 Python 习惯的动态计算图，便于调试", "训练速度更快", "部署工具更好", "社区更大"],
+        "correct_answer": 0, "explanation": "PyTorch 的动态计算图使调试更容易，对研究者更直观，尽管如今两个框架已相当接近。",
         "topic": "Python", "difficulty": "intermediate"
     },
     {
-        "id": "q-012", "question": "What is the exploration-exploitation dilemma in RL?",
-        "options": ["Balancing trying new actions vs using known rewarding actions", "Choosing between fast and slow algorithms", "Deciding how much data to collect", "Balancing model complexity and performance"],
-        "correct_answer": 0, "explanation": "The agent must balance exploring new actions to discover better rewards with exploiting known rewarding actions for immediate gain.",
+        "id": "q-012", "question": "强化学习中的探索-利用困境是什么？",
+        "options": ["在尝试新动作与利用已知高回报动作之间权衡", "在快慢算法之间选择", "决定收集多少数据", "在模型复杂度与性能之间权衡"],
+        "correct_answer": 0, "explanation": "智能体必须平衡探索新动作以发现更好回报，与利用已知高回报动作获取即时收益。",
         "topic": "Reinforcement Learning", "difficulty": "advanced"
     },
     {
-        "id": "q-013", "question": "What is the purpose of k-fold cross-validation?",
-        "options": ["Get a more robust estimate of model performance", "Reduce training time", "Increase model accuracy", "Eliminate the need for test data"],
-        "correct_answer": 0, "explanation": "K-fold CV trains and tests on multiple data splits, providing a more robust performance estimate than a single train-test split.",
+        "id": "q-013", "question": "k 折交叉验证的目的是什么？",
+        "options": ["获得更稳健的模型性能估计", "减少训练时间", "提高模型准确率", "消除对测试集的需求"],
+        "correct_answer": 0, "explanation": "k 折交叉验证在多个数据划分上训练和测试，比单次训练测试划分提供更稳健的性能估计。",
         "topic": "Machine Learning", "difficulty": "intermediate"
     },
     {
-        "id": "q-014", "question": "What is a Python decorator?",
-        "options": ["A function that extends another function's behavior", "A special type of variable", "A built-in data structure", "A debugging tool"],
-        "correct_answer": 0, "explanation": "Python decorators are functions that take another function and extend its behavior without explicitly modifying it, using the @ syntax.",
+        "id": "q-014", "question": "什么是 Python 装饰器？",
+        "options": ["扩展另一个函数行为的函数", "一种特殊类型的变量", "内置数据结构", "调试工具"],
+        "correct_answer": 0, "explanation": "Python 装饰器是接收函数并扩展其行为而无需显式修改它的函数，使用 @ 语法。",
         "topic": "Python", "difficulty": "intermediate"
     },
     {
-        "id": "q-015", "question": "What does CNN stand for in deep learning?",
-        "options": ["Convolutional Neural Network", "Complex Neural Network", "Continuous Neural Network", "Cascading Neural Network"],
-        "correct_answer": 0, "explanation": "CNNs are deep learning architectures designed for processing structured grid data like images, using convolutional layers to extract features.",
+        "id": "q-015", "question": "在深度学习中，CNN 代表什么？",
+        "options": ["卷积神经网络（Convolutional Neural Network）", "复杂神经网络（Complex Neural Network）", "连续神经网络（Continuous Neural Network）", "级联神经网络（Cascading Neural Network）"],
+        "correct_answer": 0, "explanation": "CNN 是为处理图像等结构化网格数据而设计的深度学习架构，使用卷积层提取特征。",
         "topic": "Deep Learning", "difficulty": "beginner"
     },
     {
-        "id": "q-016", "question": "What is the key advantage of YOLO object detection?",
-        "options": ["Fast single-pass detection without region proposals", "Higher accuracy than any other method", "Works without training", "Detects only faces"],
-        "correct_answer": 0, "explanation": "YOLO is a one-stage detector that predicts bounding boxes and class probabilities in a single pass, prioritizing speed over two-stage methods.",
+        "id": "q-016", "question": "YOLO 目标检测的关键优势是什么？",
+        "options": ["无需区域提议即可进行快速单次检测", "比任何其他方法准确率都高", "无需训练即可工作", "只检测人脸"],
+        "correct_answer": 0, "explanation": "YOLO 是单阶段检测器，在单次前向传播中预测边界框和类别概率，速度优先于两阶段方法。",
         "topic": "Computer Vision", "difficulty": "advanced"
     },
     {
-        "id": "q-017", "question": "What causes a KeyError in Python?",
-        "options": ["Accessing a dictionary key that doesn't exist", "Using wrong variable types", "A syntax error in the code", "Running out of memory"],
-        "correct_answer": 0, "explanation": "KeyError occurs when trying to access a dictionary key that doesn't exist. Use dict.get() or check with 'in' keyword to avoid it.",
+        "id": "q-017", "question": "在 Python 中什么会导致 KeyError？",
+        "options": ["访问字典中不存在的键", "使用错误的变量类型", "代码中的语法错误", "内存不足"],
+        "correct_answer": 0, "explanation": "当试图访问字典中不存在的键时会发生 KeyError。可使用 dict.get() 或 in 关键字避免。",
         "topic": "Python", "difficulty": "beginner"
     },
     {
-        "id": "q-018", "question": "What is a confusion matrix used for?",
-        "options": ["Evaluating classification model performance", "Visualizing data distributions", "Training neural networks", "Cleaning data"],
-        "correct_answer": 0, "explanation": "A confusion matrix shows the performance of a classification model through True Positives, True Negatives, False Positives, and False Negatives.",
+        "id": "q-018", "question": "混淆矩阵用于什么？",
+        "options": ["评估分类模型性能", "可视化数据分布", "训练神经网络", "清洗数据"],
+        "correct_answer": 0, "explanation": "混淆矩阵通过真正例、真负例、假正例、假负例展示分类模型的性能。",
         "topic": "Machine Learning", "difficulty": "beginner"
     },
     {
-        "id": "q-019", "question": "What is the purpose of byte-pair encoding (BPE) in LLMs?",
-        "options": ["Efficient subword tokenization balancing vocabulary size", "Compressing model weights", "Encrypting training data", "Optimizing GPU memory"],
-        "correct_answer": 0, "explanation": "BPE is a subword tokenization method that iteratively merges frequent character pairs, balancing vocabulary size and coverage for text processing.",
+        "id": "q-019", "question": "在 LLM 中，字节对编码（BPE）的作用是什么？",
+        "options": ["高效的子词分词，平衡词表大小", "压缩模型权重", "加密训练数据", "优化 GPU 内存"],
+        "correct_answer": 0, "explanation": "BPE 是一种子词分词方法，迭代合并高频字符对，在词表大小与覆盖度之间取得平衡。",
         "topic": "Large Language Models", "difficulty": "intermediate"
     },
     {
-        "id": "q-020", "question": "What is the bias-variance tradeoff?",
-        "options": ["The balance between model underfitting and overfitting", "The tradeoff between speed and accuracy", "The balance between training and test data size", "The tradeoff between model size and data size"],
-        "correct_answer": 0, "explanation": "The bias-variance tradeoff describes the balance between underfitting (high bias) and overfitting (high variance) in machine learning models.",
+        "id": "q-020", "question": "什么是偏差-方差权衡？",
+        "options": ["模型欠拟合与过拟合之间的平衡", "速度与准确率之间的权衡", "训练集与测试集大小之间的平衡", "模型大小与数据大小之间的权衡"],
+        "correct_answer": 0, "explanation": "偏差-方差权衡描述机器学习模型中欠拟合（高偏差）与过拟合（高方差）之间的平衡。",
         "topic": "Machine Learning", "difficulty": "intermediate"
     },
 ]

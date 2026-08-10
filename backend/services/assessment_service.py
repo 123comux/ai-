@@ -1,6 +1,7 @@
 """Assessment service - generates and scores assessments with per-dimension ability report."""
 
 import json
+import logging
 import random
 from pathlib import Path
 from typing import Optional
@@ -39,25 +40,29 @@ def get_assessment(topic: Optional[str] = None, count: int = 10) -> list[Assessm
         return []
 
     if topic is None:
-        # Balanced sampling: group by topic, take floor(count / n_topics) from each,
-        # fill the remainder round-robin from leftover questions.
-        random.shuffle(filtered)
+        # Balanced sampling: 每维度尽量均分题目，保证每个能力的分数有区分度。
+        # 用轮询（round-robin）而非直接 slice，避免"某维度题库不足时拿不到足够的题"。
         topics = list(dict.fromkeys(q.topic for q in filtered))
-        per_topic = max(1, count // len(topics)) if len(topics) > 0 else count
         buckets: dict[str, list] = {}
         for q in filtered:
             buckets.setdefault(q.topic, []).append(q)
+        for t in buckets:
+            random.shuffle(buckets[t])
+
         selected = []
-        for t in topics:
-            selected.extend(buckets[t][:per_topic])
-        # Fill remaining slots with any leftover questions
-        used_ids = {q.id for q in selected}
-        for q in filtered:
-            if len(selected) >= count:
-                break
-            if q.id not in used_ids:
-                selected.append(q)
-                used_ids.add(q.id)
+        # 轮询：优先让每个维度都拿到题，再循环补充剩余名额
+        idx = 0
+        while len(selected) < count:
+            added = False
+            for t in topics:
+                if len(selected) >= count:
+                    break
+                if idx < len(buckets[t]):
+                    selected.append(buckets[t][idx])
+                    added = True
+            if not added:
+                break  # 题库耗尽
+            idx += 1
         return selected[:count]
 
     random.shuffle(filtered)
@@ -127,10 +132,13 @@ def score_assessment(answers: list[int], question_ids: list[str], user_id: int =
             correct += 1
             topic_stats[q.topic]["correct"] += 1
 
-    # Per-dimension scores (0-100)
+    # Per-dimension scores (0-100)，只统计能映射到标准六维的题目
+    # （Data Science / Computer Vision / Reinforcement Learning 等未映射 topic 不计入报告）
     dim_scores: dict[str, int] = {}
     for topic, stats in topic_stats.items():
-        cn = DIMENSIONS.get(topic, topic)
+        if topic not in DIMENSIONS:
+            continue
+        cn = DIMENSIONS[topic]
         ratio = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
         dim_scores[cn] = round(ratio * 100)
 
@@ -201,9 +209,13 @@ def _persist_ability_report(
     }
 
     # 1) Global demo fallback (used by job-matching when no per-user report exists)
+    #    容错：全局文件可能被占用/权限受限，失败仅告警，绝不阻断测评响应
     path = PROCESSED_DIR / "ability_report.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.warning("[assessment] 写全局 ability_report.json 失败(已忽略): %s", e)
 
     # 2) Per-user persistence (multi-tenant isolation)
     if user_id is not None:

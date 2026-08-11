@@ -516,3 +516,78 @@ export interface AbilityHistory {
 export const fetchAbilityHistory = async (): Promise<AbilityHistory> => {
   return apiGet<AbilityHistory>('/api/user/ability-history');
 };
+
+// ============ 分享解锁 + 组队学习 ============
+
+/** 学习小组类型 */
+export interface Team {
+  id: number;
+  name: string;
+  code: string;
+  owner_id: number;
+  max_members: number;
+  member_count: number;
+  created_at: string;
+  joined_at?: string;
+}
+
+/** 分享解锁记录 */
+export interface ShareUnlockItem {
+  id: number;
+  share_type: string;
+  share_target: string;
+  unlocked_content: string;
+  created_at: string;
+}
+
+/** 创建学习小组（返回含邀请码）。name/max_members 为后端 query 参数 */
+export const createTeam = async (name: string, maxMembers: number = 5): Promise<Team> => {
+  return apiPost<Team>(
+    `/api/community/teams?name=${encodeURIComponent(name)}&max_members=${maxMembers}`,
+    {},
+  );
+};
+
+/** 通过邀请码加入小组。code 为后端 query 参数 */
+export const joinTeam = async (code: string): Promise<{ ok: boolean; team: Team; message?: string }> => {
+  return apiPost<{ ok: boolean; team: Team; message?: string }>(
+    `/api/community/teams/join?code=${encodeURIComponent(code)}`,
+    {},
+  );
+};
+
+/** 我的小组列表 */
+export const fetchMyTeams = async (): Promise<Team[]> => {
+  const data = await apiGet<{ teams: Team[] }>('/api/community/teams/mine');
+  return data.teams || [];
+};
+
+/** 小组详情 + 成员学习时长排行 */
+export const fetchTeamDetail = async (teamId: number): Promise<{ team: Team; members: TeamMember[] }> => {
+  return apiGet<{ team: Team; members: TeamMember[] }>(`/api/community/teams/${teamId}`);
+};
+
+/** 组内成员学习时长排行项 */
+export interface TeamMember {
+  id: number;
+  nickname: string;
+  avatar: string;
+  total_minutes: number;
+}
+
+/** 分享后解锁进阶内容。share_type 为 'course'，share_target 为课程 id */
+export const shareUnlock = async (
+  shareType: string,
+  shareTarget: string,
+): Promise<{ ok: boolean; already_unlocked?: boolean; message?: string }> => {
+  return apiPost<any>(
+    `/api/community/share-unlock?share_type=${encodeURIComponent(shareType)}&share_target=${encodeURIComponent(shareTarget)}`,
+    {},
+  );
+};
+
+/** 查询当前用户已解锁的分享内容 */
+export const fetchShareUnlocks = async (): Promise<ShareUnlockItem[]> => {
+  const data = await apiGet<{ unlocked: ShareUnlockItem[]; count: number }>('/api/community/share-unlock/status');
+  return data.unlocked || [];
+};

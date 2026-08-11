@@ -480,3 +480,84 @@
   line-height: $line-height-loose;
   display: block;
 }
+
+/* 分享解锁 */
+.unlockCard {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(22, 93, 255, 0.08) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.unlockCardDone {
+  background: $color-bg-card;
+  border-color: rgba(0, 180, 42, 0.3);
+  box-shadow: $shadow-card;
+}
+
+.unlockBadge {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-success;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.unlockGuide {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.unlockActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.unlockBtn {
+  margin: 0;
+  padding: 0 32rpx;
+  height: $button-height-sm;
+  line-height: $button-height-sm;
+  font-size: $font-size-md;
+  color: $color-text-white;
+  background: $gradient-primary;
+  border: none;
+  border-radius: $radius-button;
+}
+
+.unlockBtn::after { border: none; }
+
+.unlockManual {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  text-decoration: underline;
+}
+
+.unlockEmpty {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.unlockItem {
+  margin-bottom: $spacing-sm;
+}
+
+.unlockItemTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.unlockItemText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  display: block;
+}

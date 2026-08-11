@@ -1,15 +1,19 @@
 """
-全功能模块测试套件（对应《全功能模块实现指南与测试验证文档》v2.0）。
+全功能模块测试套件（对应《功能模块实现与测试验证文档》v3.0）。
+零基础AI教学平台 · 押金式培训版。
 
 分层：
 - 纯函数单测：token 验签、三锁判定辅助、章节标准化、技能掌握判定、方向融合
-- 集成测试：14 个后端路由模块的端到端链路
+- 集成测试：15 个后端路由模块的端到端链路
 
 运行：
     cd D:/aishixi/backend
-    python -m pytest tests/ -q        (若有 pytest)
+    DEV_MODE=true python -m pytest tests/ -q   (若有 pytest)
     # 或
-    python -m unittest tests.test_all -v
+    DEV_MODE=true python -m unittest tests.test_all -v
+
+注意：`.env` 中 DEV_MODE=false（真实微信登录）时，测试用假 code 登录会返回 401。
+测试以 DEV_MODE=true 覆盖运行即可，勿修改 .env 里的真实登录配置。
 """
 
 import os
@@ -404,7 +408,7 @@ class TestCommunity(unittest.TestCase):
 
 
 class TestContentPromptTemplates(unittest.TestCase):
-    """提示词模板库。"""
+    """提示词模板库 + FAQ 公开接口。"""
 
     def test_prompt_templates(self):
         r = client.get("/api/content/prompt-templates")
@@ -420,6 +424,20 @@ class TestContentPromptTemplates(unittest.TestCase):
         self.assertTrue(all(t["category"] == "学生" for t in r.json()))
         # 分类列表
         r = client.get("/api/content/prompt-templates/categories")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("categories", r.json())
+
+    def test_faq(self):
+        """FAQ 常见问题库公开接口。"""
+        r = client.get("/api/content/faq")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIsInstance(data, list)
+        self.assertTrue(len(data) > 0)
+        self.assertIn("question", data[0])
+        self.assertIn("answer", data[0])
+        # 分类列表
+        r = client.get("/api/content/faq/categories")
         self.assertEqual(r.status_code, 200)
         self.assertIn("categories", r.json())
 
@@ -468,7 +486,7 @@ class TestAdminDashboard(unittest.TestCase):
         r = client.get("/api/admin/dashboard", headers=h)
         self.assertEqual(r.status_code, 200)
         data = r.json()
-        for k in ("users", "checkins", "posts", "assessments"):
+        for k in ("users", "checkins", "posts", "assessments", "faq_count"):
             self.assertIn(k, data)
         # 泛型表管理：新表 users 可读
         r = client.get("/api/admin/users", headers=h)
@@ -476,6 +494,82 @@ class TestAdminDashboard(unittest.TestCase):
         # 无 token 应 401
         r = client.get("/api/admin/dashboard")
         self.assertEqual(r.status_code, 401)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+
+
+# ===== 新增：分享解锁 + 组队学习 + FAQ 管理 =====
+
+class TestShareUnlock(unittest.TestCase):
+    """分享解锁（社交裂变）。"""
+
+    def test_share_unlock_flow(self):
+        token, user = self._login("share_test")
+        h = {"Authorization": f"Bearer {token}"}
+        # 分享解锁
+        r = client.post(f"/api/community/share-unlock?share_type=course&share_target=stage-1-cognition", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ok"])
+        # 重复解锁
+        r = client.post(f"/api/community/share-unlock?share_type=course&share_target=stage-1-cognition", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["already_unlocked"])
+        # 查询状态
+        r = client.get("/api/community/share-unlock/status", headers=h)
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(r.json()["count"], 1)
+
+    def test_share_unlock_requires_auth(self):
+        r = client.post("/api/community/share-unlock?share_type=course&share_target=test")
+        self.assertEqual(r.status_code, 401)
+
+    def _login(self, nickname):
+        code = f"share_{int(time.time()*1000)}_{nickname}"
+        r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
+        self.assertEqual(r.status_code, 200)
+        return r.json()["token"], r.json()["user"]
+
+
+class TestTeams(unittest.TestCase):
+    """好友组队学习。"""
+
+    def test_team_flow(self):
+        token1, user1 = self._login("team_owner")
+        h1 = {"Authorization": f"Bearer {token1}"}
+        # 创建小组
+        r = client.post(f"/api/community/teams?name=AI学习先锋队&max_members=5", headers=h1)
+        self.assertEqual(r.status_code, 200)
+        team = r.json()
+        self.assertIn("code", team)
+        code = team["code"]
+        # 查询我的小组
+        r = client.get("/api/community/teams/mine", headers=h1)
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(len(r.json()["teams"]), 1)
+        # 另一个用户加入
+        token2, _ = self._login("team_member")
+        h2 = {"Authorization": f"Bearer {token2}"}
+        r = client.post(f"/api/community/teams/join?code={code}", headers=h2)
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ok"])
+        # 小组详情
+        r = client.get(f"/api/community/teams/{team['id']}", headers=h1)
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(len(r.json()["members"]), 2)
+
+    def test_join_invalid_code(self):
+        token, _ = self._login("bad_joiner")
+        h = {"Authorization": f"Bearer {token}"}
+        r = client.post("/api/community/teams/join?code=INVALID_CODE", headers=h)
+        self.assertEqual(r.status_code, 404)
+
+    def _login(self, nickname):
+        code = f"team_{int(time.time()*1000)}_{nickname}"
+        r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
+        self.assertEqual(r.status_code, 200)
+        return r.json()["token"], r.json()["user"]
 
 
 if __name__ == "__main__":

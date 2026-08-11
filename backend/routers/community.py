@@ -4,6 +4,8 @@ Covers three platform features (迭代计划 · 平台化量力加):
 - 每日 AI 打卡（checkins）：连续打卡记录、连续天数、激励
 - 学习排行榜（leaderboard）：按学习时长/完课率排行
 - 学习社区（posts/replies）：学员提问、互助、FAQ 沉淀
+- 分享解锁（share-unlock）：分享课程解锁进阶内容（社交裂变）
+- 好友组队学习（teams）：组队学习、裂变增长
 
 All data is per-user (multi-tenant). Auth required via get_current_user.
 """
@@ -218,3 +220,126 @@ async def like_post(post_id: int, user: dict = Depends(get_current_user)):
     row = conn.execute("SELECT id, likes FROM community_posts WHERE id=?", (post_id,)).fetchone()
     conn.close()
     return dict(row)
+
+
+# ---------- 分享解锁（社交裂变） ----------
+
+@router.post("/share-unlock")
+async def share_unlock(
+    share_type: str = "course", share_target: str = "", user: dict = Depends(get_current_user)
+):
+    """分享课程/页面后解锁进阶内容（分享即解锁，无需额外验证）。"""
+    if not share_target:
+        raise HTTPException(status_code=400, detail="share_target 不能为空")
+    conn = get_connection()
+    exists = conn.execute(
+        "SELECT id FROM share_unlocks WHERE user_id=? AND share_type=? AND share_target=?",
+        (user["id"], share_type, share_target),
+    ).fetchone()
+    if exists:
+        conn.close()
+        return {"ok": True, "already_unlocked": True, "message": "已解锁过此内容"}
+    insert_row("share_unlocks", {
+        "user_id": user["id"],
+        "share_type": share_type,
+        "share_target": share_target,
+        "unlocked_content": f"{share_type}:{share_target}",
+    })
+    conn.close()
+    return {"ok": True, "already_unlocked": False, "message": "分享成功，已解锁进阶内容"}
+
+
+@router.get("/share-unlock/status")
+async def share_unlock_status(user: dict = Depends(get_current_user)):
+    """查询当前用户已解锁的分享内容列表。"""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM share_unlocks WHERE user_id=? ORDER BY created_at DESC",
+        (user["id"],),
+    ).fetchall()
+    conn.close()
+    return {"unlocked": [dict(r) for r in rows], "count": len(rows)}
+
+
+# ---------- 好友组队学习 ----------
+
+@router.post("/teams")
+async def create_team(name: str = "", max_members: int = 5, user: dict = Depends(get_current_user)):
+    """创建学习小组。"""
+    import secrets
+    name = (name or "").strip()
+    if not name:
+        name = f"{user.get('nickname', '学员')}的学习小组"
+    code = secrets.token_hex(4).upper()
+    tid = insert_row("teams", {
+        "name": name[:30],
+        "code": code,
+        "owner_id": user["id"],
+        "max_members": max(2, min(max_members, 10)),
+    })
+    insert_row("team_members", {"team_id": tid, "user_id": user["id"]})
+    return query_one("teams", tid)
+
+
+@router.post("/teams/join")
+async def join_team(code: str = "", user: dict = Depends(get_current_user)):
+    """通过邀请码加入学习小组。"""
+    code = (code or "").strip().upper()
+    if not code:
+        raise HTTPException(status_code=400, detail="邀请码不能为空")
+    conn = get_connection()
+    team = conn.execute("SELECT * FROM teams WHERE code=?", (code,)).fetchone()
+    if not team:
+        conn.close()
+        raise HTTPException(status_code=404, detail="未找到该小组")
+    if team["member_count"] >= team["max_members"]:
+        conn.close()
+        raise HTTPException(status_code=400, detail="小组已满")
+    exists = conn.execute(
+        "SELECT id FROM team_members WHERE team_id=? AND user_id=?",
+        (team["id"], user["id"]),
+    ).fetchone()
+    if exists:
+        conn.close()
+        return {"ok": True, "team": dict(team), "message": "你已在该小组中"}
+    insert_row("team_members", {"team_id": team["id"], "user_id": user["id"]})
+    conn.execute("UPDATE teams SET member_count = member_count + 1 WHERE id=?", (team["id"],))
+    conn.commit()
+    team = conn.execute("SELECT * FROM teams WHERE id=?", (team["id"],)).fetchone()
+    conn.close()
+    return {"ok": True, "team": dict(team), "message": "加入成功"}
+
+
+@router.get("/teams/mine")
+async def my_teams(user: dict = Depends(get_current_user)):
+    """查询我加入的学习小组。"""
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT t.*, tm.joined_at FROM teams t
+        JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = ?
+        ORDER BY t.id DESC
+    """, (user["id"],)).fetchall()
+    conn.close()
+    return {"teams": [dict(r) for r in rows]}
+
+
+@router.get("/teams/{team_id}")
+async def team_detail(team_id: int, user: dict = Depends(get_current_user)):
+    """小组详情（含成员列表与各自学习进度）。"""
+    conn = get_connection()
+    team = query_one("teams", team_id)
+    if not team:
+        conn.close()
+        raise HTTPException(status_code=404, detail="小组不存在")
+    members = conn.execute("""
+        SELECT u.id, u.nickname, u.avatar,
+               COALESCE(SUM(uvp.minutes), 0) AS total_minutes
+        FROM team_members tm
+        JOIN users u ON u.id = tm.user_id
+        LEFT JOIN user_video_progress uvp ON uvp.user_id = u.id
+        WHERE tm.team_id = ?
+        GROUP BY u.id
+        ORDER BY total_minutes DESC
+    """, (team_id,)).fetchall()
+    conn.close()
+    return {"team": dict(team), "members": [dict(m) for m in members]}

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, Image } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import { View, Text, ScrollView, Image, Button } from '@tarojs/components';
+import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode, addFavorite, removeFavorite, fetchFavorites } from '@/services/api';
+import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode, addFavorite, removeFavorite, fetchFavorites, shareUnlock, fetchShareUnlocks } from '@/services/api';
 import { formatDuration, formatMinutes } from '@/utils/index';
 import type { Chapter, Video } from '@/types/index';
 import styles from './index.module.scss';
@@ -21,6 +21,34 @@ const CourseDetailPage: React.FC = () => {
   const pathIdRef = useRef('');
   const nodeIdRef = useRef('');
   const courseIdRef = useRef('');
+  const [unlocked, setUnlocked] = useState(false);
+
+  // 分享解锁：右上角菜单转发带课程 id（hook 必须在组件函数体内调用）
+  useShareAppMessage(() => ({
+    title: course ? `我在学「${course.title}」，一起解锁进阶实操` : '一起学 AI',
+    path: `/pages/courseDetail/index?id=${courseIdRef.current}`,
+  }));
+
+  const loadUnlockStatus = async () => {
+    try {
+      const list = await fetchShareUnlocks();
+      const found = list.some((u) => u.share_type === 'course' && u.share_target === courseIdRef.current);
+      setUnlocked(found);
+    } catch (e) {
+      console.error('[CourseDetail] unlock status', e);
+    }
+  };
+
+  const handleShareUnlock = async () => {
+    if (!courseIdRef.current || unlocked) return;
+    try {
+      await shareUnlock('course', courseIdRef.current);
+      setUnlocked(true);
+      Taro.showToast({ title: '已解锁进阶实操', icon: 'success' });
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || '解锁失败', icon: 'none' });
+    }
+  };
 
   const checkFavorite = async (courseId: string) => {
     try {
@@ -79,6 +107,7 @@ const CourseDetailPage: React.FC = () => {
           }
         }
         checkFavorite(id);
+        loadUnlockStatus();
       }
       // 每次显示都刷新视频（含看完状态），让学习进度实时更新
       const courseVideos = await fetchCourseVideos(id);
@@ -175,6 +204,20 @@ const CourseDetailPage: React.FC = () => {
     ? Math.round((videos.filter((v) => v.completed).length / videos.length) * 100)
     : 0;
 
+  // 分享解锁后的进阶内容：聚合各章节的实战案例与提示词要点
+  const advancedContent: { title: string; content: string }[] = (() => {
+    const items: { title: string; content: string }[] = [];
+    chapters.forEach((ch) => {
+      (ch.sections || []).forEach((sec) => {
+        if (sec.case) items.push({ title: `${ch.title} · ${sec.title} · 实战案例`, content: sec.case });
+        if (sec.knowledge_points && sec.knowledge_points.length) {
+          items.push({ title: `${ch.title} · ${sec.title} · 提示词要点`, content: sec.knowledge_points.join('；') });
+        }
+      });
+    });
+    return items;
+  })();
+
   if (!course) {
     return (
       <View className={styles.page}>
@@ -206,6 +249,38 @@ const CourseDetailPage: React.FC = () => {
             </>
           )}
         </View>
+
+        {/* 分享解锁进阶实操 */}
+        <View className={`${styles.unlockCard} ${unlocked ? styles.unlockCardDone : ''}`}>
+          {unlocked ? (
+            <>
+              <Text className={styles.unlockBadge}>🔓 已解锁进阶实操</Text>
+              {advancedContent.length === 0 ? (
+                <Text className={styles.unlockEmpty}>本课暂无额外进阶内容</Text>
+              ) : advancedContent.map((item, idx) => (
+                <View key={idx} className={styles.unlockItem}>
+                  <Text className={styles.unlockItemTitle}>{item.title}</Text>
+                  <Text className={styles.unlockItemText}>{item.content}</Text>
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <Text className={styles.unlockGuide}>分享给好友，解锁本课进阶实操</Text>
+              <View className={styles.unlockActions}>
+                <Button
+                  className={styles.unlockBtn}
+                  openType="share"
+                  onSuccess={handleShareUnlock}
+                >
+                  分享解锁
+                </Button>
+                <Text className={styles.unlockManual} onClick={handleShareUnlock}>我已分享，手动解锁</Text>
+              </View>
+            </>
+          )}
+        </View>
+
         <View className={styles.progressSection}>
           <View className={styles.progressHeader}>
             <Text className={styles.progressLabel}>学习进度</Text>

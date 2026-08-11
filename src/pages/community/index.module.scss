@@ -304,3 +304,155 @@
 }
 
 .emptyText { font-size: $font-size-md; }
+
+/* 组队 */
+.teamSection {
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.teamActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.teamBtn {
+  flex: 1;
+  height: $button-height-sm;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.teamBtnText { font-size: $font-size-md; color: $color-text-white; font-weight: $font-weight-medium; }
+
+.teamBtnGhost {
+  background: $color-bg-card;
+  border: 2rpx solid $color-primary;
+}
+
+.teamBtnGhostText { font-size: $font-size-md; color: $color-primary; font-weight: $font-weight-medium; }
+
+.teamCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.teamCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.teamName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+  margin-right: $spacing-sm;
+}
+
+.teamCount {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  background: rgba(22, 93, 255, 0.08);
+  padding: 2rpx 14rpx;
+  border-radius: $radius-round;
+}
+
+.teamCodeRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.teamCodeLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  background: $color-bg-hover;
+  padding: 2rpx 12rpx;
+  border-radius: $radius-round;
+}
+
+.teamCode {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  letter-spacing: 4rpx;
+}
+
+.teamCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-sm;
+}
+
+.teamTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.inviteBtn {
+  margin: 0;
+  padding: 4rpx 24rpx;
+  line-height: 1.5;
+  font-size: $font-size-sm;
+  color: $color-primary;
+  background: rgba(22, 93, 255, 0.08);
+  border: none;
+  border-radius: $radius-round;
+}
+
+.inviteBtn::after { border: none; }
+
+.teamDetail {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 2rpx solid $color-bg-hover;
+}
+
+.teamDetailLoading {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.teamMember {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+}
+
+.teamMemberRank {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.teamMemberName {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.teamMemberMinutes {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}

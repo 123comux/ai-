@@ -38,11 +38,12 @@
 
 .projectList {
   padding: 0 $spacing-lg $spacing-lg;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: $spacing-md;
 }
 
 .projectItem {
-  width: 100%;
+  width: calc(50% - #{$spacing-md});
+  box-sizing: border-box;
 }

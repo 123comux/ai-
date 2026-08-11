@@ -286,6 +286,56 @@ def init_db():
         )
     """)
 
+    # 分享解锁记录（社交裂变：分享课程解锁进阶内容）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS share_unlocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            share_type TEXT NOT NULL DEFAULT 'course',
+            share_target TEXT NOT NULL,
+            unlocked_content TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(user_id, share_type, share_target)
+        )
+    """)
+
+    # 好友组队学习
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            owner_id INTEGER NOT NULL,
+            member_count INTEGER NOT NULL DEFAULT 1,
+            max_members INTEGER NOT NULL DEFAULT 5,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS team_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(team_id, user_id)
+        )
+    """)
+
+    # FAQ 知识库（答疑管理：常见问题沉淀）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS faq_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'general',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            view_count INTEGER NOT NULL DEFAULT 0,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
     # ============ 用户体系（多用户隔离） ============
 
     # Users - 微信授权登录后的真实用户
@@ -850,13 +900,13 @@ def seed_from_json():
         insert_row("banners", b)
     print(f"  Seeded {len(default_banners)} banners")
 
-    # Seed default directions
+    # Seed default directions (对应零基础五阶段课程：认知/入门/进阶/实战/熟练)
     default_directions = [
-        {"name": "AI 算法工程师", "description": "机器学习、深度学习、大模型微调", "color": "#165dff", "topic_key": "Machine Learning", "sort_order": 1},
-        {"name": "AI 产品经理", "description": "AI 产品设计、Prompt Engineering", "color": "#7c3aed", "topic_key": "AI/ML", "sort_order": 2},
-        {"name": "AIGC 应用人才", "description": "AI 绘画、AI 写作、AI 视频", "color": "#00b42a", "topic_key": "Generative AI", "sort_order": 3},
-        {"name": "数据分析工程师", "description": "Python 数据分析、SQL、BI", "color": "#ff7d00", "topic_key": "Data Science", "sort_order": 4},
-        {"name": "AI 应用开发", "description": "大模型 API、RAG、Agent", "color": "#f53f3f", "topic_key": "LLM", "sort_order": 5},
+        {"name": "零基础认知", "description": "了解 AI 能做什么、不能做什么", "color": "#165dff", "topic_key": "认知", "sort_order": 1},
+        {"name": "入门实践", "description": "认识主流 AI 工具，开始动手用", "color": "#7c3aed", "topic_key": "入门", "sort_order": 2},
+        {"name": "提示词进阶", "description": "写出高质量提示词，让 AI 更懂你", "color": "#00b42a", "topic_key": "进阶", "sort_order": 3},
+        {"name": "场景实战", "description": "用 AI 解决工作学习中的真实问题", "color": "#ff7d00", "topic_key": "实战", "sort_order": 4},
+        {"name": "熟练精通", "description": "建立自动化工作流，善用 AI", "color": "#f53f3f", "topic_key": "熟练", "sort_order": 5},
     ]
     for d in default_directions:
         insert_row("directions", d)

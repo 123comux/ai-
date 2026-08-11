@@ -42,26 +42,26 @@ def get_assessment(topic: Optional[str] = None, count: int = 10) -> list[Assessm
     if topic is None:
         # Balanced sampling: 每维度尽量均分题目，保证每个能力的分数有区分度。
         # 用轮询（round-robin）而非直接 slice，避免"某维度题库不足时拿不到足够的题"。
-        topics = list(dict.fromkeys(q.topic for q in filtered))
+        dims = list(dict.fromkeys(getattr(q, 'dimension', getattr(q, 'topic', 'unknown')) for q in filtered))
         buckets: dict[str, list] = {}
         for q in filtered:
-            buckets.setdefault(q.topic, []).append(q)
+            d = getattr(q, 'dimension', getattr(q, 'topic', 'unknown'))
+            buckets.setdefault(d, []).append(q)
         for t in buckets:
             random.shuffle(buckets[t])
 
         selected = []
-        # 轮询：优先让每个维度都拿到题，再循环补充剩余名额
         idx = 0
         while len(selected) < count:
             added = False
-            for t in topics:
+            for t in dims:
                 if len(selected) >= count:
                     break
                 if idx < len(buckets[t]):
                     selected.append(buckets[t][idx])
                     added = True
             if not added:
-                break  # 题库耗尽
+                break
             idx += 1
         return selected[:count]
 
@@ -69,14 +69,14 @@ def get_assessment(topic: Optional[str] = None, count: int = 10) -> list[Assessm
     return filtered[:count]
 
 
-# Dimension name -> canonical key used in the report and direction mapping
+# 零基础AI能力测评六维度 (matches assessment_questions.json "dimension" field)
 DIMENSIONS = {
-    "Python": "编程基础",
-    "Math": "数学基础",
-    "Machine Learning": "机器学习",
-    "Deep Learning": "深度学习",
-    "Large Language Models": "大模型应用",
-    "Project": "项目经验",
+    "AI基础认知": "AI基础认知",
+    "AI工具使用": "AI工具使用",
+    "提示词能力": "提示词能力",
+    "场景应用": "场景应用",
+    "AI工作流": "AI工作流",
+    "AI思维": "AI思维",
 }
 
 
@@ -91,25 +91,24 @@ def _level_from_score(score: int) -> str:
 
 
 def _recommend_direction(dim_scores: dict[str, int]) -> str:
-    """Map per-dimension scores to a recommended career direction."""
-    ml = dim_scores.get("机器学习", 0)
-    dl = dim_scores.get("深度学习", 0)
-    llm = dim_scores.get("大模型应用", 0)
-    prog = dim_scores.get("编程基础", 0)
-    data = dim_scores.get("数学基础", 0)
+    """Map per-dimension scores to a recommended learning path."""
+    cognition = dim_scores.get("AI基础认知", 0)
+    tools = dim_scores.get("AI工具使用", 0)
+    prompting = dim_scores.get("提示词能力", 0)
+    scenario = dim_scores.get("场景应用", 0)
+    workflow = dim_scores.get("AI工作流", 0)
+    thinking = dim_scores.get("AI思维", 0)
 
-    # Strongest axis wins, with sensible career mapping.
     candidates = [
-        ("大模型应用开发", llm),
-        ("机器学习工程师", ml),
-        ("深度学习工程师", dl),
-        ("数据科学家", max(data, prog)),
+        ("从零开始学AI（小白推荐）", cognition + tools),
+        ("AI办公提效（职场推荐）", prompting + scenario),
+        ("AI项目实战（进阶推荐）", scenario + workflow),
+        ("系统掌握AI应用（深度推荐）", prompting + workflow + thinking),
     ]
     candidates.sort(key=lambda x: x[1], reverse=True)
     best, best_score = candidates[0]
 
-    # Tie-break: if LLM and ML are close, prefer the one with higher absolute score.
-    return best if best_score > 0 else "AI 应用开发"
+    return best if best_score > 0 else "从零开始学AI（小白推荐）"
 
 
 def score_assessment(answers: list[int], question_ids: list[str], user_id: int = None) -> AssessmentResult:
@@ -125,20 +124,20 @@ def score_assessment(answers: list[int], question_ids: list[str], user_id: int =
         if qid not in q_map:
             continue
         q = q_map[qid]
-        if q.topic not in topic_stats:
-            topic_stats[q.topic] = {"correct": 0, "total": 0}
-        topic_stats[q.topic]["total"] += 1
+        dim = getattr(q, 'dimension', q.topic)
+        if dim not in topic_stats:
+            topic_stats[dim] = {"correct": 0, "total": 0}
+        topic_stats[dim]["total"] += 1
         if ans == q.correct_answer:
             correct += 1
-            topic_stats[q.topic]["correct"] += 1
+            topic_stats[dim]["correct"] += 1
 
     # Per-dimension scores (0-100)，只统计能映射到标准六维的题目
-    # （Data Science / Computer Vision / Reinforcement Learning 等未映射 topic 不计入报告）
     dim_scores: dict[str, int] = {}
-    for topic, stats in topic_stats.items():
-        if topic not in DIMENSIONS:
+    for dim, stats in topic_stats.items():
+        if dim not in DIMENSIONS:
             continue
-        cn = DIMENSIONS[topic]
+        cn = DIMENSIONS[dim]
         ratio = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
         dim_scores[cn] = round(ratio * 100)
 
@@ -186,8 +185,8 @@ def _persist_ability_report(
     AND, when a user is identified, into the per-user user_ability_reports table
     so each user's 我的页 reflects their own result (multi-tenant isolation).
     """
-    # Fixed order for a stable radar chart
-    order = ["编程基础", "数学基础", "机器学习", "深度学习", "大模型应用", "项目经验"]
+    # Fixed order for a stable radar chart (零基础AI六维度)
+    order = ["AI基础认知", "AI工具使用", "提示词能力", "场景应用", "AI工作流", "AI思维"]
     dimensions = [
         {"label": dim, "score": dim_scores.get(dim, 0), "maxScore": 100}
         for dim in order

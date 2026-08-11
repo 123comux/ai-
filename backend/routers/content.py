@@ -1,6 +1,8 @@
 """
 Public Content API - serves dynamic content to frontend.
 Eliminates hard-coded data from frontend pages.
+
+Also provides FAQ public API for the learning community.
 """
 from fastapi import APIRouter
 
@@ -65,3 +67,24 @@ def get_prompt_categories():
     """Get available template categories."""
     cats = list(dict.fromkeys(t["category"] for t in PROMPT_TEMPLATES))
     return {"categories": cats}
+
+
+# ============ FAQ 常见问题库（公开接口） ============
+from pydantic import BaseModel
+
+@router.get("/faq")
+def get_faq(category: str = ""):
+    """获取 FAQ 常见问题列表（公开接口，无需登录）。"""
+    if category:
+        return query_all("faq_items", {"category": category, "is_active": 1}, "sort_order")
+    return query_all("faq_items", {"is_active": 1}, "sort_order")
+
+
+@router.get("/faq/categories")
+def get_faq_categories():
+    """获取 FAQ 分类列表。"""
+    from database import get_connection
+    conn = get_connection()
+    rows = conn.execute("SELECT DISTINCT category FROM faq_items WHERE is_active=1 ORDER BY category").fetchall()
+    conn.close()
+    return {"categories": [r["category"] for r in rows]}

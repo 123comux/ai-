@@ -8,7 +8,7 @@ import type { MenuItem } from '@/services/api';
 import styles from './index.module.scss';
 
 const MinePage: React.FC = () => {
-  const { nickname, avatar } = useUserStore();
+  const { isLoggedIn, nickname, avatar, login, logout } = useUserStore();
   const [abilityReport, setAbilityReport] = useState<any>(null);
   const [stats, setStats] = useState({ learningDays: 0, totalMinutes: 0, completedProjects: 0, completedLessons: 0 });
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -37,6 +37,37 @@ const MinePage: React.FC = () => {
     loadData();
   });
 
+  const handleWechatLogin = async () => {
+    Taro.showLoading({ title: '微信登录中...', mask: true });
+    try {
+      await login();
+      Taro.hideLoading();
+      if (useUserStore.getState().isLoggedIn) {
+        Taro.showToast({ title: '微信登录成功', icon: 'success' });
+      } else {
+        Taro.showToast({ title: '登录失败，请重试', icon: 'none' });
+      }
+      loadData();
+    } catch (err) {
+      Taro.hideLoading();
+      Taro.showToast({ title: '登录失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleLogout = () => {
+    Taro.showModal({
+      title: '退出登录',
+      content: '退出后将无法保存学习记录，确定退出吗？',
+      confirmColor: '#e5484d',
+      success: (res) => {
+        if (res.confirm) {
+          logout();
+          loadData();
+        }
+      },
+    });
+  };
+
   const handleMenuClick = (item: MenuItem) => {
     if (item.path) {
       Taro.navigateTo({ url: item.path });
@@ -47,13 +78,37 @@ const MinePage: React.FC = () => {
 
   return (
     <ScrollView className={styles.page} scrollY>
-      {/* 用户信息头部 */}
+      {/* 用户信息头部（微信快捷登录） */}
       <View className={styles.header}>
         <View className={styles.headerBg} />
-        <View className={styles.userInfo}>
-          <Image className={styles.avatar} src={avatar} mode="aspectFill" />
-          <Text className={styles.nickname}>{nickname}</Text>
-        </View>
+        {isLoggedIn ? (
+          <View className={styles.userInfo}>
+            <View className={styles.avatarWrap}>
+              {avatar ? (
+                <Image className={styles.avatar} src={avatar} mode="aspectFill" />
+              ) : (
+                <View className={styles.avatarPlaceholder}><Text className={styles.avatarPlaceholderIcon}>👤</Text></View>
+              )}
+              <View className={styles.wechatBadge}><Text className={styles.wechatBadgeText}>微信</Text></View>
+            </View>
+            <Text className={styles.nickname}>{nickname}</Text>
+            <View className={styles.directionBadge}>
+              <Text className={styles.directionText}>微信快捷登录 · 学习记录已同步</Text>
+            </View>
+            <View className={styles.logoutBtn} onClick={handleLogout}>
+              <Text className={styles.logoutText}>退出登录</Text>
+            </View>
+          </View>
+        ) : (
+          <View className={styles.loginEntry} onClick={handleWechatLogin}>
+            <Text className={styles.loginEntryIcon}>💬</Text>
+            <View className={styles.loginEntryText}>
+              <Text className={styles.loginEntryTitle}>微信快捷登录</Text>
+              <Text className={styles.loginEntryDesc}>一键登录，保存你的学习记录与能力档案</Text>
+            </View>
+            <Text className={styles.loginEntryArrow}>→</Text>
+          </View>
+        )}
       </View>
 
       {/* 学习统计 */}

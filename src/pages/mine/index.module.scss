@@ -55,6 +55,99 @@
   color: $color-text-white;
 }
 
+.avatarWrap {
+  position: relative;
+  margin-bottom: $spacing-md;
+}
+
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-bg-card;
+}
+
+.avatarPlaceholder {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-bg-card;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarPlaceholderIcon {
+  font-size: 60rpx;
+}
+
+.wechatBadge {
+  position: absolute;
+  right: -10rpx;
+  bottom: 8rpx;
+  background: #07c160;
+  border-radius: $radius-round;
+  padding: 4rpx 12rpx;
+  border: 3rpx solid $color-bg-card;
+}
+
+.wechatBadgeText {
+  font-size: 18rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+.logoutBtn {
+  margin-top: $spacing-md;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8rpx 28rpx;
+  border-radius: $radius-round;
+}
+
+.logoutText {
+  font-size: $font-size-sm;
+  color: $color-text-white;
+}
+
+.loginEntry {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2rpx solid rgba(255, 255, 255, 0.35);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-top: $spacing-sm;
+}
+
+.loginEntryIcon {
+  font-size: 56rpx;
+}
+
+.loginEntryText {
+  flex: 1;
+}
+
+.loginEntryTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  display: block;
+}
+
+.loginEntryDesc {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 4rpx;
+  display: block;
+}
+
+.loginEntryArrow {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+}
+
 .statsRow {
   display: flex;
   align-items: center;

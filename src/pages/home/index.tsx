@@ -12,31 +12,27 @@ import type { Course, Project } from '@/types/index';
 import type { CourseRecommendation, BannerItem, DirectionItem } from '@/services/api';
 import styles from './index.module.scss';
 
-/** 学习方向 → 话题映射（用于过滤课程） */
+/** 学习方向 → 课程阶段映射（用于过滤课程） */
 const DIRECTION_TOPIC_MAP: Record<string, string> = {
-  'AI 算法工程师': 'Machine Learning',
-  'AI 产品经理': 'AI/ML',
-  'AIGC 应用人才': 'Generative AI',
-  '数据分析工程师': 'Data Science',
-  'AI 应用开发': 'LLM',
-  // 学习路径推荐方向 → topic
-  '大模型应用开发': '大模型',
-  '机器学习工程师': '机器学习',
-  '深度学习工程师': '深度学习',
-  '数据科学家': '数据科学',
-  '计算机视觉工程师': '计算机视觉',
+  '零基础认知': '认知',
+  '入门实践': '入门',
+  '提示词进阶': '进阶',
+  '场景实战': '实战',
+  '熟练精通': '熟练',
+  // 兼容测评推荐方向（assessment_service 返回的方向名）
+  '零基础入门': '入门',
+  'AI办公提效': '实战',
+  'AI项目实战': '熟练',
+  '系统掌握AI': '进阶',
 };
 
-/** topic 英文 → 中文展示 */
+/** 课程阶段 / 难度 → 中文展示 */
 const TOPIC_CN_MAP: Record<string, string> = {
-  'Machine Learning': '机器学习',
-  'Deep Learning': '深度学习',
-  'Large Language Models': '大模型',
-  'NLP': '自然语言',
-  'Data Science': '数据科学',
-  'Python': 'Python',
-  'Computer Vision': '计算机视觉',
-  'Reinforcement Learning': '强化学习',
+  '认知': '认知',
+  '入门': '入门',
+  '进阶': '进阶',
+  '实战': '实战',
+  '熟练': '熟练',
   'beginner': '入门',
   'intermediate': '进阶',
   'advanced': '高级',

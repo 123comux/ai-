@@ -54,24 +54,28 @@ def admin_login(username: str, password: str):
 # ============ Generic CRUD Helpers ============
 
 TABLE_CONFIG = {
-    "banners": {"fields": ["title", "description", "image_url", "link_url", "sort_order", "is_active"], "label": "Banners"},
-    "directions": {"fields": ["name", "description", "color", "topic_key", "icon", "sort_order", "is_active"], "label": "Directions"},
-    "courses": {"fields": ["id", "title", "description", "cover_img", "topic", "difficulty", "estimated_hours", "lessons", "progress", "is_free", "price", "source", "chapters", "is_active"], "label": "Courses"},
-    "projects": {"fields": ["id", "title", "description", "cover_img", "tech_stack", "difficulty", "estimated_hours", "step_count", "status", "progress", "is_free", "price", "topics_covered", "source", "is_active"], "label": "Projects"},
-    "videos": {"fields": ["id", "title", "description", "url", "cover_url", "duration", "chapter", "course_id", "is_active"], "label": "Videos"},
-    "learning_paths": {"fields": ["id", "direction", "title", "description", "total_weeks", "current_week", "nodes", "is_active"], "label": "Learning Paths"},
-    "menu_items": {"fields": ["icon", "label", "path", "section", "sort_order", "is_active"], "label": "Menu Items"},
-    "job_matching": {"fields": ["job_title", "company", "match_score", "required_skills", "gap_skills", "recommended_courses", "recommended_projects", "is_active"], "label": "Job Matching"},
-    "learning_stats": {"fields": ["learning_days", "total_hours", "completed_projects", "completed_lessons"], "label": "Learning Stats"},
-    "learning_records": {"fields": ["date", "duration", "lessons_completed", "exercises_done"], "label": "Learning Records"},
+    "banners": {"fields": ["title", "description", "image_url", "link_url", "sort_order", "is_active"], "label": "轮播图"},
+    "directions": {"fields": ["name", "description", "color", "topic_key", "icon", "sort_order", "is_active"], "label": "学习方向"},
+    "courses": {"fields": ["id", "title", "description", "cover_img", "topic", "difficulty", "estimated_hours", "lessons", "progress", "is_free", "price", "source", "chapters", "is_active"], "label": "课程"},
+    "projects": {"fields": ["id", "title", "description", "cover_img", "tech_stack", "difficulty", "estimated_hours", "step_count", "status", "progress", "is_free", "price", "topics_covered", "source", "is_active"], "label": "实战项目"},
+    "videos": {"fields": ["id", "title", "description", "url", "cover_url", "duration", "chapter", "course_id", "is_active"], "label": "视频"},
+    "learning_paths": {"fields": ["id", "direction", "title", "description", "total_weeks", "current_week", "nodes", "is_active"], "label": "学习路径"},
+    "menu_items": {"fields": ["icon", "label", "path", "section", "sort_order", "is_active"], "label": "菜单项"},
+    "job_matching": {"fields": ["job_title", "company", "match_score", "required_skills", "gap_skills", "recommended_courses", "recommended_projects", "is_active"], "label": "岗位对标"},
+    "learning_stats": {"fields": ["learning_days", "total_hours", "completed_projects", "completed_lessons"], "label": "学习统计"},
+    "learning_records": {"fields": ["date", "duration", "lessons_completed", "exercises_done"], "label": "学习记录"},
     # 用户体系
     "users": {"fields": ["id", "openid", "nickname", "avatar", "created_at"], "label": "用户"},
     "user_deposits": {"fields": ["user_id", "amount", "currency", "status", "enrolled_at", "deadline_at", "refund_amount", "refund_at"], "label": "押金记录"},
     "user_ability_reports": {"fields": ["user_id", "overall_score", "level", "dimensions", "recommended_direction", "created_at"], "label": "能力报告"},
-    # 平台化：打卡/社区
+    # 平台化：打卡/社区/FAQ
     "checkins": {"fields": ["user_id", "checkin_date", "note", "created_at"], "label": "打卡记录"},
     "community_posts": {"fields": ["user_id", "title", "content", "category", "likes", "created_at"], "label": "社区帖子"},
     "community_replies": {"fields": ["post_id", "user_id", "content", "created_at"], "label": "社区回复"},
+    "faq_items": {"fields": ["question", "answer", "category", "sort_order", "view_count", "is_active"], "label": "常见问题库"},
+    "teams": {"fields": ["name", "code", "owner_id", "member_count", "max_members"], "label": "学习小组"},
+    "team_members": {"fields": ["team_id", "user_id", "joined_at"], "label": "小组成员"},
+    "share_unlocks": {"fields": ["user_id", "share_type", "share_target", "unlocked_content"], "label": "分享解锁"},
 }
 
 
@@ -99,6 +103,8 @@ def dashboard(request: Request):
         "replies": count("SELECT COUNT(*) c FROM community_replies"),
         "videos_watched": count("SELECT COUNT(*) c FROM user_video_progress"),
         "assessments": count("SELECT COUNT(*) c FROM user_ability_reports"),
+        "faq_count": count("SELECT COUNT(*) c FROM faq_items WHERE is_active=1"),
+        "teams_count": count("SELECT COUNT(*) c FROM teams"),
         "avg_score": None,
         "assess_levels": {},
     }

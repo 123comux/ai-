@@ -6,9 +6,17 @@ import { fetchProjects, fetchProjectCategories } from '@/services/api';
 import type { Project } from '@/types/index';
 import styles from './index.module.scss';
 
+/** 难度 → 中文 */
+const DIFFICULTY_LABEL: Record<string, string> = {
+  beginner: '入门',
+  intermediate: '进阶',
+  advanced: '高级',
+  all: '全部',
+};
+
 const ProjectPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [categories, setCategories] = useState<{ key: string; label: string }[]>([]);
+  const [categories, setCategories] = useState<{ key: string; label: string }[]>([{ key: 'all', label: '全部' }]);
   const [activeCategory, setActiveCategory] = useState('all');
 
   useEffect(() => {
@@ -19,7 +27,8 @@ const ProjectPage: React.FC = () => {
           fetchProjectCategories(),
         ]);
         setProjects(projectData);
-        setCategories(catData.map((c: string) => ({ key: c, label: c })));
+        const cats = catData.map((c: string) => ({ key: c, label: DIFFICULTY_LABEL[c] || c }));
+        setCategories([{ key: 'all', label: '全部' }, ...cats]);
       } catch (err) {
         console.error('[Project] load data error:', err);
       }
@@ -29,6 +38,14 @@ const ProjectPage: React.FC = () => {
 
   const handleCategoryChange = async (key: string) => {
     setActiveCategory(key);
+    if (key === 'all') {
+      try {
+        setProjects(await fetchProjects());
+      } catch (err) {
+        console.error('[Project] filter error:', err);
+      }
+      return;
+    }
     try {
       const data = await fetchProjects(key);
       setProjects(data);

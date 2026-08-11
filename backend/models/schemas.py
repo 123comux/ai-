@@ -39,8 +39,9 @@ class AssessmentQuestion(BaseModel):
     options: list[str]
     correct_answer: int
     explanation: str
-    topic: str
-    difficulty: str
+    topic: str = ""
+    difficulty: str = "beginner"
+    dimension: str = ""  # zero-basics dimension (AI基础认知/AI工具使用/提示词能力/场景应用/AI工作流/AI思维)
 
 
 class AssessmentQuestionPublic(BaseModel):
@@ -48,8 +49,9 @@ class AssessmentQuestionPublic(BaseModel):
     id: str
     question: str
     options: list[str]
-    topic: str
-    difficulty: str
+    topic: str = ""
+    difficulty: str = "beginner"
+    dimension: str = ""
 
 
 class AssessmentSubmit(BaseModel):

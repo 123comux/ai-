@@ -14,7 +14,6 @@ interface UserState {
   grade: string;
   major: string;
   targetDirection: string;
-  /** 微信登录：wx.login 拿 code → 后端换 token */
   login: () => Promise<void>;
   /** 启动时恢复登录态（读本地 token 并校验） */
   restore: () => Promise<void>;
@@ -30,7 +29,7 @@ export const useUserStore = create<UserState>((set) => ({
   avatar: '',
   grade: '大三',
   major: '计算机科学与技术',
-  targetDirection: '大模型应用开发',
+  targetDirection: '入门实践',
 
   login: async () => {
     try {
@@ -80,7 +79,7 @@ export const useUserStore = create<UserState>((set) => ({
     Taro.removeStorageSync(TOKEN_KEY);
     set({
       isLoggedIn: false, token: '', userId: 0, nickname: '', avatar: '',
-      grade: '大三', major: '计算机科学与技术', targetDirection: '大模型应用开发',
+      grade: '大三', major: '计算机科学与技术', targetDirection: '入门实践',
     });
   },
 

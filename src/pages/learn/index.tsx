@@ -9,20 +9,17 @@ import type { Course } from '@/types/index';
 import type { CourseRecommendation } from '@/services/api';
 import styles from './index.module.scss';
 
-/** 课程 topic 英文 → 中文映射 */
+/** 课程 topic/stage 中文映射 */
 const TOPIC_LABEL_MAP: Record<string, string> = {
-  'Machine Learning': '机器学习',
-  'Deep Learning': '深度学习',
-  'Large Language Models': '大模型',
-  'NLP': '自然语言',
-  'Data Science': '数据科学',
-  'Python': 'Python',
-  'Computer Vision': '计算机视觉',
-  'Reinforcement Learning': '强化学习',
+  '认知': '认知',
+  '入门': '入门',
+  '进阶': '进阶',
+  '实战': '实战',
+  '熟练': '熟练',
   'all': '全部',
   'beginner': '入门',
   'intermediate': '进阶',
-  'advanced': '高级',
+  'advanced': '熟练',
 };
 
 const LearnPage: React.FC = () => {

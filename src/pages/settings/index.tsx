@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Input, Picker } from '@tarojs/components';
+import { View, Text, ScrollView, Input, Picker, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useUserStore } from '@/store/useUserStore';
 import styles from './index.module.scss';
@@ -8,18 +8,24 @@ const GRADES = ['大一', '大二', '大三', '大四', '研究生'];
 const MAJORS = ['计算机科学与技术', '软件工程', '人工智能', '数据科学', '电子信息', '自动化', '其他'];
 const DIRECTIONS = ['AI 算法工程师', 'AI 产品经理', 'AIGC 应用人才', '数据分析工程师', 'AI 应用开发', '大模型应用开发'];
 
+// 微信"头像昵称填写能力"（基础库 2.21.2+）仅在小程序端可用
+const IS_WEAPP = process.env.TARO_ENV === 'weapp';
+
 const SettingsPage: React.FC = () => {
-  const { nickname, grade, major, targetDirection, setUser, logout } = useUserStore();
+  const { nickname, avatar, grade, major, targetDirection, setUser, logout, updateProfile } = useUserStore();
   const [editing, setEditing] = useState(false);
 
   const handleSave = async () => {
     try {
       setUser({ nickname, grade, major, targetDirection });
       await Taro.setStorageSync('user_info', { nickname, grade, major, targetDirection });
+      // 同步昵称到后端（不传 avatar，store 内保留当前头像，避免误清）
+      await updateProfile(nickname);
       setEditing(false);
       Taro.showToast({ title: '已保存', icon: 'success' });
     } catch (err) {
       console.error('[Settings] save error:', err);
+      Taro.showToast({ title: '保存失败，请重试', icon: 'none' });
     }
   };
 
@@ -53,9 +59,18 @@ const SettingsPage: React.FC = () => {
     });
   };
 
-  const handleAvatar = () => {
-    // 预留：头像选择
-    Taro.showToast({ title: '头像修改敬请期待', icon: 'none' });
+  // 头像选择：open-type=chooseAvatar，用户主动授权微信头像后回传后端
+  const handleAvatar = async (url: string) => {
+    if (!url) return;
+    try {
+      Taro.showLoading({ title: '更新中...', mask: true });
+      await updateProfile(nickname, url);
+      Taro.hideLoading();
+      Taro.showToast({ title: '头像已更新', icon: 'success' });
+    } catch (err: any) {
+      Taro.hideLoading();
+      Taro.showToast({ title: err?.message || '更新失败', icon: 'none' });
+    }
   };
 
   if (!editing) {
@@ -89,10 +104,28 @@ const SettingsPage: React.FC = () => {
         </View>
 
         <View className={styles.card}>
-          <View className={styles.row} onClick={handleAvatar}>
-            <Text className={styles.rowLabel}>更换头像</Text>
-            <Text className={styles.rowArrow}>→</Text>
-          </View>
+          {IS_WEAPP ? (
+            <View className={styles.row}>
+              <Text className={styles.rowLabel}>更换头像</Text>
+              <Button
+                className={styles.avatarBtn}
+                openType="chooseAvatar"
+                onChooseAvatar={(e: any) => handleAvatar(e?.detail?.avatarUrl || '')}
+              >
+                {avatar ? (
+                  <Image className={styles.avatarThumb} src={avatar} mode="aspectFill" />
+                ) : (
+                  <Text className={styles.avatarThumbPlaceholder}>👤</Text>
+                )}
+                <Text className={styles.rowArrow}>→</Text>
+              </Button>
+            </View>
+          ) : (
+            <View className={styles.row} onClick={() => Taro.showToast({ title: 'H5 暂不支持微信头像', icon: 'none' })}>
+              <Text className={styles.rowLabel}>更换头像</Text>
+              <Text className={styles.rowArrow}>→</Text>
+            </View>
+          )}
           <View className={styles.row} onClick={handleClearCache}>
             <Text className={styles.rowLabel}>清除缓存</Text>
             <Text className={styles.rowArrow}>→</Text>

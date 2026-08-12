@@ -13,7 +13,12 @@ function App(props) {
     (async () => {
       await restore();
       if (!useUserStore.getState().isLoggedIn) {
-        await login();
+        try {
+          await login();
+        } catch (err) {
+          // 非小程序环境或登录失败：保持未登录态，不打断启动（个人中心页可手动触发登录）
+          console.warn('[App] auto login skipped:', err);
+        }
       }
     })();
   }, []);

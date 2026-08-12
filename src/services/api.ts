@@ -68,7 +68,11 @@ async function apiPut<T>(path: string, body: Record<string, unknown>): Promise<T
     timeout: 30000,
     dataType: 'json',
   });
-  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  if (res.statusCode !== 200) {
+    // 与 apiPost 一致：优先取后端 FastAPI 的 detail 错误信息
+    const detail = (res.data as any)?.detail;
+    throw new Error(typeof detail === 'string' ? detail : `HTTP ${res.statusCode}`);
+  }
   return res.data;
 }
 
@@ -390,6 +394,12 @@ export const wechatLogin = async (code: string): Promise<LoginResult> => {
 /** 获取当前登录用户信息 */
 export const fetchMe = async (): Promise<AuthUser> => {
   return apiGet<AuthUser>('/api/auth/me');
+};
+
+/** 更新当前用户资料（昵称/头像）。来源：微信"头像昵称填写能力"（chooseAvatar + type=nickname） */
+export const updateProfile = async (nickname: string, avatar: string): Promise<AuthUser> => {
+  const res = await apiPut<{ ok: boolean; user: AuthUser }>('/api/auth/profile', { nickname, avatar });
+  return res.user;
 };
 
 // ============ 押金式培训 API ============

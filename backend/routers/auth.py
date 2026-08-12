@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 
 from config import WECHAT_APPID, WECHAT_SECRET, WECHAT_CODE2SESSION_URL, DEV_MODE
-from database import get_user_by_openid, create_user, get_user
+from database import get_user_by_openid, create_user, get_user, update_user_profile
 from auth_utils import create_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -15,6 +15,11 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 class WechatLoginRequest(BaseModel):
     code: str
+    nickname: str = ""
+    avatar: str = ""
+
+
+class UpdateProfileRequest(BaseModel):
     nickname: str = ""
     avatar: str = ""
 
@@ -97,4 +102,27 @@ async def me(user: dict = Depends(get_current_user)):
         "openid": user["openid"],
         "nickname": user["nickname"],
         "avatar": user["avatar"],
+    }
+
+
+@router.put("/profile")
+async def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_current_user)):
+    """更新当前用户资料（昵称/头像）。
+
+    昵称/头像来自微信"头像昵称填写能力"（基础库 2.21.2+）：
+    前端用 <button open-type="chooseAvatar"> 获取头像、<input type="nickname"> 获取昵称，
+    用户主动选择后再回传本接口落库。生产环境头像需先上传到自有服务器/CDN 再回传 URL。
+    """
+    nickname = (body.nickname or "").strip()[:30]
+    avatar = (body.avatar or "").strip()
+    update_user_profile(user["id"], nickname, avatar)
+    updated = get_user(user["id"])
+    return {
+        "ok": True,
+        "user": {
+            "id": updated["id"],
+            "openid": updated["openid"],
+            "nickname": updated["nickname"],
+            "avatar": updated["avatar"],
+        },
     }

@@ -98,3 +98,34 @@
   color: $color-text-tertiary;
   display: block;
 }
+
+/* 更换头像（open-type=chooseAvatar 按钮） */
+.avatarBtn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  background: transparent;
+  border: none;
+
+  &::after { border: none; }
+}
+
+.avatarThumb {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+}
+
+.avatarThumbPlaceholder {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-lg;
+}

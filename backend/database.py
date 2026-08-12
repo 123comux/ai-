@@ -568,6 +568,17 @@ def create_user(openid: str, nickname: str = "", avatar: str = "", unionid: str 
     return get_user(uid)
 
 
+def update_user_profile(user_id: int, nickname: str, avatar: str) -> None:
+    """更新用户昵称/头像（微信"头像昵称填写能力"获取到真实资料后回传落库）。"""
+    conn = get_connection()
+    conn.execute(
+        "UPDATE users SET nickname=?, avatar=? WHERE id=?",
+        (nickname, avatar, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def record_user_video(user_id: int, video_id: str, minutes: int = 0) -> None:
     conn = get_connection()
     conn.execute(

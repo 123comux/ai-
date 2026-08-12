@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import Taro from '@tarojs/taro';
-import { wechatLogin, fetchMe } from '@/services/api';
+import { wechatLogin, fetchMe, updateProfile as updateProfileApi } from '@/services/api';
 
 const TOKEN_KEY = 'aishi_token';
+// settings 页保存的本地"我的"资料（昵称/年级/专业/目标方向）
+const USER_INFO_KEY = 'user_info';
 
 interface UserState {
   isLoggedIn: boolean;
@@ -17,11 +19,13 @@ interface UserState {
   login: () => Promise<void>;
   /** 启动时恢复登录态（读本地 token 并校验） */
   restore: () => Promise<void>;
+  /** 更新并回传用户资料（微信"头像昵称填写能力"获取的真实昵称/头像） */
+  updateProfile: (nickname: string, avatar?: string) => Promise<void>;
   logout: () => void;
   setUser: (info: Partial<UserState>) => void;
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   isLoggedIn: false,
   token: '',
   userId: 0,
@@ -32,28 +36,34 @@ export const useUserStore = create<UserState>((set) => ({
   targetDirection: '入门实践',
 
   login: async () => {
-    try {
-      let code = '';
+    // 1) 仅在微信小程序环境走 wx.login 拿真实 code（H5 无此能力，直接报错，不再造 dev_ 假码）
+    const isWeapp = process.env.TARO_ENV === 'weapp';
+    if (!isWeapp) {
+      throw new Error('非小程序环境，微信登录不可用');
+    }
+    // code 一次性使用（可能被前一次登录消费掉），失败时重取一次重试
+    let lastErr: any;
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const res = await Taro.login();
-        code = (res as any)?.code || `dev_${Date.now()}`;
-      } catch {
-        // H5 / dev 环境下 Taro.login 可能不可用，用本地 dev code 兜底（后端 DEV_MODE 接受）
-        code = `dev_${Date.now()}`;
+        const code = (res as any)?.code || '';
+        if (!code) throw new Error('wx.login 未返回 code');
+        // 2) 用 code 换 token + 用户（后端真实 code2session → openid）
+        const data = await wechatLogin(code);
+        Taro.setStorageSync(TOKEN_KEY, data.token);
+        set({
+          isLoggedIn: true,
+          token: data.token,
+          userId: data.user.id,
+          nickname: data.user.nickname,
+          avatar: data.user.avatar,
+        });
+        return;
+      } catch (err) {
+        lastErr = err;
       }
-      const data = await wechatLogin(code);
-      Taro.setStorageSync(TOKEN_KEY, data.token);
-      set({
-        isLoggedIn: true,
-        token: data.token,
-        userId: data.user.id,
-        nickname: data.user.nickname,
-        avatar: data.user.avatar,
-      });
-    } catch (err) {
-      console.error('[login] failed:', err);
-      Taro.showToast({ title: '登录失败，请重试', icon: 'none' });
     }
+    throw lastErr;
   },
 
   restore: async () => {
@@ -69,14 +79,25 @@ export const useUserStore = create<UserState>((set) => ({
         avatar: user.avatar,
       });
     } catch {
-      // token 失效则清除，下次进入重新登录
+      // token 失效则清除本地登录态与资料缓存，下次进入重新登录
       Taro.removeStorageSync(TOKEN_KEY);
+      Taro.removeStorageSync(USER_INFO_KEY);
       set({ isLoggedIn: false, token: '', userId: 0, nickname: '', avatar: '' });
     }
   },
 
+  updateProfile: async (nickname: string, avatar?: string) => {
+    // 头像未传时保留当前值（例如只改昵称时不清掉已有头像）
+    const current = get();
+    const finalAvatar = typeof avatar === 'string' ? avatar : current.avatar;
+    const user = await updateProfileApi(nickname.trim(), finalAvatar);
+    set({ nickname: user.nickname, avatar: user.avatar });
+  },
+
   logout: () => {
+    // 清空本地存储的用户信息（token + 本地资料缓存），恢复未登录初始态
     Taro.removeStorageSync(TOKEN_KEY);
+    Taro.removeStorageSync(USER_INFO_KEY);
     set({
       isLoggedIn: false, token: '', userId: 0, nickname: '', avatar: '',
       grade: '大三', major: '计算机科学与技术', targetDirection: '入门实践',

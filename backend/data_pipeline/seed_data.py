@@ -199,6 +199,12 @@ COURSES = [
     },
 ]
 
+# 扩充课程（seed-v3）：按《商业评审报告》4.3 补 8 门场景课，共 13 门。
+# 定义见 expand_courses.py（含幂等迁移脚本），合并进 COURSES 使 seed_data 一次生成全量。
+from data_pipeline.expand_courses import NEW_COURSES
+
+COURSES = COURSES + NEW_COURSES
+
 
 # ============================================================
 # Assessment Questions: 零基础AI能力测评 (更新为6维度)

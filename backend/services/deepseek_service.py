@@ -1,29 +1,27 @@
-"""Zhipu GLM chat service — pure requests, no torch/transformers import.
+"""DeepSeek chat service — OpenAI 兼容接口，纯 requests，无 torch/transformers 导入。
 
-Importing this module is fast; it never triggers heavy model loading.
-Used by the AI tutor as the primary path (with course-RAG context).
+与 zhipu_service 返回结构一致，供 model_router 按场景选档位：
+- deepseek-chat：标准档（通用对话，性价比高）
+- deepseek-reasoner：pro 档（复杂推理：作业评审/深度分析）
 """
 
 import requests
 
-from config import ZHIPU_API_KEY, ZHIPU_API_URL
+from config import DEEPSEEK_API_KEY, DEEPSEEK_API_URL
 
 
-def chat_zhipu(
+def chat_deepseek(
     question: str,
     system_prompt: str,
     max_new_tokens: int = 220,
     temperature: float = 0.0,
-    model: str = "glm-4-flash",
+    model: str = "deepseek-chat",
 ) -> dict:
-    """Call Zhipu GLM API, optionally with course-RAG context.
+    """Call DeepSeek API (OpenAI-compatible chat completions)."""
+    if not DEEPSEEK_API_KEY:
+        raise RuntimeError("DEEPSEEK_API_KEY not configured")
 
-    model 可选 glm-4-flash（轻量）/ glm-4（标准档），供 model_router 按场景选档。
-    """
-    if not ZHIPU_API_KEY:
-        raise RuntimeError("ZHIPU_API_KEY not configured")
-
-    # 检索课程知识库，把相关内容拼入上下文
+    # 复用课程知识库 RAG，与智谱路径一致，保证答疑质量
     context = ""
     try:
         from services.knowledge_base import retrieve_context
@@ -44,15 +42,16 @@ def chat_zhipu(
     messages.append({"role": "user", "content": question})
 
     resp = requests.post(
-        ZHIPU_API_URL,
-        headers={"Authorization": f"Bearer {ZHIPU_API_KEY}", "Content-Type": "application/json"},
+        DEEPSEEK_API_URL,
+        headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
         json={
             "model": model,
             "messages": messages,
             "max_tokens": max_new_tokens,
             "temperature": temperature,
+            "stream": False,
         },
-        timeout=60,
+        timeout=120,
     )
     resp.raise_for_status()
     data = resp.json()
@@ -62,6 +61,6 @@ def chat_zhipu(
     return {
         "question": question,
         "answer": answer,
-        "model": f"{model} (Zhipu)",
+        "model": f"{model} (DeepSeek)",
         "tokens_generated": usage.get("total_tokens", 0),
     }

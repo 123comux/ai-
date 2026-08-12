@@ -70,17 +70,16 @@ async def tutor_chat(req: TutorRequest):
     else:
         system_prompt = req.system_prompt
 
-    # 1. 智谱 GLM（轻量，不加载本地模型）
+    # 1. flash 档（高频轻量，智谱 glm-4-flash 为主，回退 DeepSeek，双供应商并存）
     try:
-        from services.zhipu_service import chat_zhipu
-        if chat_zhipu.__module__:  # module importable
-            result = chat_zhipu(
-                question=req.question,
-                system_prompt=system_prompt,
-                max_new_tokens=req.max_new_tokens,
-                temperature=req.temperature,
-            )
-            return TutorResponse(**result)
+        from services.model_router import chat_flash
+        result = chat_flash(
+            question=req.question,
+            system_prompt=system_prompt,
+            max_new_tokens=req.max_new_tokens,
+            temperature=req.temperature,
+        )
+        return TutorResponse(**result)
     except Exception:
         pass
 
@@ -181,6 +180,16 @@ async def model_info():
         else:
             info["models"][key] = {"status": "not available", "reason": "model not found"}
 
+    # DeepSeek 档位可用性（OpenAI 兼容，不加载任何重模型）
+    try:
+        from config import DEEPSEEK_API_KEY
+        info["models"]["deepseek"] = {
+            "status": "available" if DEEPSEEK_API_KEY else "not configured",
+            "tiers": ["deepseek-chat (standard)", "deepseek-reasoner (pro)"],
+        }
+    except Exception:
+        info["models"]["deepseek"] = {"status": "not available"}
+
     return info
 
 
@@ -207,9 +216,9 @@ async def practice_analyze(req: PracticeRequest):
     AI 给出优化后的提示词 + 优化建议，帮助用户学会写出高质量提示词。
     """
     try:
-        from services.zhipu_service import chat_zhipu
+        from services.model_router import chat_flash
     except Exception:
-        chat_zhipu = None
+        chat_flash = None
 
     system_prompt = (
         "你是一位提示词工程教练。用户会给出一条粗糙的提问（prompt），"
@@ -219,9 +228,9 @@ async def practice_analyze(req: PracticeRequest):
         "【优化建议】用 2-3 条说明你改进了什么、为什么这样改更好。"
     )
 
-    if chat_zhipu is not None:
+    if chat_flash is not None:
         try:
-            resp = chat_zhipu(question=req.question, system_prompt=system_prompt,
+            resp = chat_flash(question=req.question, system_prompt=system_prompt,
                               max_new_tokens=400, temperature=0.4)
             raw = resp.get("answer", "")
             # 解析两段

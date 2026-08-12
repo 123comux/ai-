@@ -60,8 +60,8 @@ def _fallback_score(content: str) -> int:
 def _ai_review(stage: int, question: dict, content: str) -> tuple[float, str]:
     """用大模型按 rubric 评审作业，返回 (score 0-100, feedback)。
 
-    优先智谱 GLM；后续接入 model_router 的 pro 档（见 AI 成本分层改造）。
-    任何异常回退启发式评分，保证接口不 5xx。
+    走 model_router 的 pro 档（DeepSeek reasoner 优先，回退智谱 glm-4），
+    双供应商均不可用时回退启发式评分，保证接口不 5xx。
     """
     rubric = question.get("rubric", "")
     prompt = (
@@ -74,8 +74,8 @@ def _ai_review(stage: int, question: dict, content: str) -> tuple[float, str]:
         "输出格式（严格）：\n【得分】NN\n【评语】...\n"
     )
     try:
-        from services.zhipu_service import chat_zhipu
-        resp = chat_zhipu(question=content[:2000], system_prompt=prompt, max_new_tokens=300, temperature=0.3)
+        from services.model_router import chat_pro
+        resp = chat_pro(question=content[:2000], system_prompt=prompt, max_new_tokens=300, temperature=0.3)
         raw = resp.get("answer", "")
         m = re.search(r"【得分】\s*(\d+)", raw)
         score = int(m.group(1)) if m else None

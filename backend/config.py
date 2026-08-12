@@ -28,6 +28,11 @@ PORT = int(os.getenv("PORT", "8000"))
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
 ZHIPU_API_URL = os.getenv("ZHIPU_API_URL", "https://open.bigmodel.cn/api/paas/v4/chat/completions")
 
+# DeepSeek AI（OpenAI 兼容）——与智谱并存，提供 standard / pro 档位。
+# 无 key 时 model_router 自动回退到智谱，不影响功能。
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
+
 # Dataset config
 FIREWEB_EDU_SAMPLE = "sample-10BT"  # Can also use "sample-100BT", "sample-350BT"
 FIREWEB_EDU_MAX_ROWS = 1000  # Limit for local processing

@@ -21,7 +21,7 @@ from config import (
 )
 from database import (
     get_connection, get_deposit, upsert_deposit,
-    count_user_watched_videos, get_stage_assessments,
+    count_user_completed_chapters, get_stage_assessments, parse_json_field,
 )
 from auth_utils import get_current_user
 
@@ -49,20 +49,22 @@ class HomeworkRequest(BaseModel):
 
 # ---------- Helpers ----------
 
-def _total_video_count() -> int:
+def _total_stage_chapters() -> int:
+    """五阶段课程总章节数（完课率按章节计，不再依赖遗留视频库）。"""
     conn = get_connection()
-    row = conn.execute("SELECT COUNT(*) AS c FROM videos").fetchone()
+    rows = conn.execute("SELECT chapters FROM courses").fetchall()
     conn.close()
-    return int(row["c"]) if row else 0
+    return sum(len(parse_json_field(r["chapters"])) for r in rows)
 
 
 def _compute_status(user_id: int, deposit: dict) -> dict:
     """Compute the three-lock progress + eligibility from per-user data."""
     now = datetime.now()
 
-    total_videos = _total_video_count()
-    watched = count_user_watched_videos(user_id)
-    completion_rate = round(watched / total_videos * 100) if total_videos else 0
+    # 五阶段课程完课率：按"已完成章节 / 总章节"计算（课程为文字章节，不依赖遗留视频库）
+    total_units = _total_stage_chapters()
+    done_units = count_user_completed_chapters(user_id)
+    completion_rate = round(done_units / total_units * 100) if total_units else 0
 
     stages = get_stage_assessments(user_id)
     # 同一阶段多次录入只取最新一次，避免"已录 25 阶段"这种重复计数
@@ -105,8 +107,8 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
 
     return {
         "completion_rate": completion_rate,
-        "watched_videos": watched,
-        "total_videos": total_videos,
+        "watched_videos": done_units,
+        "total_videos": total_units,
         "stage_scores": stage_scores,
         "stages_recorded": stages_recorded,
         "assessment_avg": assess_avg,

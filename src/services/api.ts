@@ -122,6 +122,24 @@ export const fetchCourseDetail = async (courseId: string): Promise<any> => {
   return apiGet<any>(`/api/courses/${courseId}`);
 };
 
+/** 课程章节学习进度（五阶段课程按章节计进度） */
+export const fetchCourseProgress = async (courseId: string): Promise<{
+  course_id: string;
+  total_chapters: number;
+  completed_chapters: number;
+  progress: number;
+  completed_chapter_ids: string[];
+}> => {
+  return apiGet<{ course_id: string; total_chapters: number; completed_chapters: number; progress: number; completed_chapter_ids: string[] }>(
+    `/api/courses/${courseId}/progress`,
+  );
+};
+
+/** 标记某章节学完 */
+export const completeCourseChapter = async (courseId: string, chapterId: string): Promise<{ ok: boolean }> => {
+  return apiPost<{ ok: boolean }>(`/api/courses/${courseId}/chapters/${chapterId}/complete`, {});
+};
+
 /** 获取课程分类 */
 export const fetchCourseCategories = async () => {
   const data = await apiGet<{ topics: string[] }>('/api/courses/topics');

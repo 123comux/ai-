@@ -119,11 +119,15 @@ class TestDeposit(unittest.TestCase):
         # enroll
         r = client.post("/api/deposit/enroll", headers=auth_header(token))
         self.assertEqual(r.status_code, 200)
-        # 看完全部视频
-        vids = [v["id"] for v in client.get("/api/videos").json()]
-        self.assertTrue(vids)
-        for vid in vids:
-            client.post(f"/api/videos/{vid}/complete", headers=auth_header(token), json={"minutes": 1})
+        # 学完五阶段课程全部章节（完课率按章节计，不依赖遗留视频库）
+        courses = client.get("/api/courses").json()
+        for c in courses:
+            for ch in (c.get("chapters") or []):
+                r = client.post(
+                    f"/api/courses/{c['id']}/chapters/{ch['id']}/complete",
+                    headers=auth_header(token),
+                )
+                self.assertEqual(r.status_code, 200, f"complete chapter {ch['id']}")
         # 五阶段考核 + 作业 + 项目
         for s in range(1, 6):
             client.post("/api/deposit/stage-assessment", headers=auth_header(token),

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image, Button } from '@tarojs/components';
 import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
-import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode, addFavorite, removeFavorite, fetchFavorites, shareUnlock, fetchShareUnlocks } from '@/services/api';
+import { fetchCourseDetail, fetchCourseVideos, completeLearningPathNode, addFavorite, removeFavorite, fetchFavorites, shareUnlock, fetchShareUnlocks, fetchCourseProgress, completeCourseChapter } from '@/services/api';
 import { formatDuration, formatMinutes } from '@/utils/index';
 import type { Chapter, Video } from '@/types/index';
 import styles from './index.module.scss';
@@ -22,6 +22,30 @@ const CourseDetailPage: React.FC = () => {
   const nodeIdRef = useRef('');
   const courseIdRef = useRef('');
   const [unlocked, setUnlocked] = useState(false);
+  // 章节学习进度：五阶段课程按"已学完章节/总章节"计（不依赖遗留视频库）
+  const [chapterDone, setChapterDone] = useState<Set<string>>(new Set());
+
+  // 加载章节完成状态
+  const loadChapterProgress = async (courseId: string) => {
+    try {
+      const p = await fetchCourseProgress(courseId);
+      setChapterDone(new Set(p.completed_chapter_ids));
+    } catch (e) {
+      console.error('[CourseDetail] chapter progress', e);
+    }
+  };
+
+  // 标记某章节学完（幂等；学完计入课程进度与押金完课率）
+  const markChapterDone = async (chapterId: string) => {
+    if (chapterDone.has(chapterId) || !courseIdRef.current) return;
+    try {
+      await completeCourseChapter(courseIdRef.current, chapterId);
+      setChapterDone((prev) => new Set(prev).add(chapterId));
+      Taro.showToast({ title: '本章已学完', icon: 'success' });
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || '标记失败', icon: 'none' });
+    }
+  };
 
   // 分享解锁：右上角菜单转发带课程 id（hook 必须在组件函数体内调用）
   useShareAppMessage(() => ({
@@ -108,6 +132,7 @@ const CourseDetailPage: React.FC = () => {
         }
         checkFavorite(id);
         loadUnlockStatus();
+        loadChapterProgress(id);
       }
       // 每次显示都刷新视频（含看完状态），让学习进度实时更新
       const courseVideos = await fetchCourseVideos(id);
@@ -199,10 +224,10 @@ const CourseDetailPage: React.FC = () => {
     );
   }
 
-  // 学习进度实时计算：已看完视频数 / 该课程总视频数
-  const progressPercent = videos.length
-    ? Math.round((videos.filter((v) => v.completed).length / videos.length) * 100)
-    : 0;
+  // 学习进度：五阶段课程按"已学完章节/总章节"计算；无章节课程退化为按视频（兼容旧数据）
+  const progressPercent = chapters.length
+    ? Math.round((chapterDone.size / chapters.length) * 100)
+    : (videos.length ? Math.round((videos.filter((v) => v.completed).length / videos.length) * 100) : 0);
 
   // 分享解锁后的进阶内容：聚合各章节的实战案例与提示词要点
   const advancedContent: { title: string; content: string }[] = (() => {
@@ -312,6 +337,14 @@ const CourseDetailPage: React.FC = () => {
                     <Text className={styles.chapterDuration}>{ch.duration_minutes} 分钟 · {ch.sections?.length || 0} 小节</Text>
                   </View>
                   <View className={styles.chapterActions}>
+                    <View
+                      className={chapterDone.has(ch.id) ? styles.chapterDoneBtn : styles.chapterDoneBtnGhost}
+                      onClick={(e) => { e.stopPropagation(); markChapterDone(ch.id); }}
+                    >
+                      <Text className={chapterDone.has(ch.id) ? styles.chapterDoneText : styles.chapterDoneGhostText}>
+                        {chapterDone.has(ch.id) ? '✓ 已学完' : '标记学完'}
+                      </Text>
+                    </View>
                     <View className={styles.chapterDetailBtn} onClick={(e) => { e.stopPropagation(); handleChapterDetail(ch); }}>
                       <Text className={styles.chapterDetailText}>详情</Text>
                     </View>

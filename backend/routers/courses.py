@@ -1,8 +1,9 @@
 """Courses API router - reads from CMS database."""
 import json
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
-from database import query_all, query_one, parse_json_field
+from database import query_all, query_one, parse_json_field, record_user_chapter, get_user_completed_chapter_ids
+from auth_utils import get_optional_user
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -89,3 +90,40 @@ async def get_course(course_id: str):
     if not row:
         raise HTTPException(status_code=404, detail="Course not found")
     return _db_to_course(row)
+
+
+@router.get("/{course_id}/progress")
+async def course_progress(course_id: str, request: Request):
+    """课程章节学习进度：已完成章节 / 总章节（五阶段课程按章节计进度）。"""
+    row = query_one("courses", course_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Course not found")
+    chapters = _normalize_chapters(parse_json_field(row.get("chapters", "[]")))
+    total = len(chapters)
+    done_ids: set = set()
+    user = await get_optional_user(request)
+    if user and total:
+        done_ids = get_user_completed_chapter_ids(user["id"], course_id)
+    completed = sum(1 for c in chapters if c["id"] in done_ids)
+    return {
+        "course_id": course_id,
+        "total_chapters": total,
+        "completed_chapters": completed,
+        "progress": round(completed / total * 100) if total else 0,
+        "completed_chapter_ids": sorted(done_ids),
+    }
+
+
+@router.post("/{course_id}/chapters/{chapter_id}/complete")
+async def complete_chapter(course_id: str, chapter_id: str, request: Request):
+    """标记某章节学完（学完章节即计入课程进度/押金完课率）。"""
+    row = query_one("courses", course_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Course not found")
+    chapters = _normalize_chapters(parse_json_field(row.get("chapters", "[]")))
+    if not any(c["id"] == chapter_id for c in chapters):
+        raise HTTPException(status_code=404, detail="Chapter not found")
+    user = await get_optional_user(request)
+    if user:
+        record_user_chapter(user["id"], course_id, chapter_id)
+    return {"ok": True, "course_id": course_id, "chapter_id": chapter_id}

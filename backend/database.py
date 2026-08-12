@@ -361,6 +361,17 @@ def init_db():
         )
     """)
 
+    # 按用户隔离的章节完成记录（五阶段课程为文字章节，完课率按章节计，不依赖遗留视频库）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_chapter_progress (
+            user_id INTEGER NOT NULL,
+            course_id TEXT NOT NULL,
+            chapter_id TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (user_id, course_id, chapter_id)
+        )
+    """)
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_project_progress (
             user_id INTEGER NOT NULL,
@@ -609,6 +620,38 @@ def get_user_watched_video_ids(user_id: int) -> set:
     rows = conn.execute("SELECT video_id FROM user_video_progress WHERE user_id=?", (user_id,)).fetchall()
     conn.close()
     return {r["video_id"] for r in rows}
+
+
+def record_user_chapter(user_id: int, course_id: str, chapter_id: str) -> None:
+    """记录用户完成某课程章节（五阶段文字课程按章节计进度/完课率）。"""
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO user_chapter_progress (user_id, course_id, chapter_id) VALUES (?,?,?)",
+        (user_id, course_id, chapter_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_user_completed_chapter_ids(user_id: int, course_id: str) -> set:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT chapter_id FROM user_chapter_progress WHERE user_id=? AND course_id=?",
+        (user_id, course_id),
+    ).fetchall()
+    conn.close()
+    return {r["chapter_id"] for r in rows}
+
+
+def count_user_completed_chapters(user_id: int) -> int:
+    """统计用户已完成的章节总数（押金完课率用）。"""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT COUNT(*) AS c FROM user_chapter_progress WHERE user_id=?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return int(row["c"]) if row else 0
 
 
 def get_user_video_progress(user_id: int) -> list:

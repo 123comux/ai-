@@ -4,7 +4,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import {
   fetchDepositStatus, fetchDepositConfig, enrollDeposit,
   requestRefund, recordStageAssessment, passHomework, submitProject,
-  fetchVideos, completeVideo,
+  fetchCourses, completeCourseChapter,
 } from '@/services/api';
 import { useUserStore } from '@/store/useUserStore';
 import type { DepositStatus, DepositConfig } from '@/types/index';
@@ -62,12 +62,14 @@ const DepositPage: React.FC = () => {
     } finally { setBusy(false); }
   };
 
-  // 开发调试：一键模拟"全部三锁达标"（仅本地演示用，会自动看完所有视频 + 五阶段 90 分 + 作业通过 + 项目通过）
+  // 开发调试：一键模拟"全部三锁达标"（仅本地演示用，会自动学完所有章节 + 五阶段 90 分 + 作业通过 + 项目通过）
   const devSimulateAll = async () => {
-    // 1) 把所有视频标记为看完（过程锁需要完课率 100%）
-    const videos = await fetchVideos();
-    for (const v of videos) {
-      await completeVideo(v.id, 1);
+    // 1) 标记五阶段课程全部章节学完（过程锁完课率按章节计，不依赖遗留视频库）
+    const courses = await fetchCourses();
+    for (const c of courses) {
+      for (const ch of (c.chapters || [])) {
+        await completeCourseChapter(c.id, ch.id);
+      }
     }
     // 2) 五阶段考核各录 90 分
     for (let s = 1; s <= 5; s++) await recordStageAssessment(s, 90);

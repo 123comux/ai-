@@ -129,3 +129,45 @@
   justify-content: center;
   font-size: $font-size-lg;
 }
+
+/* 开发测试 · 模拟切换用户 */
+.devHeader {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-divider;
+}
+
+.devTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  display: block;
+}
+
+.devHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.devEmpty {
+  padding: $spacing-lg;
+  text-align: center;
+}
+
+.devEmptyText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.devUserNick {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.devUserMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-right: $spacing-sm;
+}

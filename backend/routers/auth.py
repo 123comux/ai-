@@ -8,8 +8,8 @@ import urllib.parse
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from pydantic import BaseModel
 
-from config import WECHAT_APPID, WECHAT_SECRET, WECHAT_CODE2SESSION_URL, DEV_MODE
-from database import get_user_by_openid, create_user, get_user, update_user_profile
+from config import WECHAT_APPID, WECHAT_SECRET, WECHAT_CODE2SESSION_URL, DEV_MODE, DEV_IMPERSONATE
+from database import get_user_by_openid, create_user, get_user, update_user_profile, get_connection
 from auth_utils import create_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -155,3 +155,44 @@ async def upload_avatar(file: UploadFile = File(...), user: dict = Depends(get_c
     with open(os.path.join(AVATAR_DIR, fname), "wb") as f:
         f.write(content)
     return {"ok": True, "avatar_url": f"/static/avatars/{fname}"}
+
+
+# ============ 开发期"模拟切换用户"（仅 DEV_IMPERSONATE=true 时开放，生产务必关闭） ============
+
+@router.get("/dev/config")
+async def dev_config():
+    """前端探测：是否开放模拟切换用户（开关可见性）。"""
+    return {"impersonate_enabled": bool(DEV_IMPERSONATE)}
+
+
+@router.get("/dev/users")
+async def dev_users(user: dict = Depends(get_current_user)):
+    """列出后台用户（id/昵称/openid），供设置页开发期切换。"""
+    if not DEV_IMPERSONATE:
+        raise HTTPException(status_code=404, detail="not found")
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, nickname, openid, created_at FROM users ORDER BY id DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    return {"users": [dict(r) for r in rows]}
+
+
+@router.post("/dev/impersonate")
+async def dev_impersonate(user_id: int, user: dict = Depends(get_current_user)):
+    """以指定用户身份签发 token（模拟切换，便于测试多用户数据隔离）。"""
+    if not DEV_IMPERSONATE:
+        raise HTTPException(status_code=404, detail="not found")
+    target = get_user(user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    token = create_token(target["id"])
+    return {
+        "token": token,
+        "user": {
+            "id": target["id"],
+            "openid": target["openid"],
+            "nickname": target["nickname"],
+            "avatar": target["avatar"],
+        },
+    }

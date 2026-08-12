@@ -65,6 +65,11 @@ WECHAT_CODE2SESSION_URL = "https://api.weixin.qq.com/sns/jscode2session"
 # 便于本地联调，无需真实微信环境。生产环境务必设为 false 并配置 AppID/Secret。
 DEV_MODE = os.getenv("DEV_MODE", "true").lower() in ("1", "true", "yes", "on")
 
+# 开发期"模拟切换用户"开关：为 true 时开放 /api/auth/dev/* 接口，
+# 允许在设置页列出后台用户并以任意用户身份进入（便于验证多用户数据隔离）。
+# 仅本地开发测试用，生产环境务必关闭。
+DEV_IMPERSONATE = os.getenv("DEV_IMPERSONATE", "false").lower() in ("1", "true", "yes", "on")
+
 # ============ Auth Token (HMAC-signed, dependency-free) ============
 # 用于签发登录态 token 的密钥，生产环境务必替换为强随机值并写入 .env。
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-insecure-secret-change-me")

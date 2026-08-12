@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import Taro from '@tarojs/taro';
-import { wechatLogin, fetchMe, updateProfile as updateProfileApi } from '@/services/api';
+import { wechatLogin, fetchMe, updateProfile as updateProfileApi, devImpersonate } from '@/services/api';
 
 const TOKEN_KEY = 'aishi_token';
 // settings 页保存的本地"我的"资料（昵称/年级/专业/目标方向）
@@ -12,7 +12,7 @@ interface UserState {
   userId: number;
   nickname: string;
   avatar: string;
-  // 兼容原有"我的"资料字段（本地态，未接入后端）
+  // 学员自填资料（初始为空，无默认值，由用户在设置页选择/填写）
   grade: string;
   major: string;
   targetDirection: string;
@@ -21,6 +21,8 @@ interface UserState {
   restore: () => Promise<void>;
   /** 更新并回传用户资料（微信"头像昵称填写能力"获取的真实昵称/头像） */
   updateProfile: (nickname: string, avatar?: string) => Promise<void>;
+  /** 开发期模拟切换：以指定后台用户身份登录（后端 DEV_IMPERSONATE=true 才可用） */
+  impersonate: (userId: number) => Promise<void>;
   logout: () => void;
   setUser: (info: Partial<UserState>) => void;
 }
@@ -31,9 +33,10 @@ export const useUserStore = create<UserState>((set, get) => ({
   userId: 0,
   nickname: '',
   avatar: '',
-  grade: '大三',
-  major: '计算机科学与技术',
-  targetDirection: '入门实践',
+  // 初始无默认资料，避免"大三/计算机科学与技术"这类占位干扰客户选择
+  grade: '',
+  major: '',
+  targetDirection: '',
 
   login: async () => {
     // 1) 仅在微信小程序环境走 wx.login 拿真实 code（H5 无此能力，直接报错，不再造 dev_ 假码）
@@ -94,13 +97,26 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ nickname: user.nickname, avatar: user.avatar });
   },
 
+  impersonate: async (userId: number) => {
+    // 开发期模拟切换：换取目标用户 token 后写入本地，等同切换登录身份
+    const data = await devImpersonate(userId);
+    Taro.setStorageSync(TOKEN_KEY, data.token);
+    set({
+      isLoggedIn: true,
+      token: data.token,
+      userId: data.user.id,
+      nickname: data.user.nickname,
+      avatar: data.user.avatar,
+    });
+  },
+
   logout: () => {
     // 清空本地存储的用户信息（token + 本地资料缓存），恢复未登录初始态
     Taro.removeStorageSync(TOKEN_KEY);
     Taro.removeStorageSync(USER_INFO_KEY);
     set({
       isLoggedIn: false, token: '', userId: 0, nickname: '', avatar: '',
-      grade: '大三', major: '计算机科学与技术', targetDirection: '入门实践',
+      grade: '', major: '', targetDirection: '',
     });
   },
 

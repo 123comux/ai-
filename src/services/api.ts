@@ -425,6 +425,31 @@ export const uploadAvatar = async (tempPath: string): Promise<string> => {
   return API_BASE + data.avatar_url;
 };
 
+// ============ 开发期"模拟切换用户"（后端 DEV_IMPERSONATE=true 才可用） ============
+
+export interface DevUser {
+  id: number;
+  nickname: string;
+  openid: string;
+  created_at?: string;
+}
+
+/** 探测是否开放模拟切换用户 */
+export const fetchDevConfig = async (): Promise<{ impersonate_enabled: boolean }> => {
+  return apiGet<{ impersonate_enabled: boolean }>('/api/auth/dev/config');
+};
+
+/** 列出后台用户，供开发期切换 */
+export const fetchDevUsers = async (): Promise<DevUser[]> => {
+  const data = await apiGet<{ users: DevUser[] }>('/api/auth/dev/users');
+  return data.users || [];
+};
+
+/** 以指定用户身份签发登录态（模拟切换） */
+export const devImpersonate = async (userId: number): Promise<LoginResult> => {
+  return apiPost<LoginResult>(`/api/auth/dev/impersonate?user_id=${userId}`, {});
+};
+
 // ============ 押金式培训 API ============
 
 /** 押金模型配置（金额、三锁规则、退费规则） */

@@ -143,7 +143,11 @@ const HomePage: React.FC = () => {
             <Image className={styles.avatar} src="https://picsum.photos/id/64/200/200" mode="aspectFill" />
             <View className={styles.userText}>
               <Text className={styles.greeting}>你好，{nickname}</Text>
-              <Text className={styles.direction}>目标：{targetDirection}</Text>
+              {targetDirection ? (
+                <Text className={styles.direction}>目标：{targetDirection}</Text>
+              ) : (
+                <Text className={styles.direction}>去设置选择目标方向 →</Text>
+              )}
             </View>
           </View>
           <View className={styles.notification}>

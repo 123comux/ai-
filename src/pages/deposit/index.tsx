@@ -80,7 +80,7 @@ const DepositPage: React.FC = () => {
     setBusy(true); setResult(null);
     try {
       const r = await requestRefund();
-      setResult({ type: 'ok', msg: `退费成功，金额 ¥${r.refund_amount}（预计 15 个工作日内原路退回）` });
+      setResult({ type: 'ok', msg: r.timing_note || '退费申请已提交，等待人工复核' });
       await load();
     } catch (err: any) {
       setResult({ type: 'err', msg: err?.message || '退费失败' });
@@ -196,6 +196,7 @@ const DepositPage: React.FC = () => {
   const dep = data!.deposit!;
   const eligible = st.refund_eligible;
   const refunded = dep.status === 'refunded';
+  const refundPending = dep.status === 'refund_pending';
 
   return (
     <ScrollView className={styles.page} scrollY>
@@ -205,9 +206,9 @@ const DepositPage: React.FC = () => {
         <Text className={styles.heroLabel}>已缴押金（达标全额退）</Text>
         <Text className={styles.heroAmount}>¥{dep.amount}</Text>
         <Text className={styles.heroSub}>
-          {refunded ? '已退费' : eligible ? '已达标，可申请退费' : '继续学习，达标即可退费'}
+          {refunded ? '已退费' : refundPending ? '退费审核中（人工复核）' : eligible ? '已达标，可申请退费' : '继续学习，达标即可退费'}
         </Text>
-        {st.days_left != null && !refunded && (
+        {st.days_left != null && !refunded && !refundPending && (
           <View className={styles.heroDeadline}><Text>时间锁剩余 {st.days_left} 天</Text></View>
         )}
       </View>
@@ -337,7 +338,7 @@ const DepositPage: React.FC = () => {
         </View>
       )}
 
-      {!refunded && (
+      {!refunded && !refundPending && (
         <View
           className={`${styles.bigBtn} ${eligible ? '' : styles.bigBtnDisabled}`}
           onClick={() => eligible && !busy && handleRefund()}
@@ -350,6 +351,11 @@ const DepositPage: React.FC = () => {
       {refunded && (
         <View className={`${styles.bigBtn} ${styles.bigBtnDisabled}`}>
           <Text className={`${styles.bigBtnText} ${styles.bigBtnDisabledText}`}>已退费 ¥{dep.refund_amount}</Text>
+        </View>
+      )}
+      {refundPending && (
+        <View className={`${styles.bigBtn} ${styles.bigBtnDisabled}`}>
+          <Text className={`${styles.bigBtnText} ${styles.bigBtnDisabledText}`}>退费审核中 · 请等待人工复核</Text>
         </View>
       )}
 

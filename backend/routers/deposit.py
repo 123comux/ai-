@@ -12,7 +12,7 @@
 
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 
 from config import (
@@ -262,19 +262,22 @@ async def project_submit(body: ProjectSubmitRequest, user: dict = Depends(get_cu
     return {"ok": True, "project_submitted": True, "project_passed": body.passed}
 
 
-# ---------- 达标全额退费 ----------
+# ---------- 达标全额退费（防刷：申请 → 人工复核 → 放行/驳回） ----------
 
 @router.post("/refund")
 async def refund(user: dict = Depends(get_current_user)):
-    """达标后全额原路退回。业务闭环：校验三锁→置为已退费→记录退款金额。
+    """达标后申请退费：校验三锁→置为「待人工复核」。
 
-    真实"原路退回"需调用微信支付退款 API（需商户证书与支付流水号），此处为占位。
+    防刷设计：不直接到账，先进复核队列（AI 监考 + 人工复核）；后台放行后才真正退款
+    （真实退款需微信支付商户号，见 pay.py；此处占位标记 refunded）。
     """
     deposit = get_deposit(user["id"])
     if not deposit:
         raise HTTPException(status_code=400, detail="尚未报名，无法退费")
     if deposit.get("status") == "refunded":
         raise HTTPException(status_code=400, detail="该身份已退费（同一身份限退费 1 次）")
+    if deposit.get("status") == "refund_pending":
+        raise HTTPException(status_code=400, detail="退费申请已提交，等待人工复核")
     if deposit.get("status") in ("forfeited", "converted"):
         raise HTTPException(status_code=400, detail="押金已转为培训费，不可退")
 
@@ -293,19 +296,70 @@ async def refund(user: dict = Depends(get_current_user)):
         )
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    updated = upsert_deposit(user["id"], {
-        "status": "refunded",
-        "refund_amount": deposit.get("amount", 0),
-        "refund_at": now,
-        "refund_txn": f"manual_{int(datetime.now().timestamp())}",
+    upsert_deposit(user["id"], {
+        "status": "refund_pending",
+        "refund_requested_at": now,
         "refund_eligible": 1,
     })
     return {
         "ok": True,
-        "refund_amount": updated.get("amount", 0),
-        "refund_at": now,
-        "timing_note": f"预计 {DEPOSIT_REFUND_WORKING_DAYS} 个工作日内原路退回（真实退款需接入微信支付）",
+        "status": "refund_pending",
+        "refund_amount": deposit.get("amount", 0),
+        "timing_note": f"退费申请已提交，等待人工复核（含 AI 监考，预计 {DEPOSIT_REFUND_WORKING_DAYS} 个工作日内处理）",
     }
+
+
+# ---------- 后台人工复核（防刷） ----------
+
+admin_router = APIRouter(prefix="/api/admin/deposit", tags=["deposit_admin"])
+
+
+@admin_router.get("/refund-reviews")
+async def list_refund_reviews(request: Request = None):
+    """待复核退费申请列表（带用户昵称）。需 admin token。"""
+    from routers.admin import verify_token
+    verify_token(request)
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT d.user_id, u.nickname, d.amount, d.currency, d.status, d.refund_requested_at, "
+        "d.deadline_at, d.course_completion_rate, d.homework_passed, d.assessment_avg_score, "
+        "d.project_submitted, d.project_passed "
+        "FROM user_deposits d LEFT JOIN users u ON u.id=d.user_id "
+        "WHERE d.status='refund_pending' ORDER BY d.refund_requested_at ASC"
+    ).fetchall()
+    conn.close()
+    reviews = [dict(r) for r in rows]
+    return {"reviews": reviews, "count": len(reviews)}
+
+
+class RefundReviewRequest(BaseModel):
+    approved: bool
+
+
+@admin_router.post("/refund-reviews/{user_id}")
+async def judge_refund_review(user_id: int, body: RefundReviewRequest, request: Request = None):
+    """人工复核放行/驳回退费。放行 → refunded（占位，真实退款见 pay.py）；驳回 → 回到 active。"""
+    from routers.admin import verify_token
+    verify_token(request)
+    deposit = get_deposit(user_id)
+    if not deposit:
+        raise HTTPException(404, "押金记录不存在")
+    if deposit.get("status") != "refund_pending":
+        raise HTTPException(400, f"当前状态 {deposit.get('status')} 不在待复核队列")
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if body.approved:
+        updated = upsert_deposit(user_id, {
+            "status": "refunded",
+            "refund_amount": deposit.get("amount", 0),
+            "refund_at": now,
+            "refund_txn": f"manual_{int(datetime.now().timestamp())}",
+        })
+        return {"ok": True, "result": "approved", "refund_amount": updated.get("amount", 0),
+                "note": "已放行退费（真实退款需接入微信支付后调用退款 API）"}
+    else:
+        upsert_deposit(user_id, {"status": "active", "refund_requested_at": ""})
+        return {"ok": True, "result": "rejected", "note": "已驳回，用户押金回到有效状态"}
 
 
 def _public_deposit(d: dict) -> dict:

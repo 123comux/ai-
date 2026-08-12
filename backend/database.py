@@ -491,6 +491,12 @@ def init_db():
         except Exception:
             pass
 
+    # 退费申请时间（防刷：人工复核队列）
+    try:
+        cur.execute("ALTER TABLE user_deposits ADD COLUMN refund_requested_at TEXT NOT NULL DEFAULT ''")
+    except Exception:
+        pass
+
     seed_homework_questions(cur)
 
     conn.commit()

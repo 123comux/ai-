@@ -61,6 +61,7 @@ app.include_router(user_data.router)
 app.include_router(videos.router)
 app.include_router(content.router)
 app.include_router(homework.admin_router)  # 需在 admin.router 之前：/api/admin/homework/* 不能被通用 /{table}/{item_id} 抢走
+app.include_router(deposit.admin_router)   # 同：/api/admin/deposit/* 需在 admin.router 之前注册
 app.include_router(admin.router)
 app.include_router(admin_panel.router)
 app.include_router(mine_data.router)

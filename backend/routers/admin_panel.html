@@ -187,7 +187,7 @@ const GROUP_MAP = {
   'checkins': '平台运营', 'community_posts': '平台运营', 'community_replies': '平台运营',
   'faq_items': '答疑管理', 'teams': '平台运营', 'team_members': '平台运营', 'share_unlocks': '平台运营',
 };
-const GROUP_ORDER = ['数据看板', '作业评审', '首页内容', '课程内容', '用户体系', '答疑管理', '平台运营'];
+const GROUP_ORDER = ['数据看板', '复核', '首页内容', '课程内容', '用户体系', '答疑管理', '平台运营'];
 
 // ============ 工具 ============
 function toast(msg, isErr) {
@@ -258,7 +258,10 @@ function renderNav() {
   const groups = {};
   // 数据看板
   groups['数据看板'] = [{ name: 'dashboard', label: '数据看板', icon: '📊' }];
-  groups['作业评审'] = [{ name: 'homework', label: '作业复核', icon: '✍' }];
+  groups['复核'] = [
+    { name: 'homework', label: '作业复核', icon: '✍' },
+    { name: 'refund-review', label: '退费复核', icon: '💳' },
+  ];
   for (const t of TABLES) {
     const g = GROUP_MAP[t.name] || '其他';
     (groups[g] = groups[g] || []).push(t);
@@ -291,6 +294,7 @@ function navTo(key) {
     el.classList.toggle('active', el.dataset.key === key));
   if (key === 'dashboard') renderDashboard();
   else if (key === 'tbl:homework') renderHomework();
+  else if (key === 'tbl:refund-review') renderRefundReview();
   else {
     const name = key.replace('tbl:', '');
     CURRENT = TABLES.find(t => t.name === name) || null;
@@ -386,6 +390,60 @@ async function judgeHomework(id, status) {
     renderHomework();
   } catch (e) {
     toast('改判失败：' + e.message, true);
+  }
+}
+
+// ============ 退费复核（防刷：人工放行/驳回） ============
+async function renderRefundReview() {
+  const area = document.getElementById('mainArea');
+  area.innerHTML = '<div style="padding:40px;text-align:center;color:#8a94a6">加载中...</div>';
+  try {
+    const d = await api('GET', '/api/admin/deposit/refund-reviews');
+    const rows = d.reviews || [];
+    area.innerHTML = `
+      <div class="page-head">
+        <div>
+          <h1>退费复核</h1>
+          <div class="sub">达标学员申请退费后先入此队列，人工复核（含 AI 监考）通过才放行（共 ${rows.length} 笔待复核）</div>
+        </div>
+        <button class="btn btn-ghost" onclick="renderRefundReview()">🔄 刷新</button>
+      </div>
+      ${rows.length === 0 ? '<div class="empty">暂无待复核退费申请</div>' : rows.map(r => `
+        <div class="panel" style="margin-bottom:14px">
+          <div class="panel-toolbar" style="flex-wrap:wrap">
+            <div>
+              <b>${esc(r.nickname || '用户' + r.user_id)}</b>
+              <span style="margin-left:10px;color:#165dff">申请退费 ¥${r.amount}</span>
+              <span style="margin-left:10px;color:#8a94a6">申请时间：${esc(r.refund_requested_at)}</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary btn-sm" onclick="judgeRefund(${r.user_id}, true)">✅ 放行退费</button>
+              <button class="btn btn-danger btn-sm" onclick="judgeRefund(${r.user_id}, false)">❌ 驳回</button>
+            </div>
+          </div>
+          <div style="padding:12px 18px;font-size:13px;color:#2b3245;line-height:1.7">
+            完课率 ${r.course_completion_rate}% · 作业${r.homework_passed ? '通过' : '未通过'} · 均分 ${r.assessment_avg_score} ·
+            项目${r.project_passed ? '通过' : (r.project_submitted ? '待评审' : '未提交')} ·
+            死线 ${esc(r.deadline_at)}
+          </div>
+        </div>`).join('')}`;
+  } catch (e) {
+    if (String(e.message).includes('401')) { toast('登录已过期，请重新登录', true); logout(); return; }
+    area.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+async function judgeRefund(userId, approved) {
+  const ok = approved
+    ? confirm('确认放行该学员退费？放行后押金记为已退费。')
+    : confirm('确认驳回该退费申请？用户押金将回到有效状态。');
+  if (!ok) return;
+  try {
+    const r = await api('POST', '/api/admin/deposit/refund-reviews/' + userId, { approved });
+    toast(approved ? '已放行退费' : '已驳回该申请');
+    renderRefundReview();
+  } catch (e) {
+    toast('操作失败：' + e.message, true);
   }
 }
 

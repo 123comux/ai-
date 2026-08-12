@@ -139,10 +139,20 @@ class TestDeposit(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         st = r.json()
         self.assertTrue(st["status"]["refund_eligible"], st)
-        # 退费
+        # 退费：申请 → 待人工复核 → 后台放行 → refunded
         r = client.post("/api/deposit/refund", headers=auth_header(token))
         self.assertEqual(r.status_code, 200)
-        self.assertIn("refund_amount", r.json())
+        self.assertEqual(r.json()["status"], "refund_pending")
+        adm = client.post("/api/admin/login", params={"username": "admin", "password": "admin123"}).json()
+        ah = {"Authorization": f"Bearer {adm['token']}"}
+        rv = client.get("/api/admin/deposit/refund-reviews", headers=ah)
+        self.assertGreater(rv.json()["count"], 0)
+        uid = rv.json()["reviews"][0]["user_id"]
+        r = client.post(f"/api/admin/deposit/refund-reviews/{uid}", json={"approved": True}, headers=ah)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["result"], "approved")
+        st2 = client.get("/api/deposit/status", headers=auth_header(token)).json()
+        self.assertEqual(st2["deposit"]["status"], "refunded")
 
 
 class TestHomework(unittest.TestCase):

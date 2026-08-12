@@ -60,6 +60,29 @@
   margin-bottom: $spacing-sm;
 }
 
+.cardHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.shareBtn {
+  margin: 0;
+  padding: 2rpx 18rpx;
+  font-size: $font-size-xs;
+  line-height: 1.5;
+  height: auto;
+  background: $color-primary;
+  color: $color-text-white;
+  border-radius: $radius-round;
+  border: none;
+
+  &::after {
+    border: none;
+  }
+}
+
 .title {
   flex: 1;
   font-size: $font-size-lg;

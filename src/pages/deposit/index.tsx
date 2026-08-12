@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Textarea } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, Textarea, Button } from '@tarojs/components';
+import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import {
   fetchDepositStatus, fetchDepositConfig, enrollDeposit,
   requestRefund, recordStageAssessment, passHomework, submitProject,
@@ -25,6 +25,17 @@ const DepositPage: React.FC = () => {
   const [hwInput, setHwInput] = useState('');
   const [hwBusy, setHwBusy] = useState(false);
   const [hwMsg, setHwMsg] = useState<Result>(null);
+
+  // 一键分享作业：点分享时把最新通过作业写进 ref，openType=share 面板读取
+  const shareRef = useRef({ title: '我在用 AI 学习，押金式培训达标全额退费', path: '/pages/deposit/index' });
+  useShareAppMessage(() => shareRef.current);
+
+  const handleShareHomework = (item: HomeworkItem) => {
+    shareRef.current = {
+      title: `我完成了「${item.stage_name}」阶段作业，AI 评审 ${item.ai_score} 分！`,
+      path: '/pages/deposit/index',
+    };
+  };
 
   const load = async () => {
     try {
@@ -243,9 +254,20 @@ const DepositPage: React.FC = () => {
               <View key={item.stage} className={styles.hwRow}>
                 <View className={styles.hwRowHead}>
                   <Text className={styles.hwStage}>{item.stage_name}</Text>
-                  <Text className={`${styles.hwStatus} ${item.passed ? styles.hwPassed : styles.hwNotPassed}`}>
-                    {item.passed ? `✓ 已通过（AI ${item.ai_score} 分）` : (item.submitted ? '未通过 · 可重交' : '未提交')}
-                  </Text>
+                  <View className={styles.hwStatusWrap}>
+                    <Text className={`${styles.hwStatus} ${item.passed ? styles.hwPassed : styles.hwNotPassed}`}>
+                      {item.passed ? `✓ 已通过（AI ${item.ai_score} 分）` : (item.submitted ? '未通过 · 可重交' : '未提交')}
+                    </Text>
+                    {item.passed && (
+                      <Button
+                        className={styles.hwShareBtn}
+                        openType="share"
+                        onClick={() => handleShareHomework(item)}
+                      >
+                        分享作业
+                      </Button>
+                    )}
+                  </View>
                 </View>
                 <Text className={styles.hwReq}>「{item.title}」{item.requirement}</Text>
                 {hwExpandStage === item.stage && (

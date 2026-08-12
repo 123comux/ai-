@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, Button } from '@tarojs/components';
+import Taro, { useShareAppMessage } from '@tarojs/taro';
 import { fetchPortfolio } from '@/services/api';
 import type { PortfolioItem } from '@/types/index';
 import styles from './index.module.scss';
@@ -8,6 +8,17 @@ import styles from './index.module.scss';
 const PortfolioPage: React.FC = () => {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 一键分享作品：点分享时写 ref，openType=share 面板读取
+  const shareRef = useRef({ title: '我的 AI 学习作品集', path: '/pages/portfolio/index' });
+  useShareAppMessage(() => shareRef.current);
+
+  const handleShareItem = (item: PortfolioItem) => {
+    shareRef.current = {
+      title: `我用 AI 完成了「${item.title}」${item.status === 'completed' ? '' : '（进行中）'}，${item.completedSteps}/${item.totalSteps} 步`,
+      path: '/pages/portfolio/index',
+    };
+  };
 
   const loadData = async () => {
     try {
@@ -53,11 +64,16 @@ const PortfolioPage: React.FC = () => {
             >
               <View className={styles.cardHeader}>
                 <Text className={styles.title}>{item.title}</Text>
-                <Text
-                  className={`${styles.statusBadge} ${item.status === 'completed' ? styles.statusDone : styles.statusDoing}`}
-                >
-                  {item.status === 'completed' ? '已完成' : '进行中'}
-                </Text>
+                <View className={styles.cardHeaderRight}>
+                  <Text
+                    className={`${styles.statusBadge} ${item.status === 'completed' ? styles.statusDone : styles.statusDoing}`}
+                  >
+                    {item.status === 'completed' ? '已完成' : '进行中'}
+                  </Text>
+                  <Button className={styles.shareBtn} openType="share" onClick={() => handleShareItem(item)}>
+                    分享
+                  </Button>
+                </View>
               </View>
               <Text className={styles.desc}>{item.description}</Text>
               {item.techStack.length > 0 && (

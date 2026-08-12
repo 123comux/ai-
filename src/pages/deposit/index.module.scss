@@ -262,6 +262,27 @@
   justify-content: space-between;
 }
 
+.hwStatusWrap {
+  display: flex;
+  align-items: center;
+}
+
+.hwShareBtn {
+  margin: 0 0 0 $spacing-sm;
+  padding: 2rpx 20rpx;
+  font-size: $font-size-xs;
+  line-height: 1.5;
+  height: auto;
+  background: $color-primary;
+  color: $color-text-white;
+  border-radius: $radius-round;
+  border: none;
+
+  &::after {
+    border: none;
+  }
+}
+
 .hwStage {
   font-size: $font-size-md;
   font-weight: $font-weight-medium;

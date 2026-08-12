@@ -48,9 +48,8 @@ const SettingsPage: React.FC = () => {
   const handleSave = async () => {
     try {
       setUser({ nickname, grade, major, targetDirection });
-      await Taro.setStorageSync('user_info', { nickname, grade, major, targetDirection });
-      // 同步昵称到后端（不传 avatar，store 内保留当前头像，避免误清）
-      await updateProfile(nickname);
+      // 资料统一存后端（昵称/头像/年级/专业/目标方向），不再写本地 user_info
+      await updateProfile({ nickname, grade, major, targetDirection });
       setEditing(false);
       Taro.showToast({ title: '已保存', icon: 'success' });
     } catch (err) {
@@ -111,7 +110,7 @@ const SettingsPage: React.FC = () => {
     try {
       Taro.showLoading({ title: '更新中...', mask: true });
       const finalUrl = /^https?:\/\//.test(url) ? url : await uploadAvatar(url);
-      await updateProfile(nickname, finalUrl);
+      await updateProfile({ nickname, avatar: finalUrl });
       Taro.hideLoading();
       Taro.showToast({ title: '头像已更新', icon: 'success' });
     } catch (err: any) {

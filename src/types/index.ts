@@ -202,6 +202,10 @@ export interface AuthUser {
   openid: string;
   nickname: string;
   avatar: string;
+  // 学员自填资料（后端 users 表，已落库持久化）
+  grade?: string;
+  major?: string;
+  targetDirection?: string;
 }
 
 export interface LoginResult {

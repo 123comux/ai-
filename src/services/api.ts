@@ -396,9 +396,22 @@ export const fetchMe = async (): Promise<AuthUser> => {
   return apiGet<AuthUser>('/api/auth/me');
 };
 
-/** 更新当前用户资料（昵称/头像）。来源：微信"头像昵称填写能力"（chooseAvatar + type=nickname） */
-export const updateProfile = async (nickname: string, avatar: string): Promise<AuthUser> => {
-  const res = await apiPut<{ ok: boolean; user: AuthUser }>('/api/auth/profile', { nickname, avatar });
+/** 更新当前用户资料（昵称/头像 + 学员自填的年级/专业/目标方向），后端为唯一数据源 */
+export const updateProfile = async (profile: {
+  nickname?: string;
+  avatar?: string;
+  grade?: string;
+  major?: string;
+  targetDirection?: string;
+}): Promise<AuthUser> => {
+  const body = {
+    nickname: profile.nickname ?? '',
+    avatar: profile.avatar ?? '',
+    grade: profile.grade ?? '',
+    major: profile.major ?? '',
+    target_direction: profile.targetDirection ?? '',
+  };
+  const res = await apiPut<{ ok: boolean; user: AuthUser }>('/api/auth/profile', body);
   return res.user;
 };
 

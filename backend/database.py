@@ -443,6 +443,13 @@ def init_db():
     except Exception:
         pass
 
+    # 学员自填资料（年级/专业/目标方向）同步到后端，避免只存本地丢失
+    for _col in ("grade", "major", "target_direction"):
+        try:
+            cur.execute(f"ALTER TABLE users ADD COLUMN {_col} TEXT NOT NULL DEFAULT ''")
+        except Exception:
+            pass
+
     conn.commit()
     conn.close()
     # 注意：Windows 默认 GBK 控制台无法输出 emoji，用 ASCII 避免 UnicodeEncodeError
@@ -568,12 +575,19 @@ def create_user(openid: str, nickname: str = "", avatar: str = "", unionid: str 
     return get_user(uid)
 
 
-def update_user_profile(user_id: int, nickname: str, avatar: str) -> None:
-    """更新用户昵称/头像（微信"头像昵称填写能力"获取到真实资料后回传落库）。"""
+def update_user_profile(
+    user_id: int,
+    nickname: str,
+    avatar: str,
+    grade: str = "",
+    major: str = "",
+    target_direction: str = "",
+) -> None:
+    """更新用户资料（昵称/头像 + 学员自填的年级/专业/目标方向），同步落库。"""
     conn = get_connection()
     conn.execute(
-        "UPDATE users SET nickname=?, avatar=? WHERE id=?",
-        (nickname, avatar, user_id),
+        "UPDATE users SET nickname=?, avatar=?, grade=?, major=?, target_direction=? WHERE id=?",
+        (nickname, avatar, grade, major, target_direction, user_id),
     )
     conn.commit()
     conn.close()

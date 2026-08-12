@@ -93,7 +93,7 @@ const MinePage: React.FC = () => {
       if (finalAvatar && !/^https?:\/\//.test(finalAvatar)) {
         finalAvatar = await uploadAvatar(finalAvatar);
       }
-      await updateProfile(editNickname.trim(), finalAvatar);
+      await updateProfile({ nickname: editNickname.trim(), avatar: finalAvatar });
       Taro.hideLoading();
       setShowProfile(false);
       Taro.showToast({ title: '资料已更新', icon: 'success' });

@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro';
 import { wechatLogin, fetchMe, updateProfile as updateProfileApi, devImpersonate } from '@/services/api';
 
 const TOKEN_KEY = 'aishi_token';
-// settings 页保存的本地"我的"资料（昵称/年级/专业/目标方向）
+// 旧版本地资料缓存 key（资料现以后端 users 表为准，此处仅退出时兜底清理历史数据）
 const USER_INFO_KEY = 'user_info';
 
 interface UserState {
@@ -12,15 +12,21 @@ interface UserState {
   userId: number;
   nickname: string;
   avatar: string;
-  // 学员自填资料（初始为空，无默认值，由用户在设置页选择/填写）
+  // 学员自填资料（初始为空，后端 users 表为唯一数据源，登录/恢复时同步）
   grade: string;
   major: string;
   targetDirection: string;
   login: () => Promise<void>;
   /** 启动时恢复登录态（读本地 token 并校验） */
   restore: () => Promise<void>;
-  /** 更新并回传用户资料（微信"头像昵称填写能力"获取的真实昵称/头像） */
-  updateProfile: (nickname: string, avatar?: string) => Promise<void>;
+  /** 更新用户资料（昵称/头像/年级/专业/目标方向），未传的字段保留当前值 */
+  updateProfile: (profile: {
+    nickname?: string;
+    avatar?: string;
+    grade?: string;
+    major?: string;
+    targetDirection?: string;
+  }) => Promise<void>;
   /** 开发期模拟切换：以指定后台用户身份登录（后端 DEV_IMPERSONATE=true 才可用） */
   impersonate: (userId: number) => Promise<void>;
   logout: () => void;
@@ -60,6 +66,9 @@ export const useUserStore = create<UserState>((set, get) => ({
           userId: data.user.id,
           nickname: data.user.nickname,
           avatar: data.user.avatar,
+          grade: data.user.grade ?? '',
+          major: data.user.major ?? '',
+          targetDirection: data.user.targetDirection ?? '',
         });
         return;
       } catch (err) {
@@ -80,6 +89,9 @@ export const useUserStore = create<UserState>((set, get) => ({
         userId: user.id,
         nickname: user.nickname,
         avatar: user.avatar,
+        grade: user.grade ?? '',
+        major: user.major ?? '',
+        targetDirection: user.targetDirection ?? '',
       });
     } catch {
       // token 失效则清除本地登录态与资料缓存，下次进入重新登录
@@ -89,12 +101,25 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
   },
 
-  updateProfile: async (nickname: string, avatar?: string) => {
-    // 头像未传时保留当前值（例如只改昵称时不清掉已有头像）
+  updateProfile: async (profile) => {
+    // 未传的字段保留当前值（例如只改昵称时不清掉已有头像/资料）
     const current = get();
-    const finalAvatar = typeof avatar === 'string' ? avatar : current.avatar;
-    const user = await updateProfileApi(nickname.trim(), finalAvatar);
-    set({ nickname: user.nickname, avatar: user.avatar });
+    const next = {
+      nickname: (profile.nickname ?? current.nickname).trim(),
+      avatar: profile.avatar ?? current.avatar,
+      grade: profile.grade ?? current.grade,
+      major: profile.major ?? current.major,
+      targetDirection: profile.targetDirection ?? current.targetDirection,
+    };
+    // 以后端返回为准回写本地态
+    const user = await updateProfileApi(next);
+    set({
+      nickname: user.nickname,
+      avatar: user.avatar,
+      grade: user.grade ?? '',
+      major: user.major ?? '',
+      targetDirection: user.targetDirection ?? '',
+    });
   },
 
   impersonate: async (userId: number) => {
@@ -107,6 +132,9 @@ export const useUserStore = create<UserState>((set, get) => ({
       userId: data.user.id,
       nickname: data.user.nickname,
       avatar: data.user.avatar,
+      grade: data.user.grade ?? '',
+      major: data.user.major ?? '',
+      targetDirection: data.user.targetDirection ?? '',
     });
   },
 

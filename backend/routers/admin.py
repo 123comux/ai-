@@ -65,7 +65,7 @@ TABLE_CONFIG = {
     "learning_stats": {"fields": ["learning_days", "total_hours", "completed_projects", "completed_lessons"], "label": "学习统计"},
     "learning_records": {"fields": ["date", "duration", "lessons_completed", "exercises_done"], "label": "学习记录"},
     # 用户体系
-    "users": {"fields": ["id", "openid", "nickname", "avatar", "created_at"], "label": "用户"},
+    "users": {"fields": ["id", "openid", "nickname", "avatar", "grade", "major", "target_direction", "created_at"], "label": "用户"},
     "user_deposits": {"fields": ["user_id", "amount", "currency", "status", "enrolled_at", "deadline_at", "refund_amount", "refund_at"], "label": "押金记录"},
     "user_ability_reports": {"fields": ["user_id", "overall_score", "level", "dimensions", "recommended_direction", "created_at"], "label": "能力报告"},
     # 平台化：打卡/社区/FAQ

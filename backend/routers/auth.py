@@ -28,6 +28,9 @@ class WechatLoginRequest(BaseModel):
 class UpdateProfileRequest(BaseModel):
     nickname: str = ""
     avatar: str = ""
+    grade: str = ""
+    major: str = ""
+    target_direction: str = ""
 
 
 def _code2session(code: str) -> dict:
@@ -96,6 +99,9 @@ async def wechat_login(body: WechatLoginRequest):
             "openid": user["openid"],
             "nickname": user["nickname"],
             "avatar": user["avatar"],
+            "grade": user.get("grade", ""),
+            "major": user.get("major", ""),
+            "target_direction": user.get("target_direction", ""),
         },
     }
 
@@ -108,12 +114,15 @@ async def me(user: dict = Depends(get_current_user)):
         "openid": user["openid"],
         "nickname": user["nickname"],
         "avatar": user["avatar"],
+        "grade": user.get("grade", ""),
+        "major": user.get("major", ""),
+        "target_direction": user.get("target_direction", ""),
     }
 
 
 @router.put("/profile")
 async def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_current_user)):
-    """更新当前用户资料（昵称/头像）。
+    """更新当前用户资料（昵称/头像 + 学员自填的年级/专业/目标方向）。
 
     昵称/头像来自微信"头像昵称填写能力"（基础库 2.21.2+）：
     前端用 <button open-type="chooseAvatar"> 获取头像、<input type="nickname"> 获取昵称，
@@ -121,7 +130,10 @@ async def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_cu
     """
     nickname = (body.nickname or "").strip()[:30]
     avatar = (body.avatar or "").strip()
-    update_user_profile(user["id"], nickname, avatar)
+    grade = (body.grade or "").strip()[:20]
+    major = (body.major or "").strip()[:30]
+    target_direction = (body.target_direction or "").strip()[:30]
+    update_user_profile(user["id"], nickname, avatar, grade, major, target_direction)
     updated = get_user(user["id"])
     return {
         "ok": True,
@@ -130,6 +142,9 @@ async def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_cu
             "openid": updated["openid"],
             "nickname": updated["nickname"],
             "avatar": updated["avatar"],
+            "grade": updated["grade"],
+            "major": updated["major"],
+            "target_direction": updated["target_direction"],
         },
     }
 
@@ -194,5 +209,8 @@ async def dev_impersonate(user_id: int, user: dict = Depends(get_current_user)):
             "openid": target["openid"],
             "nickname": target["nickname"],
             "avatar": target["avatar"],
+            "grade": target.get("grade", ""),
+            "major": target.get("major", ""),
+            "target_direction": target.get("target_direction", ""),
         },
     }

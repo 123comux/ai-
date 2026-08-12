@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, Textarea } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import {
   fetchDepositStatus, fetchDepositConfig, enrollDeposit,
   requestRefund, recordStageAssessment, passHomework, submitProject,
   fetchCourses, completeCourseChapter,
+  fetchHomeworkStatus, submitHomework, type HomeworkItem,
 } from '@/services/api';
 import { useUserStore } from '@/store/useUserStore';
 import type { DepositStatus, DepositConfig } from '@/types/index';
@@ -18,6 +19,12 @@ const DepositPage: React.FC = () => {
   const [config, setConfig] = useState<DepositConfig | null>(null);
   const [result, setResult] = useState<Result>(null);
   const [busy, setBusy] = useState(false);
+  // 作业（过程锁）
+  const [homeworkItems, setHomeworkItems] = useState<HomeworkItem[]>([]);
+  const [hwExpandStage, setHwExpandStage] = useState<number | null>(null);
+  const [hwInput, setHwInput] = useState('');
+  const [hwBusy, setHwBusy] = useState(false);
+  const [hwMsg, setHwMsg] = useState<Result>(null);
 
   const load = async () => {
     try {
@@ -29,6 +36,13 @@ const DepositPage: React.FC = () => {
       setData(st);
       if (!st.enrolled && st.config) setConfig(st.config);
       else if (!st.enrolled) setConfig(await fetchDepositConfig());
+      // 作业状态（独立于押金状态，未报名也显示作业题目）
+      try {
+        const hw = await fetchHomeworkStatus();
+        setHomeworkItems(hw.items || []);
+      } catch (hwErr) {
+        console.warn('[Deposit] homework status error:', hwErr);
+      }
     } catch (err: any) {
       console.error('[Deposit] load error:', err);
       setResult({ type: 'err', msg: err?.message || '加载失败' });
@@ -78,6 +92,29 @@ const DepositPage: React.FC = () => {
     await submitProject(true);
     Taro.showToast({ title: '已模拟全部三锁达标，可申请退费', icon: 'success' });
     await load();
+  };
+
+  // 提交某阶段作业：AI 评审 → 刷新状态
+  const handleSubmitHomework = async (stage: number) => {
+    const content = hwInput.trim();
+    if (!content) {
+      setHwMsg({ type: 'err', msg: '请先填写作业内容再提交' });
+      return;
+    }
+    setHwBusy(true); setHwMsg(null);
+    try {
+      const r = await submitHomework(stage, content);
+      setHwMsg({ type: 'ok', msg: `第 ${r.stage_name} 阶段作业：${r.passed ? '通过' : '未通过（可重交）'}（AI ${r.score} 分）` });
+      setHwInput('');
+      setHwExpandStage(null);
+      const hw = await fetchHomeworkStatus();
+      setHomeworkItems(hw.items || []);
+      await load();
+    } catch (err: any) {
+      setHwMsg({ type: 'err', msg: err?.message || '作业提交失败' });
+    } finally {
+      setHwBusy(false);
+    }
   };
 
   if (loading) {
@@ -191,6 +228,66 @@ const DepositPage: React.FC = () => {
                 <View className={styles.progressFill} style={{ width: `${st.completion_rate}%` }} />
               </View>
             </View>
+          </View>
+
+          {/* 每阶段作业（过程锁作业闭环） */}
+          <View className={styles.hwSection}>
+            <Text className={styles.hwTitle}>
+              每阶段作业（AI 评审 · 全部通过才达标）
+              {st.process_lock.homework_passed ? ' ✓ 已全部通过' : `（已通过 ${homeworkItems.filter(i => i.passed).length}/${homeworkItems.length}）`}
+            </Text>
+            {homeworkItems.length === 0 && (
+              <Text className={styles.hwEmpty}>作业题目加载中…</Text>
+            )}
+            {homeworkItems.map((item) => (
+              <View key={item.stage} className={styles.hwRow}>
+                <View className={styles.hwRowHead}>
+                  <Text className={styles.hwStage}>{item.stage_name}</Text>
+                  <Text className={`${styles.hwStatus} ${item.passed ? styles.hwPassed : styles.hwNotPassed}`}>
+                    {item.passed ? `✓ 已通过（AI ${item.ai_score} 分）` : (item.submitted ? '未通过 · 可重交' : '未提交')}
+                  </Text>
+                </View>
+                <Text className={styles.hwReq}>「{item.title}」{item.requirement}</Text>
+                {hwExpandStage === item.stage && (
+                  <View className={styles.hwForm}>
+                    {item.submitted && item.ai_feedback && (
+                      <Text className={styles.hwFeedback}>上次 AI 反馈：{item.ai_feedback}</Text>
+                    )}
+                    <Textarea
+                      className={styles.hwTextarea}
+                      value={hwInput}
+                      onInput={(e) => setHwInput(e.detail.value)}
+                      placeholder="在此填写你的作业内容（100 字以上更佳）…"
+                      maxlength={4000}
+                      autoHeight
+                    />
+                    <View
+                      className={`${styles.hwSubmit} ${hwBusy ? styles.hwSubmitDisabled : ''}`}
+                      onClick={() => !hwBusy && handleSubmitHomework(item.stage)}
+                    >
+                      <Text className={styles.hwSubmitText}>{hwBusy ? 'AI 评审中…' : '提交作业'}</Text>
+                    </View>
+                  </View>
+                )}
+                {!item.passed && (
+                  <View
+                    className={styles.hwGoBtn}
+                    onClick={() => {
+                      setHwExpandStage(hwExpandStage === item.stage ? null : item.stage);
+                      setHwInput(item.submitted ? item.content : '');
+                      setHwMsg(null);
+                    }}
+                  >
+                    <Text className={styles.hwGoText}>{hwExpandStage === item.stage ? '收起' : (item.submitted ? '重新提交' : '去提交')}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+            {hwMsg && (
+              <View className={`${styles.result} ${hwMsg.type === 'ok' ? styles.resultOk : styles.resultErr}`}>
+                <Text>{hwMsg.msg}</Text>
+              </View>
+            )}
           </View>
 
           {/* 考核锁 */}

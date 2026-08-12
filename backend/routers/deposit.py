@@ -22,6 +22,7 @@ from config import (
 from database import (
     get_connection, get_deposit, upsert_deposit,
     count_user_completed_chapters, get_stage_assessments, parse_json_field,
+    get_homework_submissions, upsert_homework_submission,
 )
 from auth_utils import get_current_user
 
@@ -87,7 +88,14 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
         except ValueError:
             time_passed = False
 
-    homework_passed = bool(deposit.get("homework_passed"))
+    # 过程锁作业：按「每阶段作业提交并通过」真实判定（完整闭环，不再只是布尔打标）。
+    # 数据源 homework_submissions：DEPOSIT_STAGES 个阶段全部 status=passed 才算作业通过。
+    homework_subs = {s["stage"]: s for s in get_homework_submissions(user_id)}
+    homework_passed = (
+        len(homework_subs) >= DEPOSIT_STAGES
+        and all(homework_subs[s]["status"] == "passed" for s in homework_subs)
+    )
+    homework_stages = sorted(homework_subs.keys())
     project_submitted = bool(deposit.get("project_submitted"))
     project_passed = bool(deposit.get("project_passed"))
 
@@ -116,6 +124,7 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
         "days_left": max(days_left, 0) if days_left is not None else None,
         "time_lock": {"passed": time_passed, "label": f"报名后 {DEPOSIT_TIME_LOCK_DAYS} 天内完成全部课程与考核，逾期不退"},
         "process_lock": {"passed": process_passed, "completion_rate": completion_rate, "homework_passed": homework_passed,
+                         "homework_stages": homework_stages,
                          "label": "五阶段课程完课率 100% + 每阶段作业提交并通过"},
         "assess_lock": {"passed": assess_passed, "avg": assess_avg, "project_submitted": project_submitted,
                         "project_passed": project_passed,
@@ -227,6 +236,17 @@ async def stage_assessment(body: StageAssessmentRequest, user: dict = Depends(ge
 
 @router.post("/homework")
 async def homework_pass(body: HomeworkRequest, user: dict = Depends(get_current_user)):
+    """过程锁作业打标（开发/遗留快捷接口）。
+
+    passed=true 时把五阶段作业全部记为通过，写入真实 homework_submissions 记录，
+    使过程锁判定走统一数据源（不再只写布尔位）。
+    """
+    if body.passed:
+        for stage in range(1, DEPOSIT_STAGES + 1):
+            upsert_homework_submission(
+                user["id"], stage, "", "（开发调试：一键标记作业通过）",
+                100.0, "（快捷通道自动通过）", "passed",
+            )
     upsert_deposit(user["id"], {"homework_passed": 1 if body.passed else 0})
     return {"ok": True, "homework_passed": body.passed}
 

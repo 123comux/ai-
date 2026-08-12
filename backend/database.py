@@ -444,6 +444,36 @@ def init_db():
         )
     """)
 
+    # 作业题库（五阶段各一题，支撑过程锁「每阶段作业提交并通过」）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS homework_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stage INTEGER NOT NULL UNIQUE,
+            course_id TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL,
+            requirement TEXT NOT NULL,
+            rubric TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    # 用户作业提交与 AI 评审记录（每阶段一次，可重交覆盖；status: pending/passed/rejected）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS homework_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            stage INTEGER NOT NULL,
+            course_id TEXT NOT NULL DEFAULT '',
+            content TEXT NOT NULL,
+            ai_score REAL NOT NULL DEFAULT 0,
+            ai_feedback TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(user_id, stage)
+        )
+    """)
+
     # goals / favorites 增加 user_id，实现多用户隔离（默认 0 = 历史全局数据）
     try:
         cur.execute("ALTER TABLE goals ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
@@ -460,6 +490,8 @@ def init_db():
             cur.execute(f"ALTER TABLE users ADD COLUMN {_col} TEXT NOT NULL DEFAULT ''")
         except Exception:
             pass
+
+    seed_homework_questions(cur)
 
     conn.commit()
     conn.close()
@@ -801,6 +833,162 @@ def upsert_deposit(user_id: int, fields: dict) -> dict:
     conn.commit()
     conn.close()
     return get_deposit(user_id)
+
+
+# ============ 作业提交 / 评审 Helpers ============
+
+# 五阶段作业题库：对齐五阶段课程主题，支撑过程锁「每阶段作业提交并通过」
+HOMEWORK_QUESTIONS = [
+    {
+        "stage": 1,
+        "course_id": "stage-1-cognition",
+        "title": "认知阶段作业：说说 AI 的能与不能",
+        "requirement": "用你自己的话解释「AI 是什么、能帮你做什么、有什么局限」，并举例一个你生活/学习中已经在用的 AI 场景（100 字以上）。",
+        "rubric": "① 能准确区分 AI 的能力与局限（不吹不贬）；② 有具体的生活例子；③ 表述清晰、有自己的话。",
+    },
+    {
+        "stage": 2,
+        "course_id": "stage-2-basics",
+        "title": "入门阶段作业：一次真实的 AI 使用体验",
+        "requirement": "选一个 AI 工具（对话 / AI 写作 / AI 绘图任选其一），描述你的完整使用过程：你输入了什么、AI 输出了什么、你觉得哪里好用、哪里不满意（100 字以上）。",
+        "rubric": "① 描述的是真实使用过程而非设想；② 能区分 AI 输出的好坏；③ 有自己的观察和感受。",
+    },
+    {
+        "stage": 3,
+        "course_id": "stage-3-advanced",
+        "title": "进阶阶段作业：写一个四段式提示词",
+        "requirement": "针对一个你要真实完成的任务，写一个「四段式提示词」（清晰任务 / 角色设定 / 场景目标 / 限制格式），并逐段说明你这样写的作用。",
+        "rubric": "① 四段齐全且结构清晰；② 任务具体可执行；③ 每段说明到位（为什么这样写）。",
+    },
+    {
+        "stage": 4,
+        "course_id": "stage-4-practice",
+        "title": "实战阶段作业：用 AI 完成一个真实任务",
+        "requirement": "用 AI 完成一个真实场景任务（周报生成 / 活动策划 / PPT 文案任选其一）：提交你的完整提示词、AI 输出结果，并说明你如何修改让它变得更好。",
+        "rubric": "① 任务真实具体；② 提示词完整可复现；③ 展示了结果与迭代改进的过程。",
+    },
+    {
+        "stage": 5,
+        "course_id": "stage-5-mastery",
+        "title": "熟练阶段作业：设计一个 AI 自动化工作流",
+        "requirement": "把一个重复性任务设计成「AI 自动化工作流」：写出流程的每一步、每一步用什么提示词或工具、以及如何保证输出质量（含人工复核点）。",
+        "rubric": "① 流程可执行、步骤清晰；② 每步有落地提示词；③ 考虑了边界情况和质量复核。",
+    },
+]
+
+
+def seed_homework_questions(cur=None):
+    """幂等灌入五阶段作业题库（按 stage 去重，重复运行不产生重复题）。"""
+    conn = None
+    if cur is None:
+        conn = get_connection()
+        cur = conn.cursor()
+    for q in HOMEWORK_QUESTIONS:
+        exists = cur.execute("SELECT id FROM homework_questions WHERE stage=?", (q["stage"],)).fetchone()
+        if not exists:
+            cur.execute(
+                "INSERT INTO homework_questions (stage, course_id, title, requirement, rubric) VALUES (?,?,?,?,?)",
+                (q["stage"], q["course_id"], q["title"], q["requirement"], q["rubric"]),
+            )
+    if conn is not None:
+        conn.commit()
+        conn.close()
+
+
+def get_homework_questions() -> list:
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM homework_questions ORDER BY stage").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_homework_question(stage: int) -> Optional[dict]:
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM homework_questions WHERE stage=?", (stage,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def upsert_homework_submission(user_id: int, stage: int, course_id: str, content: str,
+                               ai_score: float, ai_feedback: str, status: str) -> dict:
+    """创建或覆盖某用户某阶段的作业提交（重交覆盖上次记录）。"""
+    conn = get_connection()
+    existing = conn.execute(
+        "SELECT id FROM homework_submissions WHERE user_id=? AND stage=?", (user_id, stage),
+    ).fetchone()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if existing:
+        conn.execute(
+            "UPDATE homework_submissions SET course_id=?, content=?, ai_score=?, ai_feedback=?, "
+            "status=?, updated_at=? WHERE id=?",
+            (course_id, content, ai_score, ai_feedback, status, now, existing["id"]),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO homework_submissions (user_id, stage, course_id, content, ai_score, ai_feedback, status, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (user_id, stage, course_id, content, ai_score, ai_feedback, status, now, now),
+        )
+    conn.commit()
+    conn.close()
+    return get_homework_submission(user_id, stage)
+
+
+def get_homework_submission(user_id: int, stage: int) -> Optional[dict]:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM homework_submissions WHERE user_id=? AND stage=?", (user_id, stage),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_homework_submissions(user_id: int) -> list:
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM homework_submissions WHERE user_id=? ORDER BY stage", (user_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_all_homework_submissions(status: str | None = None) -> list:
+    """后台复核用：列出作业提交（可按状态筛选），带用户昵称。
+
+    status 取值：passed / rejected / None（全部）。
+    """
+    conn = get_connection()
+    sql = (
+        "SELECT s.*, u.nickname AS user_nickname "
+        "FROM homework_submissions s LEFT JOIN users u ON u.id=s.user_id"
+    )
+    params = []
+    if status:
+        sql += " WHERE s.status=?"
+        params.append(status)
+    sql += " ORDER BY s.stage, s.id DESC"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def admin_judge_homework(submission_id: int, status: str, ai_score: float) -> Optional[dict]:
+    """后台人工复核改判作业状态与分数。"""
+    if status not in ("passed", "rejected"):
+        return None
+    conn = get_connection()
+    cur = conn.execute(
+        "UPDATE homework_submissions SET status=?, ai_score=?, updated_at=datetime('now') WHERE id=?",
+        (status, ai_score, submission_id),
+    )
+    conn.commit()
+    conn.close()
+    if cur.rowcount == 0:
+        return None
+    conn = get_connection()
+    sub = conn.execute("SELECT * FROM homework_submissions WHERE id=?", (submission_id,)).fetchone()
+    conn.close()
+    return dict(sub) if sub else None
 
 
 # ============ Seed Data ============

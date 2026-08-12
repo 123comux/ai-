@@ -145,6 +145,90 @@ class TestDeposit(unittest.TestCase):
         self.assertIn("refund_amount", r.json())
 
 
+class TestHomework(unittest.TestCase):
+    """作业提交 / AI 评审 / 后台复核（过程锁作业闭环）。AI 评审用 mock 打桩，避免真实网络调用。"""
+
+    def _patch_review(self, score=82.0, feedback="写得很清楚"):
+        from unittest.mock import patch
+        import routers.homework as hw  # 与 main.py `from routers import homework` 同一模块对象
+        return patch.object(hw, "_ai_review", return_value=(score, feedback))
+
+    def test_questions_public(self):
+        r = client.get("/api/deposit/homework/questions")
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(len(r.json()["questions"]), 5)
+
+    def test_submit_requires_auth(self):
+        r = client.post("/api/deposit/homework/1/submit", json={"content": "x" * 50})
+        self.assertEqual(r.status_code, 401)
+
+    def test_submit_review_flow(self):
+        token, _ = _login("hw_user")
+        with self._patch_review(82.0, "写得很清楚"):
+            r = client.post("/api/deposit/homework/1/submit",
+                            json={"content": "AI能帮我写文案翻译总结，显著提升效率，但也要注意核实。" * 5},
+                            headers=auth_header(token))
+            self.assertEqual(r.status_code, 200, r.text)
+            body = r.json()
+            self.assertTrue(body["passed"])
+            self.assertEqual(body["score"], 82.0)
+        st = client.get("/api/deposit/homework/status", headers=auth_header(token)).json()
+        self.assertEqual(st["passed_count"], 1)
+        self.assertEqual(st["items"][0]["status"], "passed")
+
+    def test_reject_below_threshold(self):
+        token, _ = _login("hw_low")
+        with self._patch_review(40.0, "内容不完整"):
+            r = client.post("/api/deposit/homework/1/submit",
+                            json={"content": "AI能帮我写文案翻译总结，显著提升效率，但也要注意核实。" * 5},
+                            headers=auth_header(token))
+            self.assertEqual(r.status_code, 200)
+            self.assertFalse(r.json()["passed"])
+            self.assertEqual(r.json()["status"], "rejected")
+
+    def test_short_content_rejected(self):
+        token, _ = _login("hw_short")
+        r = client.post("/api/deposit/homework/1/submit", json={"content": "短"}, headers=auth_header(token))
+        self.assertEqual(r.status_code, 422)
+
+    def test_invalid_stage(self):
+        token, _ = _login("hw_badstage")
+        r = client.post("/api/deposit/homework/9/submit", json={"content": "x" * 50}, headers=auth_header(token))
+        self.assertEqual(r.status_code, 400)
+
+    def test_process_lock_requires_all_stages(self):
+        token, _ = _login("hw_process")
+        with self._patch_review(82.0, "好"):
+            for s in range(1, 6):
+                r = client.post(f"/api/deposit/homework/{s}/submit",
+                                json={"content": f"第{s}阶段作业内容，完整作答。" * 6},
+                                headers=auth_header(token))
+                self.assertEqual(r.status_code, 200, r.text)
+        st = client.get("/api/deposit/homework/status", headers=auth_header(token)).json()
+        self.assertTrue(st["all_passed"])
+        self.assertEqual(st["passed_count"], 5)
+
+    def test_admin_review_override(self):
+        token, _ = _login("hw_admin_rev")
+        with self._patch_review(50.0, "需要改进"):
+            client.post("/api/deposit/homework/1/submit",
+                        json={"content": "AI能帮我写文案翻译总结，显著提升效率，但也要注意核实。" * 5},
+                        headers=auth_header(token))
+        adm = client.post("/api/admin/login", params={"username": "admin", "password": "admin123"}).json()
+        ah = {"Authorization": f"Bearer {adm['token']}"}
+        rv = client.get("/api/admin/homework/reviews", params={"status": "all"}, headers=ah)
+        self.assertEqual(rv.status_code, 200)
+        self.assertGreater(rv.json()["count"], 0)
+        sid = rv.json()["reviews"][0]["id"]
+        r = client.post(f"/api/admin/homework/reviews/{sid}", json={"status": "passed", "score": 90}, headers=ah)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["submission"]["status"], "passed")
+        self.assertEqual(r.json()["submission"]["ai_score"], 90)
+        # 无 admin token 应 401
+        bad = client.get("/api/admin/homework/reviews", headers=auth_header(token))
+        self.assertEqual(bad.status_code, 401)
+
+
 class TestCourses(unittest.TestCase):
     def test_list_detail_topics(self):
         r = client.get("/api/courses")

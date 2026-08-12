@@ -517,6 +517,40 @@ export const submitProject = async (passed: boolean): Promise<any> => {
 export const passHomework = async (passed: boolean): Promise<any> => {
   return apiPost<any>('/api/deposit/homework', { passed });
 };
+
+// ============ 作业提交 / 评审（过程锁完整闭环） ============
+
+export interface HomeworkItem {
+  stage: number;
+  stage_name: string;
+  title: string;
+  requirement: string;
+  rubric: string;
+  course_id: string;
+  submitted: boolean;
+  content: string;
+  ai_score: number | null;
+  ai_feedback: string;
+  status: 'none' | 'pending' | 'passed' | 'rejected';
+  passed: boolean;
+  updated_at: string;
+}
+
+/** 获取各阶段作业题目 */
+export const fetchHomeworkQuestions = async (): Promise<HomeworkItem[]> => {
+  const data = await apiGet<{ questions: HomeworkItem[] }>('/api/deposit/homework/questions');
+  return data.questions || [];
+};
+
+/** 查询当前用户各阶段作业状态（题目 + 提交 + AI评分） */
+export const fetchHomeworkStatus = async (): Promise<{ items: HomeworkItem[]; passed_count: number; total: number; all_passed: boolean }> => {
+  return apiGet('/api/deposit/homework/status');
+};
+
+/** 提交某阶段作业（AI 评审 → 返回评分与反馈） */
+export const submitHomework = async (stage: number, content: string): Promise<any> => {
+  return apiPost<any>(`/api/deposit/homework/${stage}/submit`, { content }, 60000);
+};
 // ============ 平台化：打卡 / 排行榜 / 社区 ============
 
 /** 每日打卡 */

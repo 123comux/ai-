@@ -187,7 +187,7 @@ const GROUP_MAP = {
   'checkins': '平台运营', 'community_posts': '平台运营', 'community_replies': '平台运营',
   'faq_items': '答疑管理', 'teams': '平台运营', 'team_members': '平台运营', 'share_unlocks': '平台运营',
 };
-const GROUP_ORDER = ['数据看板', '首页内容', '课程内容', '用户体系', '答疑管理', '平台运营'];
+const GROUP_ORDER = ['数据看板', '作业评审', '首页内容', '课程内容', '用户体系', '答疑管理', '平台运营'];
 
 // ============ 工具 ============
 function toast(msg, isErr) {
@@ -258,6 +258,7 @@ function renderNav() {
   const groups = {};
   // 数据看板
   groups['数据看板'] = [{ name: 'dashboard', label: '数据看板', icon: '📊' }];
+  groups['作业评审'] = [{ name: 'homework', label: '作业复核', icon: '✍' }];
   for (const t of TABLES) {
     const g = GROUP_MAP[t.name] || '其他';
     (groups[g] = groups[g] || []).push(t);
@@ -289,6 +290,7 @@ function navTo(key) {
   document.querySelectorAll('.nav-item').forEach(el =>
     el.classList.toggle('active', el.dataset.key === key));
   if (key === 'dashboard') renderDashboard();
+  else if (key === 'tbl:homework') renderHomework();
   else {
     const name = key.replace('tbl:', '');
     CURRENT = TABLES.find(t => t.name === name) || null;
@@ -329,6 +331,61 @@ async function renderDashboard() {
   } catch (e) {
     if (String(e.message).includes('401')) { toast('登录已过期，请重新登录', true); logout(); return; }
     area.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+// ============ 作业复核（过程锁 · 人工改判防刷） ============
+async function renderHomework() {
+  const area = document.getElementById('mainArea');
+  area.innerHTML = '<div style="padding:40px;text-align:center;color:#8a94a6">加载中...</div>';
+  try {
+    const d = await api('GET', '/api/admin/homework/reviews?status=all');
+    const rows = d.reviews || [];
+    const stageName = {1:'认知',2:'入门',3:'进阶',4:'实战',5:'熟练'};
+    const statusChip = s => s === 'passed'
+      ? '<span style="color:#30a46c;font-weight:600">已通过</span>'
+      : '<span style="color:#e5484d;font-weight:600">未通过</span>';
+    area.innerHTML = `
+      <div class="page-head">
+        <div>
+          <h1>作业复核</h1>
+          <div class="sub">AI 评审结果供参考，人工复核可改判（共 ${rows.length} 条提交）</div>
+        </div>
+        <button class="btn btn-ghost" onclick="renderHomework()">🔄 刷新</button>
+      </div>
+      ${rows.length === 0 ? '<div class="empty">暂无作业提交</div>' : rows.map(r => `
+        <div class="panel" style="margin-bottom:14px">
+          <div class="panel-toolbar" style="flex-wrap:wrap">
+            <div>
+              <b>${esc(r.user_nickname || '用户' + r.user_id)}</b>
+              <span style="margin-left:10px;color:#8a94a6">第 ${r.stage} 阶段（${stageName[r.stage] || ''}）</span>
+              <span style="margin-left:10px">${statusChip(r.status)}</span>
+              <span style="margin-left:10px;color:#165dff">AI 评分：${r.ai_score}</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary btn-sm" onclick="judgeHomework(${r.id}, 'passed')">✅ 判通过</button>
+              <button class="btn btn-danger btn-sm" onclick="judgeHomework(${r.id}, 'rejected')">❌ 判未通过</button>
+            </div>
+          </div>
+          <div style="padding:14px 18px;white-space:pre-wrap;font-size:13px;line-height:1.7">${esc(r.content)}</div>
+          ${r.ai_feedback ? `<div style="padding:0 18px 14px;font-size:12px;color:#8a94a6">AI 反馈：${esc(r.ai_feedback)}</div>` : ''}
+        </div>`).join('')}`;
+  } catch (e) {
+    if (String(e.message).includes('401')) { toast('登录已过期，请重新登录', true); logout(); return; }
+    area.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`;
+  }
+}
+
+async function judgeHomework(id, status) {
+  const score = prompt('请输入最终评分（0-100）：', status === 'passed' ? '80' : '50');
+  if (score === null) return;
+  const s = Math.max(0, Math.min(100, parseFloat(score) || 0));
+  try {
+    await api('POST', '/api/admin/homework/reviews/' + id, { status, score: s });
+    toast('已更新该作业判定');
+    renderHomework();
+  } catch (e) {
+    toast('改判失败：' + e.message, true);
   }
 }
 

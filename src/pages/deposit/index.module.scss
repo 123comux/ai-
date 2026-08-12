@@ -226,3 +226,121 @@
   font-size: $font-size-sm;
   border-radius: $radius-md;
 }
+
+// 每阶段作业（过程锁）
+.hwSection {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1px dashed $color-divider;
+}
+
+.hwTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.hwEmpty {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.hwRow {
+  padding: $spacing-sm 0;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.hwRowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hwStage {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.hwStatus {
+  font-size: $font-size-xs;
+}
+
+.hwPassed {
+  color: $color-success;
+}
+
+.hwNotPassed {
+  color: $color-text-tertiary;
+}
+
+.hwReq {
+  display: block;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+  line-height: $line-height-normal;
+}
+
+.hwFeedback {
+  display: block;
+  font-size: $font-size-xs;
+  color: #b26a00;
+  background: #fff7e6;
+  border-radius: $radius-md;
+  padding: $spacing-xs $spacing-sm;
+  margin-top: $spacing-xs;
+}
+
+.hwForm {
+  margin-top: $spacing-sm;
+}
+
+.hwTextarea {
+  width: 100%;
+  min-height: 160rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+  font-size: $font-size-md;
+  box-sizing: border-box;
+}
+
+.hwSubmit {
+  margin-top: $spacing-sm;
+  height: $button-height-sm;
+  background: $gradient-primary;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hwSubmitDisabled {
+  opacity: 0.6;
+}
+
+.hwSubmitText {
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+.hwGoBtn {
+  margin-top: $spacing-sm;
+  display: inline-block;
+  padding: 8rpx 28rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-round;
+}
+
+.hwGoText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+}

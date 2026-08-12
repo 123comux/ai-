@@ -79,6 +79,8 @@ CORS_ORIGINS = [
     "http://127.0.0.1:10087",
     "https://trae.mobile.volcapp.com",
 ]
+# 生产域名（H5 端）通过环境变量追加：ALLOWED_CORS_ORIGINS="https://你的域名,https://www.你的域名"
+CORS_ORIGINS += [o.strip() for o in os.getenv("ALLOWED_CORS_ORIGINS", "").split(",") if o.strip()]
 CORS_ORIGIN_REGEX = r"https://.*\.(mobile\.volcapp\.com|volceapi\.com|apigateway.*\.volceapi\.com)"
 
 # ============ WeChat Mini-Program Auth ============
@@ -95,12 +97,21 @@ DEV_MODE = os.getenv("DEV_MODE", "true").lower() in ("1", "true", "yes", "on")
 
 # 开发期"模拟切换用户"开关：为 true 时开放 /api/auth/dev/* 接口，
 # 允许在设置页列出后台用户并以任意用户身份进入（便于验证多用户数据隔离）。
-# 仅本地开发测试用，生产环境务必关闭。
-DEV_IMPERSONATE = os.getenv("DEV_IMPERSONATE", "false").lower() in ("1", "true", "yes", "on")
+# 生产环境（DEV_MODE=false）强制关闭，避免开放任意用户切换接口。
+_impersonate_env = os.getenv("DEV_IMPERSONATE", "false").lower() in ("1", "true", "yes", "on")
+DEV_IMPERSONATE = _impersonate_env and DEV_MODE
 
 # ============ Auth Token (HMAC-signed, dependency-free) ============
-# 用于签发登录态 token 的密钥，生产环境务必替换为强随机值并写入 .env。
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-insecure-secret-change-me")
+# 用于签发登录态 token 的密钥。生产环境必须配置强随机值，否则启动失败（fail-fast）。
+JWT_SECRET = os.getenv("JWT_SECRET", "")
+if not JWT_SECRET:
+    if DEV_MODE:
+        JWT_SECRET = "dev-insecure-secret-change-me"
+    else:
+        raise RuntimeError(
+            "生产环境必须配置 JWT_SECRET（强随机值，例如 `py -c \"import secrets;print(secrets.token_hex(32))\"`），"
+            "写入 backend/.env 后重启。"
+        )
 TOKEN_EXPIRE_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
 
 # ============ 押金式培训（Deposit-style training）参数 ============

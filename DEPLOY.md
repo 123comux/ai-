@@ -85,9 +85,14 @@ npm run build:h5
 > 构建报错 `Conflicting order ... mini-css-extract-plugin` 已在 `config/index.ts` 的
 > `mini.miniCssExtractPluginOption.ignoreOrder=true` 处理，正常情况下不会再出现。
 
-**前端连接后端地址**：`src/services/api.ts` 中 `API_BASE` 默认 `http://localhost:8000`。
-- 本地开发：保持 localhost 即可。
-- 线上：改成 `https://your-domain.com`（小程序要求 HTTPS + 已备案域名；H5 同域由 Nginx 托管可保持同源）。
+**前端连接后端地址**：`src/config/env.ts` 中 `API_BASE` 默认 `http://localhost:8000`，用构建时注入覆盖：
+```bash
+# 生产构建（微信小程序与 H5 均用已备案 HTTPS 域名）
+TARO_APP_API_BASE=https://your-domain.com npm run build:weapp
+TARO_APP_API_BASE=https://your-domain.com npm run build:h5
+```
+- 本地开发：不注入即用 localhost。
+- 线上：小程序要求 HTTPS + 已备案域名；H5 同域由 Nginx 托管可保持同源。
 
 ---
 
@@ -119,13 +124,14 @@ npm run build:h5
 
 ### 3.5 小程序提审清单（发版前自检）
 - [ ] 已企业认证、域名已 ICP 备案、后端已 HTTPS。
-- [ ] 服务器域名已在小程序后台配置。
+- [ ] 服务器域名已在小程序后台配置（request / uploadFile / downloadFile 合法域名）。
 - [ ] `DEV_MODE=false`，且 `WECHAT_APPID/WECHAT_SECRET` 已填真实值。
-- [ ] `JWT_SECRET` 已更换为强随机串。
-- [ ] 押金/退费流程自测通过（报名 → 三锁进度 → 达标退费；未达标/超时/重复退均被拒）。
+- [ ] `JWT_SECRET` 已更换为强随机串（未配置时生产启动会 fail-fast）。
+- [ ] 押金/退费流程自测通过（报名 → 真实支付 → 三锁进度 → 作业提交 → 达标退费 → 后台人工复核 → 真实退款；未达标/超时/重复退均被拒）。
+- [ ] 微信支付商户号已配置（`WXPAY_MCHID` 等），小额真实支付/退款各走一笔。
 - [ ] 隐私协议：押金收取、退费规则、数据使用需在《隐私保护指引》与《押金服务协议》中明确说明（审核重点）。
 - [ ] 类目选择正确（教育/在线培训），如涉及收费需对应资质。
-- [ ] 真机预览：首页不白屏、登录态持久、视频/项目/测评/岗位对标/我的页核心流程可用。
+- [ ] 真机预览：首页不白屏、登录态持久、课程/作业/测评/岗位对标/我的页核心流程可用。
 - [ ] 提交审核时附「测试账号」与「功能说明」，加速过审。
 
 ---
@@ -135,11 +141,15 @@ npm run build:h5
 | 变量 | 说明 | 生产建议 |
 |------|------|----------|
 | `HOST` / `PORT` | 监听地址/端口 | `0.0.0.0` / `8000` |
-| `JWT_SECRET` | Token 签名密钥 | **必换强随机串** |
+| `JWT_SECRET` | Token 签名密钥 | **必换强随机串**（未配置生产启动即报错） |
 | `TOKEN_EXPIRE_DAYS` | Token 有效期 | 30 |
-| `ZHIPU_API_KEY` | 智谱 GLM Key | 必填（AI 主路径） |
+| `ZHIPU_API_KEY` | 智谱 GLM Key（flash 档主路径） | 必填（AI 主路径） |
+| `DEEPSEEK_API_KEY` | DeepSeek Key（standard/pro 档） | 建议填，提升 pro 档推理 |
 | `WECHAT_APPID` / `WECHAT_SECRET` | 微信登录 | 必填（生产） |
-| `DEV_MODE` | 开发模式 | **生产设为 false** |
+| `DEV_MODE` | 开发模式 | **生产设为 false**（同时强制关闭 DEV_IMPERSONATE） |
+| `ALLOWED_CORS_ORIGINS` | 额外 CORS 域名（逗号分隔） | `https://your-domain.com` |
+| `WXPAY_MCHID` 等 6 项 | 微信支付商户号 | 涉及真实收退款时必填 |
+| `WX_SUB_TEMPLATE_*` | 订阅消息模板 ID | 申请后填入（未填则静默不推送） |
 | `DEPOSIT_AMOUNT` 等 | 押金三锁参数 | 对照商业评审报告 |
 
 完整示例见 `backend/.env.example`。

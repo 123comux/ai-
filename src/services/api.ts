@@ -6,12 +6,10 @@
  */
 import Taro from '@tarojs/taro';
 import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem, LoginResult, AuthUser, DepositConfig, DepositStatus } from '@/types/index';
+import { API_BASE } from '@/config/env';
 
-// H5 dev mode & WeChat mini-program: both use direct backend URL.
-// CORS is fully configured in backend config.py (allow_origins includes localhost:10087).
-// This approach avoids Taro devServer proxy reliability issues.
-// NOTE: WeChat mini-program requires HTTPS and domain whitelist — update this for production.
-const API_BASE = 'http://localhost:8000';
+// API 地址来自环境配置（见 src/config/env.ts）。生产构建注入 TARO_APP_API_BASE=HTTPS 域名，
+// 微信小程序同时需在小程序后台配置该域名为合法 request/uploadFile 域名。
 
 /** 读取本地登录态 token（与 useUserStore 共用同一 key） */
 function authHeaders(): Record<string, string> {

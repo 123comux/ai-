@@ -70,6 +70,11 @@ export const useUserStore = create<UserState>((set, get) => ({
           major: data.user.major ?? '',
           targetDirection: data.user.targetDirection ?? '',
         });
+        // 3) 登录后请求订阅消息授权（模板未配置则静默跳过）
+        try {
+          const { requestSubscriptions } = await import('@/utils/subscribe');
+          requestSubscriptions();
+        } catch { /* 忽略订阅失败 */ }
         return;
       } catch (err) {
         lastErr = err;

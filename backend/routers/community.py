@@ -89,6 +89,12 @@ async def checkin(body: CheckinRequest | None = None, user: dict = Depends(get_c
     insert_row("checkins", {"user_id": user["id"], "checkin_date": today,
                             "note": (body.note if body else "")[:100]})
     streak = _checkin_streak(user["id"])
+    # 订阅消息：打卡成功提醒（模板未配置则静默跳过）
+    try:
+        from services.wechat_msg import notify_checkin
+        notify_checkin(user, streak)
+    except Exception:
+        pass
     return {"ok": True, "checkin_date": today, "streak": streak}
 
 

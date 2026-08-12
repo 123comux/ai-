@@ -137,6 +137,12 @@ async def homework_submit(stage: int, body: HomeworkSubmitRequest, user: dict = 
     score, feedback = _ai_review(stage, q, content)
     status = "passed" if score >= PASS_SCORE else "rejected"
     sub = upsert_homework_submission(user["id"], stage, q["course_id"], content, score, feedback, status)
+    # 订阅消息：作业评审结果通知（模板未配置则静默跳过）
+    try:
+        from services.wechat_msg import notify_homework_result
+        notify_homework_result(user, stage, score, status == "passed")
+    except Exception:
+        pass
     return {
         "ok": True,
         "stage": stage,

@@ -33,6 +33,14 @@ ZHIPU_API_URL = os.getenv("ZHIPU_API_URL", "https://open.bigmodel.cn/api/paas/v4
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
 
+# ============ 微信订阅消息（模板消息） ============
+# 模板 ID 需在小程序后台「订阅消息」申请后填入 backend/.env，未配置则静默跳过发送。
+WX_SUB_TEMPLATE_CHECKIN = os.getenv("WX_SUB_TEMPLATE_CHECKIN", "")    # 打卡成功提醒
+WX_SUB_TEMPLATE_HOMEWORK = os.getenv("WX_SUB_TEMPLATE_HOMEWORK", "")  # 作业评审结果通知
+WX_SUB_TEMPLATE_LEARNING = os.getenv("WX_SUB_TEMPLATE_LEARNING", "")  # 学习提醒/里程碑
+WX_ACCESS_TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token"
+WX_SUBSCRIBE_SEND_URL = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send"
+
 # Dataset config
 FIREWEB_EDU_SAMPLE = "sample-10BT"  # Can also use "sample-100BT", "sample-350BT"
 FIREWEB_EDU_MAX_ROWS = 1000  # Limit for local processing

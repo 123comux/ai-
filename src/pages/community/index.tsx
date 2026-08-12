@@ -120,6 +120,11 @@ const CommunityPage: React.FC = () => {
       setCheckin({ today_checked: true, streak: r.streak, recent_dates: [r.checkin_date] });
       Taro.showToast({ title: `打卡成功 · 连续 ${r.streak} 天`, icon: 'success' });
       loadRank();
+      // 订阅消息：打卡提醒（模板未配置则静默跳过）
+      try {
+        const { requestSubscriptions } = await import('@/utils/subscribe');
+        requestSubscriptions();
+      } catch { /* 忽略订阅失败 */ }
     } catch (err: any) {
       Taro.showToast({ title: err?.message || '打卡失败', icon: 'none' });
     }

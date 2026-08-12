@@ -402,6 +402,29 @@ export const updateProfile = async (nickname: string, avatar: string): Promise<A
   return res.user;
 };
 
+/** 上传头像文件（chooseAvatar 的临时路径会过期），返回可持久访问的完整 URL */
+export const uploadAvatar = async (tempPath: string): Promise<string> => {
+  const res = await Taro.uploadFile({
+    url: buildUrl('/api/auth/avatar'),
+    filePath: tempPath,
+    name: 'file',
+    header: { ...authHeaders() },
+    timeout: 30000,
+  });
+  if (res.statusCode !== 200) {
+    const raw = typeof res.data === 'string' ? res.data : '';
+    try {
+      const detail = JSON.parse(raw)?.detail;
+      throw new Error(typeof detail === 'string' ? detail : `HTTP ${res.statusCode}`);
+    } catch (e: any) {
+      throw new Error(e?.message || `HTTP ${res.statusCode}`);
+    }
+  }
+  const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+  // 后端返回相对路径 /static/avatars/xx.png，拼成完整 URL 供 <Image> 渲染
+  return API_BASE + data.avatar_url;
+};
+
 // ============ 押金式培训 API ============
 
 /** 押金模型配置（金额、三锁规则、退费规则） */

@@ -268,11 +268,8 @@ const CourseDetailPage: React.FC = () => {
             <>
               <Text className={styles.unlockGuide}>分享给好友，解锁本课进阶实操</Text>
               <View className={styles.unlockActions}>
-                <Button
-                  className={styles.unlockBtn}
-                  openType="share"
-                  onSuccess={handleShareUnlock}
-                >
+                {/* open-type=share 无 success 回调（微信分享面板不返回结果），解锁走下方手动兜底 */}
+                <Button className={styles.unlockBtn} openType="share">
                   分享解锁
                 </Button>
                 <Text className={styles.unlockManual} onClick={handleShareUnlock}>我已分享，手动解锁</Text>

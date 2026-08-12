@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Input, Picker, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useUserStore } from '@/store/useUserStore';
+import { uploadAvatar } from '@/services/api';
 import styles from './index.module.scss';
 
 const GRADES = ['大一', '大二', '大三', '大四', '研究生'];
@@ -59,12 +60,13 @@ const SettingsPage: React.FC = () => {
     });
   };
 
-  // 头像选择：open-type=chooseAvatar，用户主动授权微信头像后回传后端
+  // 头像选择：open-type=chooseAvatar 用户主动授权微信头像，先上传换持久 URL 再回传后端
   const handleAvatar = async (url: string) => {
     if (!url) return;
     try {
       Taro.showLoading({ title: '更新中...', mask: true });
-      await updateProfile(nickname, url);
+      const finalUrl = /^https?:\/\//.test(url) ? url : await uploadAvatar(url);
+      await updateProfile(nickname, finalUrl);
       Taro.hideLoading();
       Taro.showToast({ title: '头像已更新', icon: 'success' });
     } catch (err: any) {

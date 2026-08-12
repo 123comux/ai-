@@ -15,7 +15,9 @@ Usage:
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -64,6 +66,11 @@ app.include_router(mine_data.router)
 app.include_router(auth.router)
 app.include_router(deposit.router)
 app.include_router(community.router)
+
+# 静态文件（上传的头像等），生产环境应改由云存储/CDN 提供
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Ensure DB tables (incl. users / deposit) exist on startup.
 init_db()

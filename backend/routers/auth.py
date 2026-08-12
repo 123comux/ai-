@@ -1,9 +1,11 @@
 """Auth API router: WeChat mini-program login + token issuance."""
 
 import json
+import os
+import uuid
 import urllib.request
 import urllib.parse
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from pydantic import BaseModel
 
 from config import WECHAT_APPID, WECHAT_SECRET, WECHAT_CODE2SESSION_URL, DEV_MODE
@@ -11,6 +13,10 @@ from database import get_user_by_openid, create_user, get_user, update_user_prof
 from auth_utils import create_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# 上传头像存储目录（main.py 已把 /static 挂载为静态目录）
+AVATAR_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "avatars")
+ALLOWED_AVATAR_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
 class WechatLoginRequest(BaseModel):
@@ -126,3 +132,26 @@ async def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_cu
             "avatar": updated["avatar"],
         },
     }
+
+
+@router.post("/avatar")
+async def upload_avatar(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """上传头像文件到本地 static 目录，返回可持久访问的相对 URL。
+
+    微信 chooseAvatar 返回的是临时路径（会话结束后失效），
+    前端需先上传换取永久 URL，再调 PUT /auth/profile 落库。
+    生产环境应改为上传到云存储/CDN。
+    """
+    ext = os.path.splitext((file.filename or "").lower())[1]
+    if ext not in ALLOWED_AVATAR_EXTS:
+        raise HTTPException(status_code=400, detail="仅支持 jpg/jpeg/png/webp/gif 图片")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="文件为空")
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="头像不能超过 2MB")
+    os.makedirs(AVATAR_DIR, exist_ok=True)
+    fname = f"{user['id']}_{uuid.uuid4().hex}{ext}"
+    with open(os.path.join(AVATAR_DIR, fname), "wb") as f:
+        f.write(content)
+    return {"ok": True, "avatar_url": f"/static/avatars/{fname}"}

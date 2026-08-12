@@ -68,9 +68,23 @@ const DepositPage: React.FC = () => {
   const handleEnroll = async () => {
     setBusy(true); setResult(null);
     try {
-      await enrollDeposit();
-      Taro.showToast({ title: '报名成功，押金已记录', icon: 'success' });
-      await load();
+      const r = await enrollDeposit();
+      if (r.need_pay && r.pay_params) {
+        // 真实微信支付：调起支付面板
+        try {
+          const payRes = await Taro.requestPayment(r.pay_params);
+          const ok = String(payRes?.errMsg || '').includes('requestPayment:ok');
+          if (!ok) throw new Error('支付未完成');
+          setResult({ type: 'ok', msg: '支付成功，报名完成！' });
+        } catch (payErr: any) {
+          const msg = payErr?.message || payErr?.errMsg || '支付未完成';
+          setResult({ type: 'err', msg: msg.includes('cancel') ? '已取消支付，可重新报名' : msg });
+        }
+        await load();
+      } else {
+        Taro.showToast({ title: '报名成功，押金已记录', icon: 'success' });
+        await load();
+      }
     } catch (err: any) {
       setResult({ type: 'err', msg: err?.message || '报名失败' });
     } finally { setBusy(false); }
@@ -197,6 +211,7 @@ const DepositPage: React.FC = () => {
   const eligible = st.refund_eligible;
   const refunded = dep.status === 'refunded';
   const refundPending = dep.status === 'refund_pending';
+  const payPending = dep.status === 'pending_payment';
 
   return (
     <ScrollView className={styles.page} scrollY>
@@ -206,12 +221,21 @@ const DepositPage: React.FC = () => {
         <Text className={styles.heroLabel}>已缴押金（达标全额退）</Text>
         <Text className={styles.heroAmount}>¥{dep.amount}</Text>
         <Text className={styles.heroSub}>
-          {refunded ? '已退费' : refundPending ? '退费审核中（人工复核）' : eligible ? '已达标，可申请退费' : '继续学习，达标即可退费'}
+          {payPending ? '待支付 · 报名未完成' : (refunded ? '已退费' : refundPending ? '退费审核中（人工复核）' : eligible ? '已达标，可申请退费' : '继续学习，达标即可退费')}
         </Text>
-        {st.days_left != null && !refunded && !refundPending && (
+        {!payPending && st.days_left != null && !refunded && !refundPending && (
           <View className={styles.heroDeadline}><Text>时间锁剩余 {st.days_left} 天</Text></View>
         )}
       </View>
+
+      {payPending && (
+        <View
+          className={`${styles.bigBtn} ${busy ? styles.bigBtnDisabled : ''}`}
+          onClick={() => !busy && handleEnroll()}
+        >
+          <Text className={styles.bigBtnText}>{busy ? '处理中…' : '去支付 ¥' + dep.amount}</Text>
+        </View>
+      )}
 
       <View className={styles.section}>
         <Text className={styles.sectionTitle}>三锁进度</Text>

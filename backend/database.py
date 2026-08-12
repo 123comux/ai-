@@ -496,6 +496,12 @@ def init_db():
         cur.execute("ALTER TABLE user_deposits ADD COLUMN refund_requested_at TEXT NOT NULL DEFAULT ''")
     except Exception:
         pass
+    # 真实微信支付：支付单号 / 微信交易号 / 支付完成时间
+    for _col in ("out_trade_no", "transaction_id", "paid_at"):
+        try:
+            cur.execute(f"ALTER TABLE user_deposits ADD COLUMN {_col} TEXT NOT NULL DEFAULT ''")
+        except Exception:
+            pass
 
     seed_homework_questions(cur)
 

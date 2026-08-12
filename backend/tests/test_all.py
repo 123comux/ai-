@@ -20,6 +20,8 @@ import os
 import sys
 import time
 import unittest
+import base64
+import json
 
 # 让 backend 包与内部 `from database import ...` 均可导入
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -237,6 +239,91 @@ class TestHomework(unittest.TestCase):
         # 无 admin token 应 401
         bad = client.get("/api/admin/homework/reviews", headers=auth_header(token))
         self.assertEqual(bad.status_code, 401)
+
+
+class TestWxpayPayment(unittest.TestCase):
+    """微信支付 V3：加密/签名原语 + 回调置已支付 + 未配置商户号占位路径。
+
+    不依赖真实商户号：AES/RSA 用临时密钥自测，回调验签用 mock。
+    """
+
+    def test_aes_gcm_decrypt_roundtrip(self):
+        from services import wxpay_service as w
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        key = "a" * 32
+        w.WXPAY_APIV3_KEY = key
+        aesgcm = AESGCM(key.encode())
+        nonce = b"b" * 12
+        payload = b'{"out_trade_no":"dep_1_1","trade_state":"SUCCESS","transaction_id":"txn1"}'
+        ct = aesgcm.encrypt(nonce, payload, b"assoc")
+        dec = w.decrypt_resource(
+            base64.b64encode(ct).decode(), base64.b64encode(nonce).decode(), "assoc")
+        self.assertEqual(dec["out_trade_no"], "dep_1_1")
+        self.assertEqual(dec["trade_state"], "SUCCESS")
+
+    def test_rsa_sign_roundtrip(self):
+        import tempfile
+        import os
+        from services import wxpay_service as w
+        from cryptography.hazmat.primitives.asymmetric import rsa, padding as ap
+        from cryptography.hazmat.primitives import serialization, hashes
+        priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        pem = priv.private_bytes(serialization.Encoding.PEM,
+                                 serialization.PrivateFormat.PKCS8,
+                                 serialization.NoEncryption()).decode()
+        tmp = tempfile.NamedTemporaryFile(suffix=".pem", mode="w", delete=False)
+        tmp.write(pem); tmp.close()
+        w.WXPAY_PRIVATE_KEY = tmp.name
+        try:
+            msg = "POST\n/v3/pay/transactions/jsapi\n1700000000\nnonce\n{}\n"
+            sig = base64.b64decode(w._sign(msg))
+            priv.public_key().verify(sig, msg.encode(), ap.PKCS1v15(), hashes.SHA256())
+        finally:
+            os.unlink(tmp.name)
+
+    def test_placeholder_enroll_without_merchant(self):
+        # 未配置商户号：报名直接置 active（占位），/api/pay/jsapi 返回占位提示
+        token, _ = _login("pay_placeholder")
+        r = client.post("/api/deposit/enroll", json={}, headers=auth_header(token))
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNone(r.json().get("need_pay"))
+        r2 = client.post("/api/pay/jsapi", headers=auth_header(token))
+        self.assertEqual(r2.status_code, 200)
+        self.assertTrue(r2.json()["placeholder"])
+
+    def test_notify_marks_deposit_paid(self):
+        import base64 as b64
+        from unittest.mock import patch
+        from services import wxpay_service as w
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        from database import upsert_deposit, get_deposit
+
+        token, user = _login("pay_notify")
+        upsert_deposit(user["id"], {"amount": 199, "status": "pending_payment",
+                                    "out_trade_no": "dep_notify_1"})
+        key = "a" * 32
+        w.WXPAY_APIV3_KEY = key
+        aesgcm = AESGCM(key.encode())
+        nonce = b"n" * 12
+        payload = b'{"out_trade_no":"dep_notify_1","trade_state":"SUCCESS","transaction_id":"4200abc"}'
+        ad_str = "transaction"
+        ct = aesgcm.encrypt(nonce, payload, ad_str.encode())
+        body = json.dumps({
+            "event_type": "TRANSACTION.SUCCESS",
+            "resource": {
+                "algorithm": "AEAD_AES_256_GCM",
+                "ciphertext": b64.b64encode(ct).decode(),
+                "associated_data": ad_str,
+                "nonce": b64.b64encode(nonce).decode(),
+            },
+        })
+        with patch("services.wxpay_service.verify_notify_signature", return_value=True):
+            r = client.post("/api/pay/notify", content=body)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json().get("code"), "SUCCESS")
+        dep = get_deposit(user["id"])
+        self.assertEqual(dep["status"], "active")
+        self.assertEqual(dep["transaction_id"], "4200abc")
 
 
 class TestCourses(unittest.TestCase):

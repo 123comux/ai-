@@ -41,6 +41,21 @@ WX_SUB_TEMPLATE_LEARNING = os.getenv("WX_SUB_TEMPLATE_LEARNING", "")  # 学习�
 WX_ACCESS_TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token"
 WX_SUBSCRIBE_SEND_URL = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send"
 
+# ============ 微信支付（商户号 V3，押金收付） ============
+# 商户号未配置时，押金报名/退费走「占位路径」（仅记状态，不真正收钱），便于开发演示。
+WXPAY_MCHID = os.getenv("WXPAY_MCHID", "")                       # 微信支付商户号
+WXPAY_SERIAL_NO = os.getenv("WXPAY_SERIAL_NO", "")               # 商户 API 证书序列号
+WXPAY_PRIVATE_KEY = os.getenv("WXPAY_PRIVATE_KEY", "")           # 商户 API 私钥 apiclient_key.pem 路径
+WXPAY_APIV3_KEY = os.getenv("WXPAY_APIV3_KEY", "")               # APIv3 密钥（32 字节）
+WXPAY_NOTIFY_URL = os.getenv("WXPAY_NOTIFY_URL", "")             # 支付回调公网 HTTPS 地址
+WXPAY_REFUND_NOTIFY_URL = os.getenv("WXPAY_REFUND_NOTIFY_URL", "")  # 退款回调地址
+WXPAY_API_BASE = os.getenv("WXPAY_API_BASE", "https://api.mch.weixin.qq.com")
+
+
+def wxpay_configured() -> bool:
+    """是否已配置微信支付商户号（未配置则押金走占位路径）。"""
+    return all([WXPAY_MCHID, WXPAY_SERIAL_NO, WXPAY_PRIVATE_KEY, WXPAY_APIV3_KEY, WXPAY_NOTIFY_URL])
+
 # Dataset config
 FIREWEB_EDU_SAMPLE = "sample-10BT"  # Can also use "sample-100BT", "sample-350BT"
 FIREWEB_EDU_MAX_ROWS = 1000  # Limit for local processing

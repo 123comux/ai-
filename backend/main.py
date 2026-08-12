@@ -22,7 +22,7 @@ import os
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, HOST, PORT
-from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data, auth, deposit, community, homework
+from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data, auth, deposit, community, homework, pay
 from database import init_db
 
 app = FastAPI(
@@ -69,6 +69,7 @@ app.include_router(auth.router)
 app.include_router(deposit.router)
 app.include_router(community.router)
 app.include_router(homework.router)
+app.include_router(pay.router)
 
 # 静态文件（上传的头像等），生产环境应改由云存储/CDN 提供
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")

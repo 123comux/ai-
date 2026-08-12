@@ -163,7 +163,13 @@ async def deposit_config():
 
 @router.post("/enroll")
 async def enroll(body: EnrollRequest | None = None, user: dict = Depends(get_current_user)):
-    """用户报名：先收培训费（押金）。支付为占位实现，记录金额与 90 天死线。"""
+    """用户报名：先收培训费（押金）。
+
+    - 微信支付已配置：生成支付单（status=pending_payment）并返回小程序调起支付参数，
+      支付成功由回调 /api/pay/notify 置为 active；
+    - 未配置（开发占位）：直接置为 active，仅记录金额，不真正收钱。
+    """
+    from config import wxpay_configured
     body = body or EnrollRequest()
     existing = get_deposit(user["id"])
     if existing and existing.get("status") == "active":
@@ -172,25 +178,47 @@ async def enroll(body: EnrollRequest | None = None, user: dict = Depends(get_cur
     amount = body.amount if body.amount and body.amount > 0 else DEPOSIT_DEFAULT_AMOUNT
     enrolled_at = datetime.now()
     deadline_at = (enrolled_at + timedelta(days=DEPOSIT_TIME_LOCK_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    now = enrolled_at.strftime("%Y-%m-%d %H:%M:%S")
 
-    deposit = upsert_deposit(user["id"], {
-        "amount": amount,
-        "currency": DEPOSIT_CURRENCY,
-        "status": "active",
-        "enrolled_at": enrolled_at.strftime("%Y-%m-%d %H:%M:%S"),
-        "deadline_at": deadline_at,
-        "time_lock_passed": 0,
-        "course_completion_rate": 0,
-        "homework_passed": 0,
-        "assessment_avg_score": 0,
-        "project_submitted": 0,
-        "project_passed": 0,
-        "refund_eligible": 0,
-        "refund_amount": 0,
-        "refund_at": "",
-        "refund_txn": "",
-    })
-    return {"ok": True, "deposit": _public_deposit(deposit), "payment_note": "支付为占位实现，接入微信支付后此处发起收款"}
+    if wxpay_configured():
+        # 复用未完成的支付单（用户取消支付后重试），否则生成新单
+        out_trade_no = (existing or {}).get("out_trade_no") or f"dep_{user['id']}_{int(datetime.now().timestamp())}"
+        deposit = upsert_deposit(user["id"], {
+            "amount": amount,
+            "currency": DEPOSIT_CURRENCY,
+            "status": "pending_payment",
+            "enrolled_at": now,
+            "deadline_at": deadline_at,
+            "out_trade_no": out_trade_no,
+        })
+        try:
+            from services.wxpay_service import build_pay_params
+            pay_params = build_pay_params(
+                out_trade_no, int(round(amount * 100)), user.get("openid", ""), "智学AI·押金式培训",
+            )
+            return {"ok": True, "need_pay": True, "deposit": _public_deposit(deposit), "pay_params": pay_params}
+        except Exception as e:
+            # 下单失败：保持待支付状态，提示用户稍后重试
+            raise HTTPException(status_code=502, detail=f"创建支付单失败：{e}")
+    else:
+        deposit = upsert_deposit(user["id"], {
+            "amount": amount,
+            "currency": DEPOSIT_CURRENCY,
+            "status": "active",
+            "enrolled_at": now,
+            "deadline_at": deadline_at,
+            "time_lock_passed": 0,
+            "course_completion_rate": 0,
+            "homework_passed": 0,
+            "assessment_avg_score": 0,
+            "project_submitted": 0,
+            "project_passed": 0,
+            "refund_eligible": 0,
+            "refund_amount": 0,
+            "refund_at": "",
+            "refund_txn": "",
+        })
+        return {"ok": True, "deposit": _public_deposit(deposit), "payment_note": "支付为占位实现（未配置商户号），接入微信支付后此处发起收款"}
 
 
 # ---------- 三锁进度 / 达标判定 ----------
@@ -349,14 +377,32 @@ async def judge_refund_review(user_id: int, body: RefundReviewRequest, request: 
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if body.approved:
+        # 已配置商户号且押金有支付单 → 调微信支付退款；否则占位标记退费
+        from config import wxpay_configured
+        refund_txn = f"manual_{int(datetime.now().timestamp())}"
+        real_refund = False
+        if wxpay_configured() and deposit.get("out_trade_no"):
+            try:
+                from services.wxpay_service import refund as wxpay_refund
+                total_fen = int(round(float(deposit.get("amount", 0)) * 100))
+                res = wxpay_refund(
+                    deposit["out_trade_no"],
+                    f"ref_{user_id}_{int(datetime.now().timestamp())}",
+                    total_fen, total_fen,
+                    "押金式培训达标全额退费",
+                )
+                refund_txn = res.get("refund_id") or res.get("out_refund_no") or refund_txn
+                real_refund = True
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"真实退款发起失败：{e}")
         updated = upsert_deposit(user_id, {
             "status": "refunded",
             "refund_amount": deposit.get("amount", 0),
             "refund_at": now,
-            "refund_txn": f"manual_{int(datetime.now().timestamp())}",
+            "refund_txn": refund_txn,
         })
         return {"ok": True, "result": "approved", "refund_amount": updated.get("amount", 0),
-                "note": "已放行退费（真实退款需接入微信支付后调用退款 API）"}
+                "note": "已放行退费（真实退款已发起）" if real_refund else "已放行退费（未配置商户号，占位记录）"}
     else:
         upsert_deposit(user_id, {"status": "active", "refund_requested_at": ""})
         return {"ok": True, "result": "rejected", "note": "已驳回，用户押金回到有效状态"}

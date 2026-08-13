@@ -78,7 +78,8 @@ jobs:
         with:
           node-version: '18'
       - name: Install frontend deps
-        run: npm ci
+        # --legacy-peer-deps：Taro 4 + webpack 5 存在 peer 依赖冲突，npm ci 严格解析会 ERESOLVE 失败
+        run: npm ci --legacy-peer-deps
       - name: Build weapp
         run: npm run build:weapp
       - name: Build h5

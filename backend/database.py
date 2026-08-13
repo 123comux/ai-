@@ -355,7 +355,7 @@ def init_db():
         )
     """)
 
-    # 按用户隔离的章节完成记录（五阶段课程为文字章节，完课率按章节计，不依赖遗留视频库）
+    # 按用户隔离的章节完成记录（七阶段课程为文字章节，完课率按章节计，不依赖遗留视频库）
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_chapter_progress (
             user_id INTEGER NOT NULL,
@@ -386,7 +386,7 @@ def init_db():
         )
     """)
 
-    # 五阶段考核成绩（考核锁用）
+    # 七阶段考核成绩（考核锁用）
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_stage_assessments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -438,7 +438,7 @@ def init_db():
         )
     """)
 
-    # 作业题库（五阶段各一题，支撑过程锁「每阶段作业提交并通过」）
+    # 作业题库（七阶段各一题，支撑过程锁「每阶段作业提交并通过」）
     cur.execute("""
         CREATE TABLE IF NOT EXISTS homework_questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -661,7 +661,7 @@ def get_user_watched_video_ids(user_id: int) -> set:
 
 
 def record_user_chapter(user_id: int, course_id: str, chapter_id: str) -> None:
-    """记录用户完成某课程章节（五阶段文字课程按章节计进度/完课率）。"""
+    """记录用户完成某课程章节（七阶段文字课程按章节计进度/完课率）。"""
     conn = get_connection()
     conn.execute(
         "INSERT OR REPLACE INTO user_chapter_progress (user_id, course_id, chapter_id) VALUES (?,?,?)",
@@ -843,48 +843,62 @@ def upsert_deposit(user_id: int, fields: dict) -> dict:
 
 # ============ 作业提交 / 评审 Helpers ============
 
-# 五阶段作业题库：对齐五阶段课程主题，支撑过程锁「每阶段作业提交并通过」
+# 七阶段作业题库：对齐 2026 AI Agent 学习路线七阶段课程，支撑过程锁「每阶段作业提交并通过」
 HOMEWORK_QUESTIONS = [
     {
         "stage": 1,
-        "course_id": "stage-1-cognition",
-        "title": "认知阶段作业：说说 AI 的能与不能",
-        "requirement": "用你自己的话解释「AI 是什么、能帮你做什么、有什么局限」，并举例一个你生活/学习中已经在用的 AI 场景（100 字以上）。",
-        "rubric": "① 能准确区分 AI 的能力与局限（不吹不贬）；② 有具体的生活例子；③ 表述清晰、有自己的话。",
+        "course_id": "s1-llm-basics",
+        "title": "阶段一作业：用一条 Prompt 完成真实任务",
+        "requirement": "选一个真实任务（总结一篇文章 / 生成周报初稿 / 角色扮演练习任选其一），写一条结构清晰的 Prompt（含任务、上下文、输出格式），提交提示词全文与 AI 输出结果，并说明你这样写的作用。",
+        "rubric": "① 任务真实具体；② Prompt 要素齐全（任务/上下文/格式）；③ 能说明每段的设计意图。",
     },
     {
         "stage": 2,
-        "course_id": "stage-2-basics",
-        "title": "入门阶段作业：一次真实的 AI 使用体验",
-        "requirement": "选一个 AI 工具（对话 / AI 写作 / AI 绘图任选其一），描述你的完整使用过程：你输入了什么、AI 输出了什么、你觉得哪里好用、哪里不满意（100 字以上）。",
-        "rubric": "① 描述的是真实使用过程而非设想；② 能区分 AI 输出的好坏；③ 有自己的观察和感受。",
+        "course_id": "s2-agent-core",
+        "title": "阶段二作业：设计一个简单 ReAct Agent 流程",
+        "requirement": "以「天气查询 Agent」为例，画出 ReAct 循环：Thought → Action → Observation → … → Final Answer，并说明每一步里 LLM 和你的程序各负责什么。",
+        "rubric": "① ReAct 循环正确完整；② 能分清 LLM 与程序职责；③ 体现了工具调用闭环的理解。",
     },
     {
         "stage": 3,
-        "course_id": "stage-3-advanced",
-        "title": "进阶阶段作业：写一个四段式提示词",
-        "requirement": "针对一个你要真实完成的任务，写一个「四段式提示词」（清晰任务 / 角色设定 / 场景目标 / 限制格式），并逐段说明你这样写的作用。",
-        "rubric": "① 四段齐全且结构清晰；② 任务具体可执行；③ 每段说明到位（为什么这样写）。",
+        "course_id": "s3-rag",
+        "title": "阶段三作业：实现一个带 RAG 的知识问答",
+        "requirement": "用 FastAPI + Chroma 实现最小 RAG：上传/内置一份文档，实现「检索 + 生成 + 引用溯源」问答，提交代码、一次检索问答的输入输出，并说明你的分块策略与引用如何传递。",
+        "rubric": "① 检索-生成链路真实可跑；② 引用溯源有实现；③ 能讲清分块与 Embedding 的选择。",
     },
     {
         "stage": 4,
-        "course_id": "stage-4-practice",
-        "title": "实战阶段作业：用 AI 完成一个真实任务",
-        "requirement": "用 AI 完成一个真实场景任务（周报生成 / 活动策划 / PPT 文案任选其一）：提交你的完整提示词、AI 输出结果，并说明你如何修改让它变得更好。",
-        "rubric": "① 任务真实具体；② 提示词完整可复现；③ 展示了结果与迭代改进的过程。",
+        "course_id": "s4-multi-agent",
+        "title": "阶段四作业：设计一个 Supervisor 协作方案",
+        "requirement": "为一个任务（如软件开发 / 客服分流）设计 Supervisor 多 Agent 方案：画出主管 + 执行 Agent 的协作图，说明任务怎么分配、Agent 之间怎么通信、出了错怎么办。",
+        "rubric": "① 架构图清晰、职责不重叠；② 通信机制明确；③ 考虑了失败处理与成本。",
     },
     {
         "stage": 5,
-        "course_id": "stage-5-mastery",
-        "title": "熟练阶段作业：设计一个 AI 自动化工作流",
-        "requirement": "把一个重复性任务设计成「AI 自动化工作流」：写出流程的每一步、每一步用什么提示词或工具、以及如何保证输出质量（含人工复核点）。",
-        "rubric": "① 流程可执行、步骤清晰；② 每步有落地提示词；③ 考虑了边界情况和质量复核。",
+        "course_id": "s5-deploy",
+        "title": "阶段五作业：给 Agent 做 Docker 部署与优化",
+        "requirement": "把阶段三的 RAG 问答（或任一 Agent）容器化：编写 Dockerfile 与 docker-compose，加一个性能/成本优化点（缓存或并行），提交 Dockerfile、优化前后对比与部署截图。",
+        "rubric": "① Dockerfile 可构建、能一键部署；② 优化点有量化对比；③ 说明生产环境要考虑的安全/监控要点。",
+    },
+    {
+        "stage": 6,
+        "course_id": "s6-rag-project",
+        "title": "阶段六作业：完成一个可部署的 Agent 项目",
+        "requirement": "完成「RAG 知识库问答系统」或「智能客服 Agent」其一：代码放 GitHub、README 讲清架构、Docker 一键部署、有演示页面，提交项目链接与一段 3 分钟的项目讲述文稿。",
+        "rubric": "① 项目完整可部署可演示；② 技术选型能讲出理由；③ 覆盖了工程要点（引用/审批/护栏等）。",
+    },
+    {
+        "stage": 7,
+        "course_id": "s7-career",
+        "title": "阶段七作业：整理简历 + 讲清技术选型",
+        "requirement": "完成简历（含 1 个 Agent 项目）并准备「为什么这样设计」的口头讲解：技术选型、难点与解法、效果评估各一段，提交简历要点 + 讲解大纲。",
+        "rubric": "① 简历有可展示的 Agent 项目；② 技术选型讲解有深度（不是照搬教程）；③ 覆盖难点与效果。",
     },
 ]
 
 
 def seed_homework_questions(cur=None):
-    """幂等灌入五阶段作业题库（按 stage 去重，重复运行不产生重复题）。"""
+    """幂等灌入七阶段作业题库（按 stage 去重，重复运行不产生重复题）。"""
     conn = None
     if cur is None:
         conn = get_connection()
@@ -1041,20 +1055,12 @@ def seed_from_json():
     """Seed database from existing JSON files."""
     data_dir = os.path.join(os.path.dirname(__file__), "data", "processed")
 
-    # 若处理数据缺失（全新 clone / 全新部署 / CI），先由 seed_data.py 生成基础种子，
-    # 再按依赖顺序合并场景课（8 门）与课程丰富（加深 13 门 + 新增 5 门实战课），
-    # 保证 `python -m database` 在任何环境都能灌出与本地一致的 18 门课。
-    # 两个合并脚本均幂等（按 id 去重），且只改 JSON，真正入库统一走下方 seed 循环。
+    # 若处理数据缺失（全新 clone / 全新部署 / CI），由 curriculum_2026 生成
+    # 2026 AI Agent 学习路线七阶段课程体系（24 门课程 + 24 条视频 + 学习路径），
+    # 保证 `python -m database` 在任何环境都能一键自举。
     if not os.path.exists(os.path.join(data_dir, "courses.json")):
-        from data_pipeline.seed_data import run as _generate_seed
-        _generate_seed()
-        from data_pipeline import expand_courses, enrich_courses_v2
-        for _name in ("courses.json", "enriched_courses.json"):
-            expand_courses.merge_into_json(os.path.join(data_dir, _name))
-        enrich_courses_v2.main()
-    # seed_data 不生成视频；缺失时按课程生成占位视频库
-    if not os.path.exists(os.path.join(data_dir, "videos.json")):
-        _generate_default_videos(data_dir)
+        from data_pipeline import curriculum_2026
+        curriculum_2026.main()
 
     # Seed courses (use enriched data for coverImg, category, etc.)
     courses_file = os.path.join(data_dir, "enriched_courses.json")
@@ -1215,13 +1221,15 @@ def seed_from_json():
         insert_row("banners", b)
     print(f"  Seeded {len(default_banners)} banners")
 
-    # Seed default directions (对应零基础五阶段课程：认知/入门/进阶/实战/熟练)
+    # Seed default directions (对应 2026 AI Agent 学习路线七阶段)
     default_directions = [
-        {"name": "零基础认知", "description": "了解 AI 能做什么、不能做什么", "color": "#165dff", "topic_key": "认知", "sort_order": 1},
-        {"name": "入门实践", "description": "认识主流 AI 工具，开始动手用", "color": "#7c3aed", "topic_key": "入门", "sort_order": 2},
-        {"name": "提示词进阶", "description": "写出高质量提示词，让 AI 更懂你", "color": "#00b42a", "topic_key": "进阶", "sort_order": 3},
-        {"name": "场景实战", "description": "用 AI 解决工作学习中的真实问题", "color": "#ff7d00", "topic_key": "实战", "sort_order": 4},
-        {"name": "熟练精通", "description": "建立自动化工作流，善用 AI", "color": "#f53f3f", "topic_key": "熟练", "sort_order": 5},
+        {"name": "阶段一 · AI 大模型基础", "description": "LLM 概念、Prompt、API 调用、Ollama 本地部署", "color": "#165dff", "topic_key": "大模型基础", "sort_order": 1},
+        {"name": "阶段二 · Agent 基础概念", "description": "Agent 核心能力、架构模式、工具调用、记忆系统", "color": "#7c3aed", "topic_key": "Agent基础", "sort_order": 2},
+        {"name": "阶段三 · Agent 开发实战", "description": "RAG、MCP、Agent Skills、LangChain、LangGraph", "color": "#00b42a", "topic_key": "开发实战", "sort_order": 3},
+        {"name": "阶段四 · 多 Agent 系统", "description": "多 Agent 架构、MetaGPT/AutoGen、编排与工程化", "color": "#ff7d00", "topic_key": "多Agent", "sort_order": 4},
+        {"name": "阶段五 · 优化和部署", "description": "性能优化、安全可控、监控评估、生产部署", "color": "#f53f3f", "topic_key": "优化部署", "sort_order": 5},
+        {"name": "阶段六 · 项目实战", "description": "RAG 知识库问答、智能客服 Agent 求职作品", "color": "#00a0c0", "topic_key": "项目实战", "sort_order": 6},
+        {"name": "阶段七 · 求职备战", "description": "简历作品集、高频面试题、项目讲述", "color": "#ff6b81", "topic_key": "求职备战", "sort_order": 7},
     ]
     for d in default_directions:
         insert_row("directions", d)
@@ -1251,15 +1259,15 @@ def seed_from_json():
 
     # Seed default FAQ items（答疑知识库）
     default_faqs = [
-        {"question": "这个平台是免费的吗？", "answer": "核心功能全部免费开放：五阶段课程、AI 导师答疑、实操练习、能力测评、学习档案都不收费。",
+        {"question": "这个平台是免费的吗？", "answer": "核心功能全部免费开放：七阶段 AI Agent 开发课程、AI 导师答疑、实操练习、能力测评、学习档案都不收费。",
          "category": "general", "sort_order": 1, "view_count": 0, "is_active": 1},
-        {"question": "押金式培训怎么退费？", "answer": "报名缴纳押金后，90 天内完成五阶段课程（完课率 100%）、每阶段作业通过、五阶段考核均分 ≥85 且实战项目通过，达标后申请退费，经人工复核后全额原路退回。",
+        {"question": "押金式培训怎么退费？", "answer": "报名缴纳押金后，90 天内完成七阶段课程（完课率 100%）、每阶段作业通过、七阶段考核均分 ≥85 且实战项目通过，达标后申请退费，经人工复核后全额原路退回。",
          "category": "deposit", "sort_order": 2, "view_count": 0, "is_active": 1},
         {"question": "完不成怎么办？押金会退吗？", "answer": "未在 90 天期限内达标，押金转为培训费，可续学一期，不予退还。请按学习路径合理安排时间。",
          "category": "deposit", "sort_order": 3, "view_count": 0, "is_active": 1},
         {"question": "AI 导师答疑有限制吗？", "answer": "答疑免费开放。基础问题由 AI 导师（课程知识库 RAG）自动解答，复杂问题可咨询社群或助教。",
          "category": "general", "sort_order": 4, "view_count": 0, "is_active": 1},
-        {"question": "课程适合零基础吗？", "answer": "适合。课程按「认知 → 入门 → 进阶 → 实战 → 熟练」五阶段设计，从零讲起，不需要任何技术背景。",
+        {"question": "课程适合零基础吗？", "answer": "适合。课程按 2026 最新 AI Agent 学习路线七阶段设计：大模型基础 → Agent 概念 → 开发实战 → 多 Agent → 优化部署 → 项目实战 → 求职备战，从零讲起，有 Python/FastAPI 基础上手更快。",
          "category": "course", "sort_order": 5, "view_count": 0, "is_active": 1},
         {"question": "如何获得结业认证？", "answer": "完成全部课程、作业与考核，通过实战项目评审后，可申请能力等级认证（结业项目）。",
          "category": "course", "sort_order": 6, "view_count": 0, "is_active": 1},

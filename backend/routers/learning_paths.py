@@ -37,38 +37,38 @@ def _load_json(filename: str):
 
 # direction family -> (course ids in order, project ids in order)
 # 每个方向差异化选课，让用户能切换不同学习路径。
-# 课程/项目均取当前种子数据中的真实 id（旧 course-N 遗留 id 已不再存在，勿用）。
-# 每个方向都保留「五阶段」核心课程，再追加一门方向相关的场景课做差异化。
+# 课程/项目均取当前种子数据中的真实 id（2026 七阶段课程体系，旧 stage-N/course-N 已不再存在）。
+# 所有方向共享「大模型基础 + Agent 概念」打底，再按方向追加差异化技术模块。
 _DIRECTION_PLAN = {
     "大模型应用开发": (
-        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-3-prompt4"],
+        ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-rag", "s3-langchain", "s6-rag-project"],
         ["project-3", "project-0", "project-4"],
     ),
     "机器学习工程师": (
-        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-4-weekly"],
+        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-agent-core", "s2-agent-arch", "s3-rag", "s5-observability"],
         ["project-0", "project-3", "project-4"],
     ),
     "深度学习工程师": (
-        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-3-structure"],
+        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-langgraph", "s3-agentic-rag"],
         ["project-4", "project-3"],
     ),
     "数据科学家": (
-        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-4-weekly"],
+        ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s2-agent-core", "s3-rag", "s5-observability", "s5-deploy"],
         ["project-0", "project-4", "project-3"],
     ),
     "AI 应用开发": (
-        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-4-planning"],
+        ["s1-llm-basics", "s1-api-dev", "s2-tool-calling", "s3-langchain", "s3-langgraph", "s4-multi-agent", "s5-deploy", "s6-rag-project", "s6-cs-agent", "s7-career"],
         ["project-1", "project-4", "project-2"],
     ),
     "计算机视觉工程师": (
-        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-2-media"],
+        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-tool-calling", "s3-mcp", "s4-orchestration"],
         ["project-4", "project-0"],
     ),
 }
 
 # fallback plan when direction is not in the map above
 _DEFAULT_PLAN = (
-    ["stage-1-cognition", "stage-2-basics", "stage-3-advanced"],
+    ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-rag", "s3-langchain"],
     ["project-3", "project-4"],
 )
 

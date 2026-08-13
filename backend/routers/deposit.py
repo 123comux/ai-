@@ -2,8 +2,8 @@
 
 三锁门槛（对齐商业评审报告《押金式培训版》）：
 - 时间锁：报名后 90 天内完成全部课程与考核，逾期不退。
-- 过程锁：五阶段课程完课率 100% + 每阶段作业提交并通过。
-- 考核锁：五阶段考核均分 ≥85 + 提交实战项目并通过评审。
+- 过程锁：七阶段课程完课率 100% + 每阶段作业提交并通过。
+- 考核锁：七阶段考核均分 ≥85 + 提交实战项目并通过评审。
 
 达标后全额原路退回；未达标押金转培训费可续学一期；同一身份限退费 1 次。
 说明：真实"收押金/原路退回"需接入微信支付（支付+退款 API + 商户证书），
@@ -51,7 +51,7 @@ class HomeworkRequest(BaseModel):
 # ---------- Helpers ----------
 
 def _total_stage_chapters() -> int:
-    """五阶段课程总章节数（完课率按章节计，不再依赖遗留视频库）。"""
+    """七阶段课程总章节数（完课率按章节计，不再依赖遗留视频库）。"""
     conn = get_connection()
     rows = conn.execute("SELECT chapters FROM courses").fetchall()
     conn.close()
@@ -62,7 +62,7 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
     """Compute the three-lock progress + eligibility from per-user data."""
     now = datetime.now()
 
-    # 五阶段课程完课率：按"已完成章节 / 总章节"计算（课程为文字章节，不依赖遗留视频库）
+    # 七阶段课程完课率：按"已完成章节 / 总章节"计算（课程为文字章节，不依赖遗留视频库）
     total_units = _total_stage_chapters()
     done_units = count_user_completed_chapters(user_id)
     completion_rate = round(done_units / total_units * 100) if total_units else 0
@@ -125,10 +125,10 @@ def _compute_status(user_id: int, deposit: dict) -> dict:
         "time_lock": {"passed": time_passed, "label": f"报名后 {DEPOSIT_TIME_LOCK_DAYS} 天内完成全部课程与考核，逾期不退"},
         "process_lock": {"passed": process_passed, "completion_rate": completion_rate, "homework_passed": homework_passed,
                          "homework_stages": homework_stages,
-                         "label": "五阶段课程完课率 100% + 每阶段作业提交并通过"},
+                         "label": "七阶段课程完课率 100% + 每阶段作业提交并通过"},
         "assess_lock": {"passed": assess_passed, "avg": assess_avg, "project_submitted": project_submitted,
                         "project_passed": project_passed,
-                        "label": f"五阶段考核均分 ≥{DEPOSIT_PASS_SCORE} + 提交实战项目并通过评审"},
+                        "label": f"七阶段考核均分 ≥{DEPOSIT_PASS_SCORE} + 提交实战项目并通过评审"},
         "refund_eligible": eligible,
     }
 
@@ -147,8 +147,8 @@ async def deposit_config():
         "refund_working_days": DEPOSIT_REFUND_WORKING_DAYS,
         "locks": {
             "time": f"报名后 {DEPOSIT_TIME_LOCK_DAYS} 天内完成全部课程与考核，逾期不退",
-            "process": "五阶段课程完课率 100% + 每阶段作业提交并通过",
-            "assess": f"五阶段考核均分 ≥{DEPOSIT_PASS_SCORE} + 提交实战项目并通过评审",
+            "process": "七阶段课程完课率 100% + 每阶段作业提交并通过",
+            "assess": f"七阶段考核均分 ≥{DEPOSIT_PASS_SCORE} + 提交实战项目并通过评审",
         },
         "refund_rules": {
             "amount": "全额退还培训费，原路退回",
@@ -247,7 +247,7 @@ async def deposit_status(user: dict = Depends(get_current_user)):
     }
 
 
-# ---------- 考核锁：录入五阶段考核成绩 ----------
+# ---------- 考核锁：录入七阶段考核成绩 ----------
 
 @router.post("/stage-assessment")
 async def stage_assessment(body: StageAssessmentRequest, user: dict = Depends(get_current_user)):
@@ -266,7 +266,7 @@ async def stage_assessment(body: StageAssessmentRequest, user: dict = Depends(ge
 async def homework_pass(body: HomeworkRequest, user: dict = Depends(get_current_user)):
     """过程锁作业打标（开发/遗留快捷接口）。
 
-    passed=true 时把五阶段作业全部记为通过，写入真实 homework_submissions 记录，
+    passed=true 时把七阶段作业全部记为通过，写入真实 homework_submissions 记录，
     使过程锁判定走统一数据源（不再只写布尔位）。
     """
     if body.passed:

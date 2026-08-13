@@ -172,8 +172,9 @@ class TestDeposit(unittest.TestCase):
         # enroll
         r = client.post("/api/deposit/enroll", headers=auth_header(token))
         self.assertEqual(r.status_code, 200)
-        # 学完五阶段课程全部章节（完课率按章节计，不依赖遗留视频库）
-        courses = client.get("/api/courses").json()
+        # 学完七阶段课程全部章节（完课率按章节计，不依赖遗留视频库）
+        # 注：课程数超过默认 limit=20，须显式取全部 24 门
+        courses = client.get("/api/courses?limit=100").json()
         for c in courses:
             for ch in (c.get("chapters") or []):
                 r = client.post(
@@ -181,8 +182,8 @@ class TestDeposit(unittest.TestCase):
                     headers=auth_header(token),
                 )
                 self.assertEqual(r.status_code, 200, f"complete chapter {ch['id']}")
-        # 五阶段考核 + 作业 + 项目
-        for s in range(1, 6):
+        # 七阶段考核 + 作业 + 项目
+        for s in range(1, 8):
             client.post("/api/deposit/stage-assessment", headers=auth_header(token),
                         json={"stage": s, "score": 90})
         client.post("/api/deposit/homework", headers=auth_header(token), json={"passed": True})
@@ -219,7 +220,7 @@ class TestHomework(unittest.TestCase):
     def test_questions_public(self):
         r = client.get("/api/deposit/homework/questions")
         self.assertEqual(r.status_code, 200)
-        self.assertGreaterEqual(len(r.json()["questions"]), 5)
+        self.assertGreaterEqual(len(r.json()["questions"]), 7)
 
     def test_submit_requires_auth(self):
         r = client.post("/api/deposit/homework/1/submit", json={"content": "x" * 50})
@@ -262,14 +263,14 @@ class TestHomework(unittest.TestCase):
     def test_process_lock_requires_all_stages(self):
         token, _ = _login("hw_process")
         with self._patch_review(82.0, "好"):
-            for s in range(1, 6):
+            for s in range(1, 8):
                 r = client.post(f"/api/deposit/homework/{s}/submit",
                                 json={"content": f"第{s}阶段作业内容，完整作答。" * 6},
                                 headers=auth_header(token))
                 self.assertEqual(r.status_code, 200, r.text)
         st = client.get("/api/deposit/homework/status", headers=auth_header(token)).json()
         self.assertTrue(st["all_passed"])
-        self.assertEqual(st["passed_count"], 5)
+        self.assertEqual(st["passed_count"], 7)
 
     def test_admin_review_override(self):
         token, _ = _login("hw_admin_rev")
@@ -745,11 +746,11 @@ class TestShareUnlock(unittest.TestCase):
         token, user = self._login("share_test")
         h = {"Authorization": f"Bearer {token}"}
         # 分享解锁
-        r = client.post(f"/api/community/share-unlock?share_type=course&share_target=stage-1-cognition", headers=h)
+        r = client.post(f"/api/community/share-unlock?share_type=course&share_target=s1-llm-basics", headers=h)
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.json()["ok"])
         # 重复解锁
-        r = client.post(f"/api/community/share-unlock?share_type=course&share_target=stage-1-cognition", headers=h)
+        r = client.post(f"/api/community/share-unlock?share_type=course&share_target=s1-llm-basics", headers=h)
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.json()["already_unlocked"])
         # 查询状态

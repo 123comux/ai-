@@ -94,7 +94,7 @@ async def get_course(course_id: str):
 
 @router.get("/{course_id}/progress")
 async def course_progress(course_id: str, request: Request):
-    """课程章节学习进度：已完成章节 / 总章节（五阶段课程按章节计进度）。"""
+    """课程章节学习进度：已完成章节 / 总章节（七阶段课程按章节计进度）。"""
     row = query_one("courses", course_id)
     if not row:
         raise HTTPException(status_code=404, detail="Course not found")

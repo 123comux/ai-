@@ -345,7 +345,7 @@ async function renderHomework() {
   try {
     const d = await api('GET', '/api/admin/homework/reviews?status=all');
     const rows = d.reviews || [];
-    const stageName = {1:'认知',2:'入门',3:'进阶',4:'实战',5:'熟练'};
+    const stageName = {1:'大模型基础',2:'Agent 概念',3:'开发实战',4:'多 Agent',5:'优化部署',6:'项目实战',7:'求职备战'};
     const statusChip = s => s === 'passed'
       ? '<span style="color:#30a46c;font-weight:600">已通过</span>'
       : '<span style="color:#e5484d;font-weight:600">未通过</span>';

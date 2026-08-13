@@ -11,15 +11,17 @@ import styles from './index.module.scss';
 
 /** 课程 topic/stage 中文映射 */
 const TOPIC_LABEL_MAP: Record<string, string> = {
-  '认知': '认知',
-  '入门': '入门',
-  '进阶': '进阶',
-  '实战': '实战',
-  '熟练': '熟练',
+  '大模型基础': '阶段一 · 大模型基础',
+  'Agent基础': '阶段二 · Agent 概念',
+  '开发实战': '阶段三 · 开发实战',
+  '多Agent': '阶段四 · 多 Agent',
+  '优化部署': '阶段五 · 优化部署',
+  '项目实战': '阶段六 · 项目实战',
+  '求职备战': '阶段七 · 求职备战',
   'all': '全部',
   'beginner': '入门',
   'intermediate': '进阶',
-  'advanced': '熟练',
+  'advanced': '高级',
 };
 
 const LearnPage: React.FC = () => {

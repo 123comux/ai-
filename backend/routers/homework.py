@@ -29,7 +29,7 @@ admin_router = APIRouter(prefix="/api/admin/homework", tags=["homework_admin"])
 
 PASS_SCORE = 60  # 作业评审及格线
 
-STAGE_NAMES = {1: "认知", 2: "入门", 3: "进阶", 4: "实战", 5: "熟练"}
+STAGE_NAMES = {1: "大模型基础", 2: "Agent 概念", 3: "开发实战", 4: "多 Agent", 5: "优化部署", 6: "项目实战", 7: "求职备战"}
 
 
 # ---------- Schemas ----------

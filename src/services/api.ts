@@ -120,7 +120,7 @@ export const fetchCourseDetail = async (courseId: string): Promise<any> => {
   return apiGet<any>(`/api/courses/${courseId}`);
 };
 
-/** 课程章节学习进度（五阶段课程按章节计进度） */
+/** 课程章节学习进度（七阶段课程按章节计进度） */
 export const fetchCourseProgress = async (courseId: string): Promise<{
   course_id: string;
   total_chapters: number;
@@ -501,7 +501,7 @@ export const requestRefund = async (): Promise<any> => {
   return apiPost<any>('/api/deposit/refund', {});
 };
 
-/** 录入五阶段考核成绩（考核锁用） */
+/** 录入七阶段考核成绩（考核锁用） */
 export const recordStageAssessment = async (stage: number, score: number): Promise<any> => {
   return apiPost<any>('/api/deposit/stage-assessment', { stage, score });
 };

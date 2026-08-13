@@ -91,7 +91,7 @@ def notify_homework_result(user: dict, stage: int, score: float, passed: bool) -
     """作业评审结果通知：模板字段 thing1=阶段作业，phrase2=通过/未通过，number3=评分。"""
     if not WX_SUB_TEMPLATE_HOMEWORK:
         return False
-    stage_names = {1: "认知", 2: "入门", 3: "进阶", 4: "实战", 5: "熟练"}
+    stage_names = {1: "大模型基础", 2: "Agent 概念", 3: "开发实战", 4: "多 Agent", 5: "优化部署", 6: "项目实战", 7: "求职备战"}
     name = stage_names.get(stage, f"第{stage}阶段")
     return send_subscribe_message(
         user.get("openid", ""), WX_SUB_TEMPLATE_HOMEWORK,

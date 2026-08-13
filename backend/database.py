@@ -999,9 +999,56 @@ def admin_judge_homework(submission_id: int, status: str, ai_score: float) -> Op
 
 # ============ Seed Data ============
 
+def _generate_default_videos(data_dir: str) -> int:
+    """seed_data.py 不生成视频数据；原遗留视频库（videos.json）已清理。
+
+    这里按课程生成一批占位视频，保证 videos 表非空、视频页可用；
+    后续如需真实视频，替换 videos.json 或按章节 video_bv 关联即可。
+    """
+    import urllib.parse
+    courses_file = os.path.join(data_dir, "enriched_courses.json")
+    if not os.path.exists(courses_file):
+        courses_file = os.path.join(data_dir, "courses.json")
+    if not os.path.exists(courses_file):
+        return 0
+    with open(courses_file, "r", encoding="utf-8") as f:
+        courses = json.load(f)
+    videos = []
+    for co in courses:
+        cid = co.get("id", "")
+        title = co.get("title", "") or ""
+        videos.append({
+            "id": f"video-{cid}",
+            "title": f"{title} · 课程视频",
+            "subtitle": "",
+            "description": "示例视频（原遗留视频库已清理，此为按课程生成的占位）",
+            "coreInfo": [],
+            "narrative": "",
+            "visual": "",
+            "quality": {},
+            "url": f"https://search.bilibili.com/all?keyword={urllib.parse.quote(title)}",
+            "coverUrl": co.get("coverImg", co.get("cover_img", "")),
+            "duration": 0,
+            "chapter": "",
+            "courseId": cid,
+        })
+    with open(os.path.join(data_dir, "videos.json"), "w", encoding="utf-8") as f:
+        json.dump(videos, f, ensure_ascii=False, indent=2)
+    return len(videos)
+
+
 def seed_from_json():
     """Seed database from existing JSON files."""
     data_dir = os.path.join(os.path.dirname(__file__), "data", "processed")
+
+    # 若处理数据缺失（全新 clone / 全新部署 / CI），先由 seed_data.py 生成，
+    # 保证 `python -m database` 在任何环境都能灌出完整种子（课程/项目/视频/测评/路径）。
+    if not os.path.exists(os.path.join(data_dir, "courses.json")):
+        from data_pipeline.seed_data import run as _generate_seed
+        _generate_seed()
+    # seed_data 不生成视频；缺失时按课程生成占位视频库
+    if not os.path.exists(os.path.join(data_dir, "videos.json")):
+        _generate_default_videos(data_dir)
 
     # Seed courses (use enriched data for coverImg, category, etc.)
     courses_file = os.path.join(data_dir, "enriched_courses.json")

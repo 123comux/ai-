@@ -11,3 +11,5 @@ python-dotenv==1.0.1
 requests==2.32.3
 # 微信支付 V3：RSA-SHA256 签名 + AES-256-GCM 回调解密
 cryptography==49.0.0
+# MySQL 方言（DB_ENGINE=mysql 生产用）
+pymysql==2.2.8

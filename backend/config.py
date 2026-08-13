@@ -20,6 +20,16 @@ KNOWLEDGE_BASE_DIR = BASE_DIR / "data" / "knowledge_base"
 for d in [RAW_DIR, PROCESSED_DIR, KNOWLEDGE_BASE_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
+# ============ 数据库（SQLite 默认 / MySQL 生产） ============
+# DB_ENGINE=mysql 时使用 MySQL（业务 SQL 运行时做方言翻译），否则 SQLite。
+DB_ENGINE = os.getenv("DB_ENGINE", "sqlite").lower()
+DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "data" / "cms.db"))
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DB_PORT = int(os.getenv("DB_PORT", "3306"))
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_NAME = os.getenv("DB_NAME", "ai_teach")
+
 # Server config
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))

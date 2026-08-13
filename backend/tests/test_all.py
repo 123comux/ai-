@@ -91,6 +91,57 @@ class TestPureFunctions(unittest.TestCase):
         self.assertIn("sections", out[0])
 
 
+class TestDbDialect(unittest.TestCase):
+    """方言翻译纯函数：SQLite 写法 → MySQL（无 DB 依赖即可验证）。"""
+
+    def _t(self):
+        from db import to_mysql, to_mysql_ddl
+        return to_mysql, to_mysql_ddl
+
+    def test_placeholder_skips_string_literal_question(self):
+        to_mysql, _ = self._t()
+        sql = "SELECT id FROM favorites WHERE item_type=? AND item_id=? AND detail_path='/pages/courseDetail/index?id='"
+        out = to_mysql(sql)
+        self.assertEqual(out, "SELECT id FROM favorites WHERE item_type=%s AND item_id=%s AND detail_path='/pages/courseDetail/index?id='")
+
+    def test_datetime_now(self):
+        to_mysql, _ = self._t()
+        self.assertIn("NOW()", to_mysql("UPDATE t SET watched_at=datetime('now') WHERE id=?"))
+
+    def test_upsert_or_replace(self):
+        to_mysql, _ = self._t()
+        out = to_mysql("INSERT OR REPLACE INTO user_chapter_progress (user_id, course_id, chapter_id) VALUES (?,?,?)")
+        self.assertTrue(out.startswith("REPLACE INTO"))
+
+    def test_on_conflict_to_duplicate_key(self):
+        to_mysql, _ = self._t()
+        sql = "INSERT INTO p (user_id, video_id, minutes) VALUES (?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET minutes=excluded.minutes, watched_at=datetime('now')"
+        out = to_mysql(sql)
+        self.assertIn("ON DUPLICATE KEY UPDATE minutes=VALUES(minutes), watched_at=NOW()", out)
+
+    def test_ddl_autoincrement(self):
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(100) NOT NULL UNIQUE)")
+        self.assertIn("AUTO_INCREMENT", out)
+        self.assertNotIn("AUTOINCREMENT", out)
+
+    def test_ddl_timestamp_default(self):
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (created_at TEXT NOT NULL DEFAULT (datetime('now')))")
+        self.assertIn("DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP", out)
+
+    def test_ddl_text_literal_default_becomes_expression(self):
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (description TEXT NOT NULL DEFAULT '')")
+        self.assertIn("DEFAULT ('')", out)
+
+    def test_text_in_key_stays_varchar(self):
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (id VARCHAR(100) PRIMARY KEY, openid VARCHAR(200) NOT NULL UNIQUE)")
+        self.assertNotIn("TEXT PRIMARY KEY", out)
+        self.assertIn("VARCHAR(200) NOT NULL UNIQUE", out)
+
+
 class TestAuth(unittest.TestCase):
     def test_wechat_login(self):
         token, user = _login("auth_user")

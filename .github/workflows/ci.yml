@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 后端 · SQLite（本地默认引擎，快）
+  backend-sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          pip install -r backend/requirements-runtime.txt
+          pip install -r backend/requirements-dev.txt
+      - name: Init + seed (SQLite)
+        working-directory: backend
+        run: DEV_MODE=true python -m database
+      - name: Run tests (SQLite)
+        working-directory: backend
+        env:
+          DEV_MODE: "true"
+        run: python -m pytest tests/ -q
+
+  # 后端 · MySQL（生产引擎，验证方言翻译层）
+  backend-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ai_teach
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DEV_MODE: "true"
+      DB_ENGINE: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: ai_teach
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          pip install -r backend/requirements-runtime.txt
+          pip install -r backend/requirements-dev.txt
+      - name: Init + seed (MySQL)
+        working-directory: backend
+        run: python -m database
+      - name: Run tests (MySQL)
+        working-directory: backend
+        run: python -m pytest tests/ -q
+
+  # 前端 · 双端构建
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install frontend deps
+        run: npm ci
+      - name: Build weapp
+        run: npm run build:weapp
+      - name: Build h5
+        run: npm run build:h5

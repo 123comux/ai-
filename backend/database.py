@@ -1,22 +1,16 @@
 """
-SQLite database module for content management.
-Provides CRUD operations for all content types.
+数据库访问模块：所有内容类型的 CRUD。
+
+连接层见 db.py（SQLite 默认 / MySQL 生产双引擎），此处保持对外 API 不变：
+业务代码 `from database import get_connection` 即可，无需感知底层引擎。
 """
-import sqlite3
 import json
 import os
 from datetime import datetime
 from typing import Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "data", "cms.db")
-
-
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+from db import get_connection
+from config import DB_PATH, DB_ENGINE
 
 
 def init_db():
@@ -45,7 +39,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS directions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
+            name VARCHAR(100) NOT NULL UNIQUE,
             description TEXT NOT NULL DEFAULT '',
             color TEXT NOT NULL DEFAULT '#165dff',
             topic_key TEXT NOT NULL DEFAULT '',
@@ -60,7 +54,7 @@ def init_db():
     # Courses
     cur.execute("""
         CREATE TABLE IF NOT EXISTS courses (
-            id TEXT PRIMARY KEY,
+            id VARCHAR(100) PRIMARY KEY,
             title TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             cover_img TEXT NOT NULL DEFAULT '',
@@ -82,7 +76,7 @@ def init_db():
     # Projects
     cur.execute("""
         CREATE TABLE IF NOT EXISTS projects (
-            id TEXT PRIMARY KEY,
+            id VARCHAR(100) PRIMARY KEY,
             title TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             cover_img TEXT NOT NULL DEFAULT '',
@@ -105,7 +99,7 @@ def init_db():
     # Videos
     cur.execute("""
         CREATE TABLE IF NOT EXISTS videos (
-            id TEXT PRIMARY KEY,
+            id VARCHAR(100) PRIMARY KEY,
             title TEXT NOT NULL,
             subtitle TEXT NOT NULL DEFAULT '',
             description TEXT NOT NULL DEFAULT '',
@@ -127,7 +121,7 @@ def init_db():
     # Learning paths
     cur.execute("""
         CREATE TABLE IF NOT EXISTS learning_paths (
-            id TEXT PRIMARY KEY,
+            id VARCHAR(100) PRIMARY KEY,
             direction TEXT NOT NULL,
             title TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
@@ -229,8 +223,8 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS favorites (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            item_type TEXT NOT NULL,
-            item_id TEXT NOT NULL,
+            item_type VARCHAR(50) NOT NULL,
+            item_id VARCHAR(100) NOT NULL,
             title TEXT NOT NULL DEFAULT '',
             cover_img TEXT NOT NULL DEFAULT '',
             detail_path TEXT NOT NULL DEFAULT '',
@@ -243,7 +237,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS admin_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
+            username VARCHAR(100) NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'admin',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -255,7 +249,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS checkins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
-            checkin_date TEXT NOT NULL,  -- YYYY-MM-DD
+            checkin_date VARCHAR(20) NOT NULL,  -- YYYY-MM-DD
             note TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             UNIQUE(user_id, checkin_date)
@@ -291,8 +285,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS share_unlocks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
-            share_type TEXT NOT NULL DEFAULT 'course',
-            share_target TEXT NOT NULL,
+            share_type VARCHAR(50) NOT NULL DEFAULT 'course',
+            share_target VARCHAR(200) NOT NULL,
             unlocked_content TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             UNIQUE(user_id, share_type, share_target)
@@ -304,7 +298,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS teams (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            code TEXT NOT NULL UNIQUE,
+            code VARCHAR(100) NOT NULL UNIQUE,
             owner_id INTEGER NOT NULL,
             member_count INTEGER NOT NULL DEFAULT 1,
             max_members INTEGER NOT NULL DEFAULT 5,
@@ -342,7 +336,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            openid TEXT NOT NULL UNIQUE,
+            openid VARCHAR(200) NOT NULL UNIQUE,
             unionid TEXT NOT NULL DEFAULT '',
             nickname TEXT NOT NULL DEFAULT '',
             avatar TEXT NOT NULL DEFAULT '',
@@ -354,7 +348,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_video_progress (
             user_id INTEGER NOT NULL,
-            video_id TEXT NOT NULL,
+            video_id VARCHAR(100) NOT NULL,
             watched_at TEXT NOT NULL DEFAULT (datetime('now')),
             minutes INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (user_id, video_id)
@@ -365,8 +359,8 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_chapter_progress (
             user_id INTEGER NOT NULL,
-            course_id TEXT NOT NULL,
-            chapter_id TEXT NOT NULL,
+            course_id VARCHAR(100) NOT NULL,
+            chapter_id VARCHAR(100) NOT NULL,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             PRIMARY KEY (user_id, course_id, chapter_id)
         )
@@ -375,7 +369,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_project_progress (
             user_id INTEGER NOT NULL,
-            project_id TEXT NOT NULL,
+            project_id VARCHAR(100) NOT NULL,
             completed_steps INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             PRIMARY KEY (user_id, project_id)
@@ -385,7 +379,7 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_path_progress (
             user_id INTEGER NOT NULL,
-            path_id TEXT NOT NULL,
+            path_id VARCHAR(100) NOT NULL,
             completed_nodes TEXT NOT NULL DEFAULT '[]',
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             PRIMARY KEY (user_id, path_id)
@@ -513,8 +507,8 @@ def init_db():
 
 # ============ CRUD Helpers ============
 
-def row_to_dict(row: sqlite3.Row) -> dict:
-    """Convert sqlite3.Row to dict."""
+def row_to_dict(row) -> dict:
+    """把查询行转 dict：sqlite3.Row 或 MySQL DictCursor 的 dict 均可。"""
     return dict(row)
 
 
@@ -1202,10 +1196,29 @@ def seed_from_json():
     })
     print("  Seeded admin user (admin / admin123)")
 
+    # Seed default FAQ items（答疑知识库）
+    default_faqs = [
+        {"question": "这个平台是免费的吗？", "answer": "核心功能全部免费开放：五阶段课程、AI 导师答疑、实操练习、能力测评、学习档案都不收费。",
+         "category": "general", "sort_order": 1, "view_count": 0, "is_active": 1},
+        {"question": "押金式培训怎么退费？", "answer": "报名缴纳押金后，90 天内完成五阶段课程（完课率 100%）、每阶段作业通过、五阶段考核均分 ≥85 且实战项目通过，达标后申请退费，经人工复核后全额原路退回。",
+         "category": "deposit", "sort_order": 2, "view_count": 0, "is_active": 1},
+        {"question": "完不成怎么办？押金会退吗？", "answer": "未在 90 天期限内达标，押金转为培训费，可续学一期，不予退还。请按学习路径合理安排时间。",
+         "category": "deposit", "sort_order": 3, "view_count": 0, "is_active": 1},
+        {"question": "AI 导师答疑有限制吗？", "answer": "答疑免费开放。基础问题由 AI 导师（课程知识库 RAG）自动解答，复杂问题可咨询社群或助教。",
+         "category": "general", "sort_order": 4, "view_count": 0, "is_active": 1},
+        {"question": "课程适合零基础吗？", "answer": "适合。课程按「认知 → 入门 → 进阶 → 实战 → 熟练」五阶段设计，从零讲起，不需要任何技术背景。",
+         "category": "course", "sort_order": 5, "view_count": 0, "is_active": 1},
+        {"question": "如何获得结业认证？", "answer": "完成全部课程、作业与考核，通过实战项目评审后，可申请能力等级认证（结业项目）。",
+         "category": "course", "sort_order": 6, "view_count": 0, "is_active": 1},
+    ]
+    for f in default_faqs:
+        insert_row("faq_items", f)
+    print(f"  Seeded {len(default_faqs)} FAQ items")
+
 
 if __name__ == "__main__":
-    # Remove old database if exists
-    if os.path.exists(DB_PATH):
+    # 仅 SQLite 模式删除旧库文件重建；MySQL 走 CREATE TABLE IF NOT EXISTS（幂等，不清已有数据）。
+    if DB_ENGINE != "mysql" and os.path.exists(DB_PATH):
         os.remove(DB_PATH)
         print(f"Removed old database: {DB_PATH}")
     init_db()

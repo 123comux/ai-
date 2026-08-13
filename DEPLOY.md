@@ -151,12 +151,40 @@ TARO_APP_API_BASE=https://your-domain.com npm run build:h5
 | `WXPAY_MCHID` 等 6 项 | 微信支付商户号 | 涉及真实收退款时必填 |
 | `WX_SUB_TEMPLATE_*` | 订阅消息模板 ID | 申请后填入（未填则静默不推送） |
 | `DEPOSIT_AMOUNT` 等 | 押金三锁参数 | 对照商业评审报告 |
+| `DB_ENGINE` | 数据库引擎 | `sqlite`（默认，本地/测试）或 `mysql`（生产） |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | MySQL 连接参数 | `DB_ENGINE=mysql` 时必填 |
 
 完整示例见 `backend/.env.example`。
 
 ---
 
-## 5. 运维
+## 5. 数据库（SQLite 默认 / MySQL 生产）
+
+- **方言层** `backend/db.py`：业务代码零改动，`get_connection()` 按 `DB_ENGINE` 返回连接；
+  MySQL 模式下 SQL 运行时做方言翻译（`?`→`%s`、`datetime('now')`→`NOW()`、upsert、DDL 时间戳列）。
+- **本地/测试**：`DB_ENGINE` 缺省即 SQLite（`data/cms.db`），无需数据库服务。
+- **生产**：`DB_ENGINE=mysql` + 连接参数，首次 `python -m database` 建表并灌种子（幂等）。
+- **建库**：先建空库再灌种子：
+  ```sql
+  CREATE DATABASE ai_teach CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  ```
+
+## 6. CI（GitHub Actions）
+
+`.github/workflows/ci.yml` 三个 job，push/PR 到 main 自动跑：
+- **backend-sqlite**：SQLite 全量测试（`DEV_MODE=true`）
+- **backend-mysql**：`mysql:8.0` service 容器 + 方言层全量测试（验证生产引擎）
+- **frontend**：`npm ci` + `build:weapp` + `build:h5`
+
+本地手动跑测试：
+```bash
+cd backend && DEV_MODE=true python -m pytest tests/ -q          # SQLite
+cd backend && DEV_MODE=true DB_ENGINE=mysql DB_HOST=... python -m pytest tests/ -q   # MySQL
+```
+
+---
+
+## 7. 运维
 
 - **日志**：Docker `docker logs ai-teach-backend`；裸机看 uvicorn 输出（已配置 `logging.INFO`）。
 - **数据库备份**：定期备份挂载卷中的 `data/cms.db`（如 `cp cms.db cms.db.bak`）。
@@ -165,11 +193,11 @@ TARO_APP_API_BASE=https://your-domain.com npm run build:h5
 
 ---
 
-## 6. 快速核对命令
+## 8. 快速核对命令
 
 ```bash
-# 后端单测（29 项，应全绿）
-cd backend && python -m unittest tests.test_all
+# 后端单测（54 项，SQLite + MySQL 双引擎应全绿）
+cd backend && DEV_MODE=true python -m pytest tests/ -q
 
 # 前端类型检查（应 0 错误）
 npx tsc --noEmit -p tsconfig.json

@@ -10,7 +10,13 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import LearningPathItem, LearningPathNode
 from auth_utils import get_optional_user
-from database import record_user_path_node, safe_load_json
+from database import (
+    record_user_path_node,
+    safe_load_json,
+    query_one,
+    parse_json_field,
+    get_user_completed_chapter_ids,
+)
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/learning-paths", tags=["learning-paths"])
@@ -30,38 +36,40 @@ def _load_json(filename: str):
 
 
 # direction family -> (course ids in order, project ids in order)
-# 每个方向差异化选课，让用户能切换不同学习路径
+# 每个方向差异化选课，让用户能切换不同学习路径。
+# 课程/项目均取当前种子数据中的真实 id（旧 course-N 遗留 id 已不再存在，勿用）。
+# 每个方向都保留「五阶段」核心课程，再追加一门方向相关的场景课做差异化。
 _DIRECTION_PLAN = {
     "大模型应用开发": (
-        ["course-5", "course-2", "course-0", "course-1", "course-3"],
-        ["project-8", "project-2", "project-5", "project-1"],
+        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-3-prompt4"],
+        ["project-3", "project-0", "project-4"],
     ),
     "机器学习工程师": (
-        ["course-5", "course-0", "course-4", "course-1", "course-3"],
-        ["project-3", "project-7", "project-6", "project-2"],
+        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-4-weekly"],
+        ["project-0", "project-3", "project-4"],
     ),
     "深度学习工程师": (
-        ["course-5", "course-1", "course-6", "course-0", "course-3"],
-        ["project-0", "project-4", "project-6", "project-1"],
+        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-3-structure"],
+        ["project-4", "project-3"],
     ),
     "数据科学家": (
-        ["course-5", "course-4", "course-0", "course-3", "course-1"],
-        ["project-9", "project-3", "project-6", "project-7"],
+        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-4-weekly"],
+        ["project-0", "project-4", "project-3"],
     ),
     "AI 应用开发": (
-        ["course-5", "course-2", "course-3", "course-0", "course-7"],
-        ["project-8", "project-2", "project-1", "project-5"],
+        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-4-planning"],
+        ["project-1", "project-4", "project-2"],
     ),
     "计算机视觉工程师": (
-        ["course-5", "course-6", "course-1", "course-0", "course-3"],
-        ["project-4", "project-0", "project-6", "project-2"],
+        ["stage-1-cognition", "stage-2-basics", "stage-3-advanced", "stage-4-practice", "stage-5-mastery", "stage-2-media"],
+        ["project-4", "project-0"],
     ),
 }
 
 # fallback plan when direction is not in the map above
 _DEFAULT_PLAN = (
-    ["course-5", "course-0", "course-1"],
-    ["project-3", "project-8"],
+    ["stage-1-cognition", "stage-2-basics", "stage-3-advanced"],
+    ["project-3", "project-4"],
 )
 
 
@@ -150,27 +158,42 @@ def _save_progress(progress: dict[str, list[str]]) -> None:
         json.dump(progress, f, ensure_ascii=False, indent=2)
 
 
-def _apply_user_progress(path: LearningPathItem, completed: set[str]) -> LearningPathItem:
-    """Merge user-completed node ids + video-watched state into a path's nodes.
+def _course_chapter_progress(user_id: int | None, course_id: str) -> tuple[int, int]:
+    """返回课程 (已完成章节数, 总章节数)。
 
-    - Course node progress = 该课程已看完视频 / 总视频数（视频粒度，看一个视频进度就涨）
-    - 课程视频全部看完的节点自动视为完成（无需手动"标记完成"），但仅在前面节点都已
-      完成时生效（保持顺序解锁），这样路径里重复出现的已学课程能直接解锁下一节。
+    五阶段课程为文字章节，进度按章节计（与押金完课率同口径）。
+    未登录或课程无章节时返回 (0, 0)。
     """
-    from routers.videos import _load_videos, _load_watched
+    if user_id is None:
+        return (0, 0)
+    row = query_one("courses", course_id)
+    if not row:
+        return (0, 0)
+    chapters = parse_json_field(row.get("chapters", "[]"))
+    total = len(chapters)
+    if total == 0:
+        return (0, 0)
+    done = get_user_completed_chapter_ids(user_id, course_id)
+    completed = sum(1 for c in chapters if c.get("id") in done)
+    return (completed, total)
 
-    videos = _load_videos()
-    watched = _load_watched()
 
+def _apply_user_progress(path: LearningPathItem, completed: set[str], user_id: int | None = None) -> LearningPathItem:
+    """Merge user-completed node ids + chapter-completed state into a path's nodes.
+
+    - Course node progress = 该用户已学完章节 / 总章节（章节粒度，学完一章进度就涨）
+    - 课程章节全部学完的节点自动视为完成（无需手动"标记完成"），但仅在前面节点都已
+      完成时生效（保持顺序解锁），这样路径里重复出现的已学课程能直接解锁下一节。
+    - 旧版按"看完视频数"计；遗留视频库已清理为占位，现统一改为按章节完成度。
+    """
     node_progress: dict[str, int] = {}
     auto_completed: set[str] = set()
     for node in path.nodes:
         if node.type == "course" and node.courseId:
-            course_videos = [v for v in videos if v.courseId == node.courseId]
-            if course_videos:
-                watched_count = sum(1 for v in course_videos if v.id in watched)
-                node_progress[node.id] = round(watched_count / len(course_videos) * 100)
-                if watched_count == len(course_videos):
+            done, total = _course_chapter_progress(user_id, node.courseId)
+            if total:
+                node_progress[node.id] = round(done / total * 100)
+                if done == total:
                     auto_completed.add(node.id)
 
     all_completed = {n.id for n in path.nodes if n.status == "completed"} | completed
@@ -205,7 +228,7 @@ def _get_base_path(path_id: str) -> LearningPathItem | None:
 
 
 @router.get("", response_model=list[LearningPathItem])
-async def list_paths(direction: str | None = Query(None, description="Filter / generate path for a direction")):
+async def list_paths(request: Request, direction: str | None = Query(None, description="Filter / generate path for a direction")):
     """List learning paths.
 
     - With ?direction=X: return a single path generated for that direction.
@@ -213,10 +236,12 @@ async def list_paths(direction: str | None = Query(None, description="Filter / g
       so the user can browse and switch between learning directions.
     """
     progress = _load_progress()
+    user = await get_optional_user(request)
+    user_id = user["id"] if user else None
 
     if direction:
         path = _build_path(direction)
-        return [_apply_user_progress(path, set(progress.get(path.id, [])))]
+        return [_apply_user_progress(path, set(progress.get(path.id, [])), user_id)]
 
     paths = []
     # 推荐方向排最前，其余方向按顺序列出
@@ -227,7 +252,7 @@ async def list_paths(direction: str | None = Query(None, description="Filter / g
         directions.insert(0, rec_dir)
     for d in directions:
         path = _build_path(d)
-        paths.append(_apply_user_progress(path, set(progress.get(path.id, []))))
+        paths.append(_apply_user_progress(path, set(progress.get(path.id, [])), user_id))
     return paths
 
 
@@ -236,7 +261,7 @@ async def complete_node(path_id: str, node_id: str, request: Request):
     """Mark a node as completed; the next locked node becomes current.
 
     Persists completion in path_progress.json so it survives restarts.
-    For course nodes, the course's videos must all be watched first.
+    For course nodes, the course's chapters must be completed first (五阶段课程按章节计进度).
     """
     base = _get_base_path(path_id)
     if base is None:
@@ -245,47 +270,47 @@ async def complete_node(path_id: str, node_id: str, request: Request):
     if node is None:
         raise HTTPException(status_code=404, detail="Node not found in path")
 
-    # 解锁约束：locked 节点不可越级完成；auto-completed（视频看完自动完成）的节点
+    # 按用户隔离：登录态下校验章节完成度 + 同步写入 user_path_progress（押金三锁/学习档案）
+    user = await get_optional_user(request)
+    user_id = user["id"] if user else None
+
+    # 解锁约束：locked 节点不可越级完成；auto-completed（章节学完自动完成）的节点
     # 允许再次"标记完成"（幂等），避免误报"请先完成前一个节点"
     progress = _load_progress()
     completed = set(progress.get(path_id, []))
     if node.id in completed:
-        return _apply_user_progress(base, completed)
-    effective = _apply_user_progress(base, completed)
+        return _apply_user_progress(base, completed, user_id)
+    effective = _apply_user_progress(base, completed, user_id)
     node_effective = next((n for n in effective.nodes if n.id == node_id), None)
     if node_effective is None or node_effective.status == "locked":
         raise HTTPException(status_code=400, detail="请先完成前一个节点")
 
-    # 课程节点：先校验该课程全部视频已看完
-    if node.type == "course" and node.courseId:
-        from routers.videos import _load_videos, _load_watched
-        course_videos = [v for v in _load_videos() if v.courseId == node.courseId]
-        if course_videos:
-            watched = _load_watched()
-            un_watched = [v for v in course_videos if v.id not in watched]
-            if un_watched:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"还有 {len(un_watched)}/{len(course_videos)} 个视频未看完：{', '.join(v.id for v in un_watched)}",
-                )
+    # 课程节点：登录态下先校验该课程章节已学完（五阶段课程为文字章节，按章节计进度；
+    # 未登录时不做章节门槛，保持与全局路径进度的宽松行为一致）
+    if node.type == "course" and node.courseId and user:
+        done, total = _course_chapter_progress(user_id, node.courseId)
+        if total and done < total:
+            raise HTTPException(
+                status_code=400,
+                detail=f"还有 {total - done}/{total} 个章节未学完，请先完成课程内容再标记完成",
+            )
 
     completed.add(node_id)
     progress[path_id] = sorted(completed)
     _save_progress(progress)
 
-    # 按用户隔离：登录态下同步写入 user_path_progress（供押金三锁/学习档案）
-    user = await get_optional_user(request)
     if user:
-        record_user_path_node(user["id"], path_id, node_id)
+        record_user_path_node(user_id, path_id, node_id)
 
-    return _apply_user_progress(base, completed)
+    return _apply_user_progress(base, completed, user_id)
 
 
 @router.get("/{path_id}", response_model=LearningPathItem)
-async def get_path(path_id: str):
+async def get_path(path_id: str, request: Request):
     """Get a single learning path by ID."""
     base = _get_base_path(path_id)
     if base is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
     progress = _load_progress()
-    return _apply_user_progress(base, set(progress.get(path_id, [])))
+    user = await get_optional_user(request)
+    return _apply_user_progress(base, set(progress.get(path_id, [])), user["id"] if user else None)

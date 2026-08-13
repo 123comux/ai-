@@ -1041,11 +1041,17 @@ def seed_from_json():
     """Seed database from existing JSON files."""
     data_dir = os.path.join(os.path.dirname(__file__), "data", "processed")
 
-    # 若处理数据缺失（全新 clone / 全新部署 / CI），先由 seed_data.py 生成，
-    # 保证 `python -m database` 在任何环境都能灌出完整种子（课程/项目/视频/测评/路径）。
+    # 若处理数据缺失（全新 clone / 全新部署 / CI），先由 seed_data.py 生成基础种子，
+    # 再按依赖顺序合并场景课（8 门）与课程丰富（加深 13 门 + 新增 5 门实战课），
+    # 保证 `python -m database` 在任何环境都能灌出与本地一致的 18 门课。
+    # 两个合并脚本均幂等（按 id 去重），且只改 JSON，真正入库统一走下方 seed 循环。
     if not os.path.exists(os.path.join(data_dir, "courses.json")):
         from data_pipeline.seed_data import run as _generate_seed
         _generate_seed()
+        from data_pipeline import expand_courses, enrich_courses_v2
+        for _name in ("courses.json", "enriched_courses.json"):
+            expand_courses.merge_into_json(os.path.join(data_dir, _name))
+        enrich_courses_v2.main()
     # seed_data 不生成视频；缺失时按课程生成占位视频库
     if not os.path.exists(os.path.join(data_dir, "videos.json")):
         _generate_default_videos(data_dir)

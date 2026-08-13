@@ -13,3 +13,5 @@ requests==2.32.3
 cryptography==49.0.0
 # MySQL 方言（DB_ENGINE=mysql 生产用）
 pymysql>=1.1.0
+# 头像上传接口（FastAPI UploadFile）依赖表单解析
+python-multipart>=0.0.9

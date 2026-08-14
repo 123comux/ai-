@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import CourseCard from '@/components/CourseCard';
 import PathCard from '@/components/PathCard';
 import { useLearningStore } from '@/store/useLearningStore';
@@ -36,30 +36,39 @@ const LearnPage: React.FC = () => {
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [showRecommend, setShowRecommend] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // 读取从首页传递的学习方向
-        const topic = useLearningStore.getState().selectedTopic;
-        const loadTopic = topic !== 'all' ? topic : undefined;
+  const firstShow = useRef(true);
 
-        const [courseData, catData, pathData] = await Promise.all([
-          fetchCourses(loadTopic),
-          fetchCourseCategories(),
-          fetchLearningPath(),
-        ]);
-        setCourses(courseData);
-        setCategories(catData.map((c: string) => ({ key: c, label: TOPIC_LABEL_MAP[c] || c })));
-        if (topic !== 'all' && catData.includes(topic)) {
-          setActiveCategory(topic);
-        }
-        setCurrentPath(pathData);
-      } catch (err) {
-        console.error('[Learn] load data error:', err);
+  const loadData = useCallback(async () => {
+    try {
+      // 读取从首页传递的学习方向
+      const topic = useLearningStore.getState().selectedTopic;
+      const loadTopic = topic !== 'all' ? topic : undefined;
+
+      const [courseData, catData, pathData] = await Promise.all([
+        fetchCourses(loadTopic),
+        fetchCourseCategories(),
+        fetchLearningPath(),
+      ]);
+      setCourses(courseData);
+      setCategories(catData.map((c: string) => ({ key: c, label: TOPIC_LABEL_MAP[c] || c })));
+      if (topic !== 'all' && catData.includes(topic)) {
+        setActiveCategory(topic);
       }
-    };
-    loadData();
+      setCurrentPath(pathData);
+    } catch (err) {
+      console.error('[Learn] load data error:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Tab 页切回时重新拉取，避免看到旧数据
+  useDidShow(() => {
+    if (firstShow.current) { firstShow.current = false; return; }
+    loadData();
+  });
 
   const handleCategoryChange = async (key: string) => {
     setActiveCategory(key);

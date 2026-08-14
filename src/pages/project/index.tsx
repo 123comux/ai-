@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import ProjectCard from '@/components/ProjectCard';
 import { fetchProjects, fetchProjectCategories } from '@/services/api';
 import type { Project } from '@/types/index';
@@ -19,22 +19,31 @@ const ProjectPage: React.FC = () => {
   const [categories, setCategories] = useState<{ key: string; label: string }[]>([{ key: 'all', label: '全部' }]);
   const [activeCategory, setActiveCategory] = useState('all');
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [projectData, catData] = await Promise.all([
-          fetchProjects(),
-          fetchProjectCategories(),
-        ]);
-        setProjects(projectData);
-        const cats = catData.map((c: string) => ({ key: c, label: DIFFICULTY_LABEL[c] || c }));
-        setCategories([{ key: 'all', label: '全部' }, ...cats]);
-      } catch (err) {
-        console.error('[Project] load data error:', err);
-      }
-    };
-    loadData();
+  const firstShow = useRef(true);
+
+  const loadData = useCallback(async (category?: string) => {
+    try {
+      const [projectData, catData] = await Promise.all([
+        fetchProjects(category === 'all' || category === undefined ? undefined : category),
+        fetchProjectCategories(),
+      ]);
+      setProjects(projectData);
+      const cats = catData.map((c: string) => ({ key: c, label: DIFFICULTY_LABEL[c] || c }));
+      setCategories([{ key: 'all', label: '全部' }, ...cats]);
+    } catch (err) {
+      console.error('[Project] load data error:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Tab 页切回时重新拉取（保留当前难度筛选），避免看到旧数据
+  useDidShow(() => {
+    if (firstShow.current) { firstShow.current = false; return; }
+    loadData(activeCategory);
+  });
 
   const handleCategoryChange = async (key: string) => {
     setActiveCategory(key);

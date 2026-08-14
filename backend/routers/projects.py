@@ -11,6 +11,13 @@ from database import record_user_project, safe_load_json
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
+# 项目按难度从入门到高级排序（项目页默认展示顺序）
+_DIFFICULTY_ORDER = {"beginner": 0, "intermediate": 1, "advanced": 2}
+
+
+def _difficulty_sort_key(p: ProjectItem) -> tuple:
+    return (_DIFFICULTY_ORDER.get(p.difficulty.lower(), 9), p.id)
+
 
 def _load_projects() -> list[ProjectItem]:
     # Try enriched data first, fall back to original
@@ -71,6 +78,7 @@ async def list_projects(
         filtered = [p for p in filtered if p.difficulty.lower() == difficulty.lower()]
     if tech:
         filtered = [p for p in filtered if any(tech.lower() in t.lower() for t in p.tech_stack)]
+    filtered = sorted(filtered, key=_difficulty_sort_key)
     progress = _load_progress()
     result = [_apply_progress(p, progress.get(p.id, 0)) for p in filtered]
     return result[offset:offset + limit]

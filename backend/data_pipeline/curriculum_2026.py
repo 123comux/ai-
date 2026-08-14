@@ -1252,6 +1252,125 @@ def _apply_section_enrich(all_courses):
     return all_courses
 
 
+# =====================================================================
+# 实战项目分步指南（project steps）
+# 每个项目 5 步：title / desc / guide（操作指引）/ acceptance（验收标准）
+# =====================================================================
+PROJECT_STEPS = {
+    "project-0": [  # 个人AI周报生成工作流（入门）
+        {"title": "明确周报内容与格式", "desc": "确定周报需要包含的板块（本周工作/成果/问题/下周计划），明确目标读者与格式。",
+         "guide": "先列出一份你想要的周报模板，标注每个板块要写什么；参考一份真实周报反推结构。",
+         "acceptance": "产出一份含各板块标题的周报模板。"},
+        {"title": "设计可复用的提示词模板", "desc": "把周报生成规则写成带占位符的提示词模板，含角色、任务、格式与约束。",
+         "guide": "用阶段一的四段式提示词方法写：角色（资深运营）+ 任务（按模板生成周报）+ 格式（分点）+ 占位符 {本周事项}。",
+         "acceptance": "有一条包含占位符的完整周报提示词模板。"},
+        {"title": "随手记录本周事项", "desc": "把本周完成的工作、数据、遇到的问题随手记录下来，作为周报素材。",
+         "guide": "用手机备忘录或文档随手记，每天 2-3 条：做了什么、结果如何、卡在哪。",
+         "acceptance": "积累至少 10 条本周事项记录。"},
+        {"title": "生成并迭代优化周报", "desc": "把事项填入提示词让 AI 生成周报，对照模板检查并迭代优化。",
+         "guide": "AI 生成后逐板块核对是否完整；缺板块/缺数据就补充提示词再生成，直到满意。",
+         "acceptance": "生成一份完整周报并人工修订定稿。"},
+        {"title": "沉淀为每周复用流程", "desc": "把模板与流程固化，形成每周可复用的标准化工作流。",
+         "guide": "把提示词模板保存为可复用文件，写清每周『收集→填入→生成→修订』的使用步骤。",
+         "acceptance": "有完整的周报工作流文档 + 一份示例周报。"},
+    ],
+    "project-3": [  # 个人AI提示词库建设（入门）
+        {"title": "盘点你的高频任务", "desc": "梳理你日常反复做的任务（写文案、做总结、起标题等），作为提示词库的收录对象。",
+         "guide": "列出 5-10 个你每周都会做的任务，标注使用场景与目标读者。",
+         "acceptance": "有一份高频任务清单。"},
+        {"title": "为每个任务写一条优质提示词", "desc": "针对每个高频任务，用角色+任务+格式+约束四段式写一条提示词。",
+         "guide": "每条提示词都要能直接复用，把会变的参数用占位符标出。",
+         "acceptance": "至少为 3 个任务各写一条完整提示词。"},
+        {"title": "测试与迭代提示词", "desc": "实际运行每条提示词，根据输出质量迭代优化，记录有效版本。",
+         "guide": "每个任务跑 2-3 次，对比输出差异；效果不稳就补示例或调整约束。",
+         "acceptance": "3 条提示词各有一次有效输出记录。"},
+        {"title": "建立提示词库结构", "desc": "按场景/任务给提示词分类归档，建立目录与索引。",
+         "guide": "用文件夹或文档按『任务类型』分类，每条带用途说明与示例输出。",
+         "acceptance": "有结构清晰的提示词库（分类 + 索引）。"},
+        {"title": "持续沉淀与分享", "desc": "把验证有效的提示词沉淀入库，形成可持续积累的个人资产。",
+         "guide": "每周新增 1-2 条，标注来源与效果；可整理成文档对外分享。",
+         "acceptance": "完成提示词库整理，附一份示例输出。"},
+    ],
+    "project-1": [  # 活动策划全流程实战（进阶）
+        {"title": "明确活动目标与受众", "desc": "确定活动要达成的目标（拉新/转化/品牌）与目标受众画像。",
+         "guide": "写出活动的核心目标、衡量指标（如报名人数）、目标人群特征。",
+         "acceptance": "有一页活动目标与受众说明。"},
+        {"title": "用 AI 生成活动方案初稿", "desc": "把活动需求喂给 AI，生成包含主题、形式、流程、预算的完整方案初稿。",
+         "guide": "提示词要点：活动类型、受众、预算范围、输出格式（方案书分节）。",
+         "acceptance": "生成一份结构化活动方案初稿。"},
+        {"title": "拆解执行任务与时间表", "desc": "把方案拆成可执行的任务清单，排定时间表与负责人。",
+         "guide": "用 AI 辅助把方案拆成『物料/宣传/现场/复盘』四线任务，标注截止时间。",
+         "acceptance": "有一份带时间线的任务清单。"},
+        {"title": "生成宣传物料文案", "desc": "用 AI 批量生成活动宣传文案（海报文案、公众号、朋友圈等）。",
+         "guide": "按不同渠道分别写提示词，保持口径一致，突出活动亮点。",
+         "acceptance": "至少 3 条不同渠道的宣传文案。"},
+        {"title": "活动复盘与沉淀", "desc": "活动结束后汇总数据，用 AI 辅助生成复盘报告，沉淀可复用模板。",
+         "guide": "输入活动数据（报名/到场/转化）与过程记录，让 AI 输出复盘要点与改进建议。",
+         "acceptance": "一份含数据与改进建议的复盘报告。"},
+    ],
+    "project-2": [  # AI求职竞争力提升方案（进阶）
+        {"title": "做一次自我能力盘点", "desc": "梳理你的技能、项目、经历，明确目标岗位与差距。",
+         "guide": "列出目标岗位的核心要求，对照自己的技能逐项打分，找出差距。",
+         "acceptance": "有一份能力盘点与差距清单。"},
+        {"title": "用 AI 优化简历", "desc": "把简历初稿交给 AI，用 STAR 原则改写，突出量化成果。",
+         "guide": "提示词要点：目标岗位、简历原文、要求按 STAR 量化改写、控制一页。",
+         "acceptance": "一份按 STAR 量化改写的简历。"},
+        {"title": "准备项目与作品集", "desc": "把学习中的项目整理成可展示的作品（GitHub/演示/说明）。",
+         "guide": "检查项目是否可复现、有 README、能演示；补齐缺失部分。",
+         "acceptance": "至少一个可在线访问/可演示的项目。"},
+        {"title": "AI 模拟面试练习", "desc": "用 AI 扮演面试官模拟面试，针对薄弱环节反复练习。",
+         "guide": "让 AI 按目标岗位出题并追问，把你的回答喂回去让它点评改进。",
+         "acceptance": "完成至少 3 轮模拟面试并记录改进点。"},
+        {"title": "制定求职行动计划", "desc": "把求职拆成可执行的步骤（投递/内推/面试/复盘）并按周推进。",
+         "guide": "写一份四周行动计划：每周投递量、面试复盘、简历迭代节奏。",
+         "acceptance": "一份按周排期的求职行动计划。"},
+    ],
+    "project-4": [  # 结业综合项目（高级）
+        {"title": "确定结业项目方向", "desc": "选择一个能综合运用全部技能的项目方向（推荐 RAG 知识库或智能客服 Agent）。",
+         "guide": "结合自身兴趣与目标岗位选择方向，明确项目要解决的问题与验收标准。",
+         "acceptance": "一页项目立项说明（方向/目标/范围/技术栈）。"},
+        {"title": "完成技术选型与架构设计", "desc": "确定技术栈并画出系统架构，讲清每个技术选择的理由。",
+         "guide": "写清 FastAPI/LangGraph/Chroma 等选型理由、数据流与模块划分。",
+         "acceptance": "一份含架构图与选型理由的设计文档。"},
+        {"title": "实现核心功能并加工程护栏", "desc": "实现项目核心链路，接入日志、错误处理、预算、安全等工程护栏。",
+         "guide": "按阶段四的工程清单逐项落实：终止条件、日志、失败兜底、敏感操作审批。",
+         "acceptance": "核心功能可运行 + 工程护栏清单逐项落地。"},
+        {"title": "容器化部署与演示", "desc": "用 Docker 部署项目，准备一套可现场演示的流程。",
+         "guide": "写好 Dockerfile/compose 与 README，预演『上传→问答→演示』的完整脚本。",
+         "acceptance": "docker-compose up 一键可跑 + 一份演示脚本。"},
+        {"title": "项目复盘与作品输出", "desc": "写技术博客/README 复盘设计取舍与踩坑，形成求职作品。",
+         "guide": "讲清为什么这么设计、遇到什么坑、效果如何，配架构图与数据。",
+         "acceptance": "完整的项目文档（README/博客）与展示素材。"},
+    ],
+}
+
+
+def _enrich_projects():
+    """为项目补充分步指南（steps）：读 seed_data 生成的项目，合并 PROJECT_STEPS 后写回。"""
+    projects = None
+    for name in ("enriched_projects.json", "projects.json"):
+        path = os.path.join(PROCESSED_DIR, name)
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                projects = json.load(f)
+            break
+    if projects is None:
+        print("  [curriculum-2026] 未找到项目数据，跳过 steps 补充")
+        return
+    applied = 0
+    for p in projects:
+        steps = PROJECT_STEPS.get(p.get("id"))
+        if steps:
+            p["steps"] = steps
+            p["stepCount"] = len(steps)
+            p["step_count"] = len(steps)
+            applied += 1
+    for name in ("enriched_projects.json", "projects.json"):
+        with open(os.path.join(PROCESSED_DIR, name), "w", encoding="utf-8") as f:
+            json.dump(projects, f, ensure_ascii=False, indent=2)
+    print(f"  [curriculum-2026] 项目步骤已补充：{applied}/{len(projects)}")
+
+
 def main():
     os.makedirs(PROCESSED_DIR, exist_ok=True)
     all_courses = [c for stage in range(1, 8) for c in ALL_STAGE_COURSES[stage]]
@@ -1276,6 +1395,8 @@ def main():
     # 同步 courses.json 基础版（部分旧逻辑读它），内容一致
     with open(os.path.join(PROCESSED_DIR, "courses.json"), "w", encoding="utf-8") as f:
         json.dump(all_courses, f, ensure_ascii=False, indent=2)
+
+    _enrich_projects()
 
     print(f"[curriculum-2026] 写入 {len(all_courses)} 门课程、{len(videos)} 条视频、"
           f"{len(build_directions())} 个方向、{len(build_learning_paths())} 条学习路径 → {PROCESSED_DIR}")

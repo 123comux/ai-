@@ -202,6 +202,12 @@ const VideoPage: React.FC = () => {
   /** 判断是否为 B 站嵌入 URL */
   const isBilibiliUrl = (url: string) => url.includes('bilibili.com');
 
+  /** 判断 URL 是否为可直接播放的视频文件（.mp4/.webm/.m3u8 等），否则视为网页/文档资源 */
+  const isDirectVideoFile = (url: string) => /\.(mp4|webm|ogg|m3u8|flv|mov)(\?|#|$)/i.test(url);
+
+  /** 是否为外部网页/文档资源（非 B站、非直链视频），无法内嵌播放，需跳 webview 打开 */
+  const isExternalDoc = (url: string) => !isBilibiliUrl(url) && !isDirectVideoFile(url);
+
   /** 切换到降级视图（手动触发） */
   const handleReportPlaybackIssue = () => {
     setBiliError(true);
@@ -238,6 +244,7 @@ const VideoPage: React.FC = () => {
   }
 
   const isBilibili = isBilibiliUrl(currentVideo.url);
+  const isDoc = isExternalDoc(currentVideo.url);
 
   return (
     <View className={styles.page}>
@@ -305,7 +312,18 @@ const VideoPage: React.FC = () => {
               </View>
             </View>
           )
-        ) : (
+        ) : isDoc ? (
+            <View className={styles.weappBiliCard}>
+              <View className={styles.weappBiliCardIcon}>📄</View>
+              <Text className={styles.weappBiliCardTitle}>{currentVideo.title}</Text>
+              <Text className={styles.weappBiliCardDesc}>
+                本课程配套内容为外部文档/教程资源，无法在小程序内直接播放。点击下方按钮前往查看，学习完成后回来标记已完成。
+              </Text>
+              <View className={styles.weappBiliCardBtn} onClick={handleOpenOnBilibili}>
+                <Text className={styles.weappBiliCardBtnText}>前往查看 →</Text>
+              </View>
+            </View>
+          ) : (
           <Video
             className={styles.videoPlayer}
             src={currentVideo.url}

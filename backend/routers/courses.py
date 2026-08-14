@@ -7,6 +7,17 @@ from auth_utils import get_optional_user
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
+# 课程按 2026 学习路线七阶段顺序展示（学习页默认按此排序）
+_STAGE_ORDER = {
+    "大模型基础": 1, "Agent基础": 2, "开发实战": 3, "多Agent": 4,
+    "优化部署": 5, "项目实战": 6, "求职备战": 7,
+}
+
+
+def _stage_sort_key(course: dict) -> tuple:
+    """阶段 topic 升序；未知 topic 排最后。"""
+    return (_STAGE_ORDER.get(course.get("topic"), 999), course.get("id", ""))
+
 
 def _normalize_chapters(raw: list) -> list:
     """Normalize chapter structure: alias content_summary -> summary, ensure sections array,
@@ -68,6 +79,7 @@ async def list_courses(
     """List all courses from CMS database."""
     rows = query_all("courses", {"is_active": 1})
     courses = [_db_to_course(r) for r in rows]
+    courses.sort(key=_stage_sort_key)
     if topic:
         courses = [c for c in courses if c["topic"].lower() == topic.lower() or c["category"].lower() == topic.lower()]
     if difficulty:

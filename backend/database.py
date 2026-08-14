@@ -1055,10 +1055,13 @@ def seed_from_json():
     """Seed database from existing JSON files."""
     data_dir = os.path.join(os.path.dirname(__file__), "data", "processed")
 
-    # 若处理数据缺失（全新 clone / 全新部署 / CI），由 curriculum_2026 生成
-    # 2026 AI Agent 学习路线七阶段课程体系（24 门课程 + 24 条视频 + 学习路径），
-    # 保证 `python -m database` 在任何环境都能一键自举。
+    # 若处理数据缺失（全新 clone / 全新部署 / CI）：
+    # 先由 seed_data 生成基础数据（projects / assessment / knowledge 等非课程数据），
+    # 再由 curriculum_2026 覆盖课程/视频/学习路径为新七阶段体系，
+    # 保证 `python -m database` 在任何环境都能一键自举出完整种子。
     if not os.path.exists(os.path.join(data_dir, "courses.json")):
+        from data_pipeline.seed_data import run as _generate_seed
+        _generate_seed()
         from data_pipeline import curriculum_2026
         curriculum_2026.main()
 

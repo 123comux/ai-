@@ -18,17 +18,6 @@ BILIBILI_BLACKHORSE = "BV1h1VbzHER2"   # 黑马 Python+AI 大模型（阶段一�
 BILIBILI_AGENT = "BV18hWtzuErE"        # 2025 AI Agent 智能体全套（阶段二/四）
 BILIBILI_LANGCHAIN = "BV1xr3Mz2EXD"    # 2025 最好的 LangChain Agent 实战（阶段三/五）
 
-DOC_RAG = "https://python.langchain.com/docs/tutorials/rag/"
-DOC_MCP = "https://modelcontextprotocol.io"
-DOC_LANGGRAPH = "https://langchain-ai.github.io/langgraph/"
-DOC_METAGPT = "https://github.com/geekan/MetaGPT"
-DOC_AUTOGEN = "https://microsoft.github.io/autogen/"
-DOC_LANGSMITH = "https://docs.smith.langchain.com/"
-DOC_LANGCHAIN_ZH = "https://www.langchain.asia/"
-DOC_DEPLOY = "https://mgoods.taobao.com/t/aijiaocheng_17011/98fd81d1836eb4d0c3c777ae26dcae9a.html"
-DOC_YUPI_PROJECTS = "https://www.codefather.cn/post/1797431216467001345"
-DOC_MIANSHIYA = "https://www.mianshiya.com/bank/1906189461556076546"
-
 
 def _sec(sec_id, title, content, knowledge_points, case=""):
     return {"id": sec_id, "title": title, "content": content,
@@ -1063,22 +1052,22 @@ VIDEO_RESOURCE = {
     "s2-agent-arch": (BILIBILI_AGENT, "阶段二 · Agent 基础概念（2025 AI Agent 智能体全套）"),
     "s2-tool-calling": (BILIBILI_AGENT, "阶段二 · Agent 基础概念（2025 AI Agent 智能体全套）"),
     "s2-memory": (BILIBILI_AGENT, "阶段二 · Agent 基础概念（2025 AI Agent 智能体全套）"),
-    "s3-rag": (DOC_RAG, "阶段三 · RAG（LangChain RAG 官方教程）"),
-    "s3-mcp": (DOC_MCP, "阶段三 · MCP（MCP 官方文档）"),
+    "s3-rag": (BILIBILI_LANGCHAIN, "阶段三 · RAG（LangChain Agent 实战）"),
+    "s3-mcp": (BILIBILI_LANGCHAIN, "阶段三 · MCP（LangChain Agent 实战）"),
     "s3-skills": (BILIBILI_LANGCHAIN, "阶段三 · Agent Skills（LangChain Agent 实战）"),
     "s3-langchain": (BILIBILI_LANGCHAIN, "阶段三 · LangChain（LangChain Agent 实战）"),
-    "s3-langgraph": (DOC_LANGGRAPH, "阶段三 · LangGraph（官方文档）"),
-    "s3-agentic-rag": (DOC_LANGGRAPH, "阶段三 · Agentic RAG（LangGraph 官方文档）"),
+    "s3-langgraph": (BILIBILI_LANGCHAIN, "阶段三 · LangGraph（LangChain Agent 实战）"),
+    "s3-agentic-rag": (BILIBILI_LANGCHAIN, "阶段三 · Agentic RAG（LangChain Agent 实战）"),
     "s4-multi-agent": (BILIBILI_AGENT, "阶段四 · 多 Agent（2025 AI Agent 智能体全套）"),
-    "s4-metagpt-autogen": (DOC_METAGPT, "阶段四 · MetaGPT（GitHub）"),
-    "s4-orchestration": (DOC_AUTOGEN, "阶段四 · 编排（AutoGen 官方文档）"),
+    "s4-metagpt-autogen": (BILIBILI_AGENT, "阶段四 · MetaGPT/AutoGen（2025 AI Agent 智能体全套）"),
+    "s4-orchestration": (BILIBILI_AGENT, "阶段四 · Agent 编排（2025 AI Agent 智能体全套）"),
     "s5-performance": (BILIBILI_LANGCHAIN, "阶段五 · 性能优化（LangChain Agent 实战）"),
-    "s5-security": (DOC_LANGCHAIN_ZH, "阶段五 · 安全（LangChain 中文文档）"),
-    "s5-observability": (DOC_LANGSMITH, "阶段五 · 监控评估（LangSmith 官方文档）"),
-    "s5-deploy": (DOC_DEPLOY, "阶段五 · 部署（Agent 部署最佳实践）"),
-    "s6-rag-project": (DOC_YUPI_PROJECTS, "阶段六 · RAG 知识库项目（鱼皮 AI 项目教程合集）"),
-    "s6-cs-agent": (DOC_YUPI_PROJECTS, "阶段六 · 智能客服项目（鱼皮 AI 项目教程合集）"),
-    "s7-career": (DOC_MIANSHIYA, "阶段七 · 求职备战（面试鸭 AI 面试题）"),
+    "s5-security": (BILIBILI_LANGCHAIN, "阶段五 · 安全可控（LangChain Agent 实战）"),
+    "s5-observability": (BILIBILI_LANGCHAIN, "阶段五 · 监控评估（LangChain Agent 实战）"),
+    "s5-deploy": (BILIBILI_LANGCHAIN, "阶段五 · 生产部署（LangChain Agent 实战）"),
+    "s6-rag-project": (BILIBILI_LANGCHAIN, "阶段六 · RAG 知识库项目（LangChain Agent 实战）"),
+    "s6-cs-agent": (BILIBILI_AGENT, "阶段六 · 智能客服项目（2025 AI Agent 智能体全套）"),
+    "s7-career": (BILIBILI_AGENT, "阶段七 · 求职备战（2025 AI Agent 智能体全套）"),
 }
 
 STAGE_TITLE = {
@@ -1371,10 +1360,27 @@ def _enrich_projects():
     print(f"  [curriculum-2026] 项目步骤已补充：{applied}/{len(projects)}")
 
 
+def _apply_video_bv(all_courses):
+    """按 VIDEO_RESOURCE 给映射到 B 站视频的课程章节补 video_bv（章节页内嵌/跳转 B 站）。"""
+    applied = 0
+    for co in all_courses:
+        url, _ = VIDEO_RESOURCE.get(co["id"], ("", ""))
+        bv = url if isinstance(url, str) and url.startswith("BV") else ""
+        if not bv:
+            continue
+        for ch in co.get("chapters", []):
+            if not ch.get("video_bv"):
+                ch["video_bv"] = bv
+                applied += 1
+    print(f"  [curriculum-2026] 章节 video_bv 已补齐：{applied}")
+    return all_courses
+
+
 def main():
     os.makedirs(PROCESSED_DIR, exist_ok=True)
     all_courses = [c for stage in range(1, 8) for c in ALL_STAGE_COURSES[stage]]
     all_courses = _apply_section_enrich(all_courses)
+    all_courses = _apply_video_bv(all_courses)
     courses_path = os.path.join(PROCESSED_DIR, "enriched_courses.json")
     with open(courses_path, "w", encoding="utf-8") as f:
         json.dump(all_courses, f, ensure_ascii=False, indent=2)

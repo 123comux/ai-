@@ -1228,9 +1228,34 @@ def build_learning_paths():
     return paths
 
 
+def _apply_section_enrich(all_courses):
+    """把 course_content.SECTION_ENRICH 的详实内容合并到每个小节（按小节 id 覆盖）。"""
+    try:
+        from data_pipeline.course_content import SECTION_ENRICH
+    except Exception:
+        SECTION_ENRICH = {}
+    applied = 0
+    for co in all_courses:
+        for ch in co.get("chapters", []):
+            for sec in ch.get("sections", []):
+                e = SECTION_ENRICH.get(sec["id"])
+                if not e:
+                    continue
+                if e.get("content"):
+                    sec["content"] = e["content"]
+                if e.get("case"):
+                    sec["case"] = e["case"]
+                if e.get("knowledge_points"):
+                    sec["knowledge_points"] = e["knowledge_points"]
+                applied += 1
+    print(f"  [curriculum-2026] 小节内容扩充已应用：{applied}/{sum(len(ch['sections']) for c in all_courses for ch in c['chapters'])}")
+    return all_courses
+
+
 def main():
     os.makedirs(PROCESSED_DIR, exist_ok=True)
     all_courses = [c for stage in range(1, 8) for c in ALL_STAGE_COURSES[stage]]
+    all_courses = _apply_section_enrich(all_courses)
     courses_path = os.path.join(PROCESSED_DIR, "enriched_courses.json")
     with open(courses_path, "w", encoding="utf-8") as f:
         json.dump(all_courses, f, ensure_ascii=False, indent=2)

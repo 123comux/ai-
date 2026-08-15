@@ -111,7 +111,8 @@ export const completeLearningPathNode = async (pathId: string, nodeId: string): 
 
 /** 获取课程列表 */
 export const fetchCourses = async (topic?: string): Promise<Course[]> => {
-  const query = topic && topic !== 'all' ? `?topic=${encodeURIComponent(topic)}` : '';
+  // limit=100：课程 24 门超过后端默认 20，避免漏掉末尾课程
+  const query = topic && topic !== 'all' ? `?topic=${encodeURIComponent(topic)}&limit=100` : '?limit=100';
   return apiGet<Course[]>(`/api/courses${query}`);
 };
 
@@ -146,7 +147,8 @@ export const fetchCourseCategories = async () => {
 
 /** 获取项目列表 */
 export const fetchProjects = async (difficulty?: string): Promise<Project[]> => {
-  const query = difficulty && difficulty !== 'all' ? `?difficulty=${encodeURIComponent(difficulty)}` : '';
+  // limit=100：避免项目数超过后端默认 20 时被截断
+  const query = difficulty && difficulty !== 'all' ? `?difficulty=${encodeURIComponent(difficulty)}&limit=100` : '?limit=100';
   return apiGet<Project[]>(`/api/projects${query}`);
 };
 

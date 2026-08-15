@@ -4,9 +4,6 @@ import json
 from pathlib import Path
 from typing import Optional
 
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
 from config import PROCESSED_DIR
 
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
@@ -16,10 +13,13 @@ _model_cache = None
 
 
 def _load_model():
-    """Load BERT assessment model (cached)."""
-    global _model_cache
+    """Load BERT assessment model (cached). torch/transformers 惰性导入，避免拖慢启动。"""
+    global torch, AutoTokenizer, AutoModelForSequenceClassification, _model_cache
     if _model_cache is not None:
         return _model_cache
+
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
     model_dir = MODELS_DIR / "assessment"
     if not model_dir.exists():
@@ -137,3 +137,12 @@ def get_model_info() -> dict:
         }
     except Exception:
         return {"status": "error"}
+
+
+def warm_up() -> bool:
+    """后台预热：加载模型进缓存，失败静默返回 False（供启动线程调用，不阻塞启动）。"""
+    try:
+        _load_model()
+        return True
+    except Exception:
+        return False

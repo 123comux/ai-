@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from database import query_all, query_one, parse_json_field, record_user_chapter, get_user_completed_chapter_ids
 from auth_utils import get_optional_user
+from cache import get as cache_get, set as cache_set
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -77,9 +78,14 @@ async def list_courses(
     offset: int = Query(0, ge=0),
 ):
     """List all courses from CMS database."""
-    rows = query_all("courses", {"is_active": 1})
-    courses = [_db_to_course(r) for r in rows]
-    courses.sort(key=_stage_sort_key)
+    cached = cache_get("courses:list")
+    if cached is None:
+        rows = query_all("courses", {"is_active": 1})
+        courses = [_db_to_course(r) for r in rows]
+        courses.sort(key=_stage_sort_key)
+        cache_set("courses:list", courses)
+    else:
+        courses = list(cached)
     if topic:
         courses = [c for c in courses if c["topic"].lower() == topic.lower() or c["category"].lower() == topic.lower()]
     if difficulty:
@@ -98,10 +104,16 @@ async def course_topics():
 @router.get("/{course_id}")
 async def get_course(course_id: str):
     """Get a single course by ID."""
+    key = f"course:{course_id}"
+    cached = cache_get(key)
+    if cached is not None:
+        return cached
     row = query_one("courses", course_id)
     if not row:
         raise HTTPException(status_code=404, detail="Course not found")
-    return _db_to_course(row)
+    course = _db_to_course(row)
+    cache_set(key, course)
+    return course
 
 
 @router.get("/{course_id}/progress")

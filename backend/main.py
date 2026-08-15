@@ -101,6 +101,30 @@ async def health():
     return {"status": "ok"}
 
 
+def _warmup_models():
+    """后台预热本地 AI 模型（不阻塞启动）。AI_WARMUP=false 可关闭。"""
+    if os.getenv("AI_WARMUP", "true").lower() in ("0", "false", "no", "off"):
+        return
+    try:
+        from services import assessment_ai_service, tutor_service
+        for name, fn in (("assessment", assessment_ai_service.warm_up),
+                         ("tutor", tutor_service.warm_up)):
+            try:
+                ok = fn()
+                logging.info(f"[warmup] {name} model loaded: {ok}")
+            except Exception as e:
+                logging.info(f"[warmup] {name} model skipped: {e}")
+    except Exception as e:
+        logging.info(f"[warmup] services unavailable: {e}")
+
+
+@app.on_event("startup")
+async def _startup_warmup():
+    """启动后后台线程预热本地模型，首个 AI 请求不再等待冷加载。"""
+    import threading
+    threading.Thread(target=_warmup_models, daemon=True).start()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

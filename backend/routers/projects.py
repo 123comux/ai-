@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import ProjectItem
 from auth_utils import get_optional_user
-from database import record_user_project, safe_load_json
+from database import record_user_project, get_user_project_progress, safe_load_json
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -64,8 +64,16 @@ def _get_project(project_id: str) -> ProjectItem | None:
     return None
 
 
+def _progress_for(user_id: int | None) -> dict[str, int]:
+    """登录用户以 DB 进度为准（数据隔离），匿名用户回退全局文件进度。"""
+    if user_id is not None:
+        return get_user_project_progress(user_id)
+    return _load_progress()
+
+
 @router.get("", response_model=list[ProjectItem])
 async def list_projects(
+    request: Request,
     difficulty: str = Query(None, description="Filter by difficulty"),
     tech: str = Query(None, description="Filter by tech stack keyword"),
     limit: int = Query(20, ge=1, le=100),
@@ -79,7 +87,8 @@ async def list_projects(
     if tech:
         filtered = [p for p in filtered if any(tech.lower() in t.lower() for t in p.tech_stack)]
     filtered = sorted(filtered, key=_difficulty_sort_key)
-    progress = _load_progress()
+    user = await get_optional_user(request)
+    progress = _progress_for(user["id"] if user else None)
     result = [_apply_progress(p, progress.get(p.id, 0)) for p in filtered]
     return result[offset:offset + limit]
 
@@ -93,12 +102,13 @@ async def project_topics():
 
 
 @router.get("/{project_id}", response_model=ProjectItem)
-async def get_project(project_id: str):
+async def get_project(project_id: str, request: Request):
     """Get a single project by ID (with user progress merged)."""
     project = _get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    progress = _load_progress()
+    user = await get_optional_user(request)
+    progress = _progress_for(user["id"] if user else None)
     return _apply_progress(project, progress.get(project_id, 0))
 
 
@@ -106,25 +116,29 @@ async def get_project(project_id: str):
 async def advance_project(project_id: str, request: Request):
     """Advance a project by one step (user completes the current step).
 
-    Persists completed-step count in project_progress.json.
-    When authenticated, also records per-user progress (data isolation).
+    登录用户进度写入 user_project_progress（DB，数据隔离）；
+    匿名用户回退全局 project_progress.json。
     """
     project = _get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
     user = await get_optional_user(request)
+    total = len(project.steps)
+
+    if user:
+        # 登录用户：DB 为准，读写均走 user_project_progress
+        completed = get_user_project_progress(user["id"]).get(project_id, 0)
+        if completed < total:
+            completed += 1
+            record_user_project(user["id"], project_id, completed)
+        return _apply_progress(project, completed)
+
+    # 匿名用户：全局文件进度
     progress = _load_progress()
     completed = progress.get(project_id, 0)
-    total = len(project.steps)
-    if completed >= total:
-        if user:
-            record_user_project(user["id"], project_id, completed)
-        return _apply_progress(project, completed)  # 已完成，幂等返回
-
-    completed += 1
-    progress[project_id] = completed
-    _save_progress(progress)
-    if user:
-        record_user_project(user["id"], project_id, completed)
+    if completed < total:
+        completed += 1
+        progress[project_id] = completed
+        _save_progress(progress)
     return _apply_progress(project, completed)

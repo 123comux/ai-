@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Header, Request
 from pydantic import BaseModel, Field
 
 from database import query_all, query_one, insert_row, update_row, delete_row, parse_json_field, get_connection
+from cache import clear as cache_clear
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -138,6 +139,16 @@ def read_one(table: str, item_id, request: Request):
     return row
 
 
+def _invalidate_cache(table: str) -> None:
+    """后台修改数据后使相关只读缓存失效。"""
+    if table == "courses":
+        cache_clear()  # 课程列表 + 各 course:{id} 详情一并失效
+    elif table == "directions":
+        cache_clear("content:directions")
+    elif table == "banners":
+        cache_clear("content:banners")
+
+
 @router.post("/{table}")
 def create_item(table: str, data: dict, request: Request):
     """Create a new item."""
@@ -154,6 +165,7 @@ def create_item(table: str, data: dict, request: Request):
         if isinstance(v, (list, dict)):
             clean[k] = json.dumps(v, ensure_ascii=False)
     item_id = insert_row(table, clean)
+    _invalidate_cache(table)
     return {"id": item_id, "message": f"Created in {table}"}
 
 
@@ -173,6 +185,7 @@ def update_item(table: str, item_id, data: dict, request: Request):
     ok = update_row(table, item_id, clean)
     if not ok:
         raise HTTPException(404, f"Item not found in {table}")
+    _invalidate_cache(table)
     return {"message": f"Updated in {table}"}
 
 
@@ -185,4 +198,5 @@ def delete_item(table: str, item_id, request: Request):
     ok = delete_row(table, item_id)
     if not ok:
         raise HTTPException(404, f"Item not found in {table}")
+    _invalidate_cache(table)
     return {"message": f"Deleted from {table}"}

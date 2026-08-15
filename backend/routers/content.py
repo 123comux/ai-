@@ -7,6 +7,7 @@ Also provides FAQ public API for the learning community.
 from fastapi import APIRouter
 
 from database import query_all
+from cache import get as cache_get, set as cache_set
 
 router = APIRouter(prefix="/api/content", tags=["content"])
 
@@ -14,13 +15,23 @@ router = APIRouter(prefix="/api/content", tags=["content"])
 @router.get("/banners")
 def get_banners():
     """Get active banners for home page carousel."""
-    return query_all("banners", {"is_active": 1}, "sort_order")
+    cached = cache_get("content:banners")
+    if cached is not None:
+        return cached
+    banners = query_all("banners", {"is_active": 1}, "sort_order")
+    cache_set("content:banners", banners)
+    return banners
 
 
 @router.get("/directions")
 def get_directions():
     """Get active learning directions for home page."""
-    return query_all("directions", {"is_active": 1}, "sort_order")
+    cached = cache_get("content:directions")
+    if cached is not None:
+        return cached
+    directions = query_all("directions", {"is_active": 1}, "sort_order")
+    cache_set("content:directions", directions)
+    return directions
 
 
 @router.get("/menu-items")

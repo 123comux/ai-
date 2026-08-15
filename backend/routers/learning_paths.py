@@ -12,6 +12,8 @@ from models.schemas import LearningPathItem, LearningPathNode
 from auth_utils import get_optional_user
 from database import (
     record_user_path_node,
+    get_user_path_progress,
+    get_user_path_completed,
     safe_load_json,
     query_one,
     parse_json_field,
@@ -235,9 +237,10 @@ async def list_paths(request: Request, direction: str | None = Query(None, descr
     - Without params: return all direction plans (each with its own course/project set),
       so the user can browse and switch between learning directions.
     """
-    progress = _load_progress()
     user = await get_optional_user(request)
     user_id = user["id"] if user else None
+    # 登录用户以 DB 进度为准（数据隔离），匿名用户回退全局文件
+    progress = get_user_path_progress(user_id) if user_id else _load_progress()
 
     if direction:
         path = _build_path(direction)
@@ -270,14 +273,18 @@ async def complete_node(path_id: str, node_id: str, request: Request):
     if node is None:
         raise HTTPException(status_code=404, detail="Node not found in path")
 
-    # 按用户隔离：登录态下校验章节完成度 + 同步写入 user_path_progress（押金三锁/学习档案）
+    # 按用户隔离：登录态下进度以 DB 为准（押金三锁/学习档案），匿名用户回退全局文件
     user = await get_optional_user(request)
     user_id = user["id"] if user else None
 
+    if user:
+        completed = set(get_user_path_completed(user_id, path_id))
+    else:
+        progress = _load_progress()
+        completed = set(progress.get(path_id, []))
+
     # 解锁约束：locked 节点不可越级完成；auto-completed（章节学完自动完成）的节点
     # 允许再次"标记完成"（幂等），避免误报"请先完成前一个节点"
-    progress = _load_progress()
-    completed = set(progress.get(path_id, []))
     if node.id in completed:
         return _apply_user_progress(base, completed, user_id)
     effective = _apply_user_progress(base, completed, user_id)
@@ -296,11 +303,11 @@ async def complete_node(path_id: str, node_id: str, request: Request):
             )
 
     completed.add(node_id)
-    progress[path_id] = sorted(completed)
-    _save_progress(progress)
-
     if user:
         record_user_path_node(user_id, path_id, node_id)
+    else:
+        progress[path_id] = sorted(completed)
+        _save_progress(progress)
 
     return _apply_user_progress(base, completed, user_id)
 
@@ -311,6 +318,10 @@ async def get_path(path_id: str, request: Request):
     base = _get_base_path(path_id)
     if base is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
-    progress = _load_progress()
     user = await get_optional_user(request)
-    return _apply_user_progress(base, set(progress.get(path_id, [])), user["id"] if user else None)
+    user_id = user["id"] if user else None
+    if user:
+        progress = {path_id: get_user_path_completed(user_id, path_id)}
+    else:
+        progress = _load_progress()
+    return _apply_user_progress(base, set(progress.get(path_id, [])), user_id)

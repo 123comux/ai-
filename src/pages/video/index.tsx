@@ -221,6 +221,16 @@ const VideoPage: React.FC = () => {
     }
   };
 
+  /** 复制 B 站链接（web-view 业务域名未配置导致打不开时，可手动复制到浏览器观看） */
+  const handleCopyLink = () => {
+    const bv = bvFromUrl(currentVideo?.url || '');
+    const biliUrl = bv ? `https://www.bilibili.com/video/${bv}` : (currentVideo?.url || '');
+    Taro.setClipboardData({
+      data: biliUrl,
+      success: () => Taro.showToast({ title: '链接已复制', icon: 'success' }),
+    });
+  };
+
   if (loading) {
     return (
       <View className={styles.page}>
@@ -259,6 +269,9 @@ const VideoPage: React.FC = () => {
             </Text>
             <View className={styles.weappBiliCardBtn} onClick={handleOpenOnBilibili}>
               <Text className={styles.weappBiliCardBtnText}>在 Bilibili 观看 →</Text>
+            </View>
+            <View className={styles.weappBiliCardBtnSecondary} onClick={handleCopyLink}>
+              <Text className={styles.weappBiliCardBtnSecondaryText}>复制链接（打不开时用浏览器打开）</Text>
             </View>
           </View>
         ) : isBilibili ? (

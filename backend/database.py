@@ -776,6 +776,16 @@ def get_user_path_completed(user_id: int, path_id: str) -> list:
     return parse_json_field(row["completed_nodes"]) if row else []
 
 
+def get_user_path_progress(user_id: int) -> dict:
+    """该用户所有学习路径的已完成节点：{path_id: [node_id, ...]}（DB 为准）。"""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT path_id, completed_nodes FROM user_path_progress WHERE user_id=?", (user_id,)
+    ).fetchall()
+    conn.close()
+    return {r["path_id"]: parse_json_field(r["completed_nodes"]) for r in rows}
+
+
 def record_stage_assessment(user_id: int, stage: int, score: float) -> None:
     conn = get_connection()
     conn.execute(

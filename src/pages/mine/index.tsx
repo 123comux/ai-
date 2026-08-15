@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, ScrollView, Button, Input } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
@@ -37,12 +37,15 @@ const MinePage: React.FC = () => {
     }
   };
 
+  const firstShow = useRef(true);
+
   useEffect(() => {
     loadData();
   }, []);
 
-  // 每次显示刷新，学习时长/能力报告同步
+  // 每次显示刷新，学习时长/能力报告同步；首次由 useEffect 承担，避免重复请求
   useDidShow(() => {
+    if (firstShow.current) { firstShow.current = false; return; }
     loadData();
   });
 

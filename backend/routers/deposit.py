@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 
 from config import (
+    DEV_MODE,
     DEPOSIT_DEFAULT_AMOUNT, DEPOSIT_CURRENCY, DEPOSIT_TIME_LOCK_DAYS,
     DEPOSIT_STAGES, DEPOSIT_PASS_SCORE, DEPOSIT_REFUND_WORKING_DAYS,
 )
@@ -167,7 +168,9 @@ async def enroll(body: EnrollRequest | None = None, user: dict = Depends(get_cur
 
     - 微信支付已配置：生成支付单（status=pending_payment）并返回小程序调起支付参数，
       支付成功由回调 /api/pay/notify 置为 active；
-    - 未配置（开发占位）：直接置为 active，仅记录金额，不真正收钱。
+    - DEV_MODE 且未配置支付：占位解锁（开发自测用，不真正收钱）；
+    - 生产（DEV_MODE=false）未配置支付：**拒绝报名**——绝不免费解锁付费墙，
+      否则未配商户号上线会直接绕过押金收费、商业闭环崩塌。
     """
     from config import wxpay_configured
     body = body or EnrollRequest()
@@ -200,7 +203,8 @@ async def enroll(body: EnrollRequest | None = None, user: dict = Depends(get_cur
         except Exception as e:
             # 下单失败：保持待支付状态，提示用户稍后重试
             raise HTTPException(status_code=502, detail=f"创建支付单失败：{e}")
-    else:
+
+    if DEV_MODE:
         deposit = upsert_deposit(user["id"], {
             "amount": amount,
             "currency": DEPOSIT_CURRENCY,
@@ -218,7 +222,13 @@ async def enroll(body: EnrollRequest | None = None, user: dict = Depends(get_cur
             "refund_at": "",
             "refund_txn": "",
         })
-        return {"ok": True, "deposit": _public_deposit(deposit), "payment_note": "支付为占位实现（未配置商户号），接入微信支付后此处发起收款"}
+        return {"ok": True, "deposit": _public_deposit(deposit), "payment_note": "支付为占位实现（未配置商户号，仅开发环境），接入微信支付后此处发起收款"}
+
+    # 生产环境未配置微信支付：拒绝报名，绝不免费解锁
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="支付通道未配置，暂无法报名，请稍后再试",
+    )
 
 
 # ---------- 三锁进度 / 达标判定 ----------

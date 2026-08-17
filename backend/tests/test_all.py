@@ -343,6 +343,21 @@ class TestWxpayPayment(unittest.TestCase):
         self.assertEqual(r2.status_code, 200)
         self.assertTrue(r2.json()["placeholder"])
 
+    def test_production_enroll_refused_without_merchant(self):
+        # 生产（DEV_MODE=false）且未配商户号：必须拒绝报名（503），绝不占位免费解锁付费墙。
+        # 若上线漏配商户号也不至于绕过押金收费。
+        from unittest.mock import patch
+        import routers.deposit as deposit_mod
+        token, user = _login("prod_nopay")
+        # 确保该用户无已存在 active 押金，且此时未配商户号
+        from database import get_deposit
+        self.assertIsNone(get_deposit(user["id"]))
+        with patch.object(deposit_mod, "DEV_MODE", False):
+            r = client.post("/api/deposit/enroll", json={}, headers=auth_header(token))
+        self.assertEqual(r.status_code, 503)
+        # 不得被误置为已支付/占用——应保持无押金记录
+        self.assertIsNone(get_deposit(user["id"]))
+
     def test_notify_marks_deposit_paid(self):
         import base64 as b64
         from unittest.mock import patch

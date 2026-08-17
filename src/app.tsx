@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useDidShow, useDidHide } from '@tarojs/taro';
+import { useLaunch, useDidShow, useDidHide } from '@tarojs/taro';
 // 全局样式
 import './app.scss';
 import { View } from '@tarojs/components';
@@ -11,8 +10,10 @@ function App(props) {
   const restore = useUserStore((s) => s.restore);
   const login = useUserStore((s) => s.login);
 
-  // 启动即恢复登录态；未登录则自动登录（建立真实用户，支撑多用户数据隔离）
-  useEffect(() => {
+  // 启动即恢复登录态；未登录则自动登录（建立真实用户，支撑多用户数据隔离）。
+  // 用 useLaunch（App.onLaunch）而非 useEffect：微信小程序端 App 组件的 useEffect 不被可靠触发，
+  // 会导致 useAccessStore.init() 从不执行、弹窗永不出现（H5 正常、微信端不弹的根因）。
+  useLaunch(() => {
     // 冷启动：先立即弹「功能使用说明」弹窗（内部先置 visible 再拉数据，用兜底图文即时渲染），
     // 不等登录完成——登录/网络较慢时弹窗也能第一时间出现。
     useAccessStore.getState().init();
@@ -29,7 +30,7 @@ function App(props) {
       // 登录态就绪后静默刷新试用/解锁状态，更新弹窗状态章颜色（不重复弹窗）
       useAccessStore.getState().refresh();
     })();
-  }, []);
+  });
 
   // 对应 onShow：每次回到前台静默刷新解锁状态（缴押金返回后锁定遮罩即时消失；不重复弹窗）
   useDidShow(() => {

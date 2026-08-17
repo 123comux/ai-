@@ -5,6 +5,7 @@ import AssessmentCard from '@/components/AssessmentCard';
 import PathCard from '@/components/PathCard';
 import CourseCard from '@/components/CourseCard';
 import ProjectCard from '@/components/ProjectCard';
+import AccessGate from '@/components/AccessGate';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
 import { useAccessStore, formatTrialRemaining } from '@/store/useAccessStore';
@@ -363,6 +364,9 @@ const HomePage: React.FC = () => {
         </View>
       </View>
 
+      {/* 导语弹窗 + 锁定遮罩（微信端 App 组件渲染会被页面层盖住，故在首页渲染；
+          首页是冷启动首屏，覆盖导语弹窗与试用到期锁定的主要场景） */}
+      <AccessGate />
     </ScrollView>
   );
 };

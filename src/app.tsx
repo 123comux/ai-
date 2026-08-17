@@ -2,7 +2,6 @@ import { useLaunch, useDidShow, useDidHide } from '@tarojs/taro';
 // 全局样式
 import './app.scss';
 import { View } from '@tarojs/components';
-import AccessGate from '@/components/AccessGate';
 import { useUserStore } from '@/store/useUserStore';
 import { useAccessStore } from '@/store/useAccessStore';
 
@@ -42,10 +41,11 @@ function App(props) {
 
   // 注意：微信小程序 App 组件必须返回**单根**节点（不能返回 Fragment 多根），
   // 否则渲染帧异常导致整页白屏 / getCurrentInstanceFrame 超时。
+  // 注意：导语弹窗 / 锁定遮罩（<AccessGate>）不在此渲染——微信端 App 组件里的内容
+  // 是所有页面之下的容器，position:fixed 元素被页面层盖住无法显示，故改由首页渲染。
   return (
     <View className="app-root">
       {props.children}
-      <AccessGate />
     </View>
   );
 }

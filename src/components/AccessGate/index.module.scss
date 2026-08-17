@@ -1,11 +1,15 @@
 @use '@/styles/variables.scss' as *;
 
-/* 通用蒙层（导语弹窗 + 锁定遮罩共用） */
+/* 通用蒙层（导语弹窗 + 锁定遮罩共用）
+   微信端：App 组件里渲染的 fixed 元素需用 vw/vh 显式铺满视口 + 极高 z-index，
+   否则易被页面层(page 固有层级)盖住而不可见 */
 .mask {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,9 +191,11 @@
 /* —— 锁定全屏遮罩 —— */
 .lockMask {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
   background: $color-bg-page;
-  z-index: 100;
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -52,7 +52,9 @@ export const useAccessStore = create<AccessState>((set, get) => ({
   checking: false,
 
   init: async () => {
-    set({ checking: true });
+    // 先立即置弹窗可见（用兜底文案渲染），数据到达后再刷新——避免在微信端
+    // 因登录/网络慢导致弹窗迟迟不出现
+    set({ checking: true, introVisible: true });
     let config: AccessConfig | null = null;
     let status: AccessStatus | null = null;
     try {
@@ -70,7 +72,6 @@ export const useAccessStore = create<AccessState>((set, get) => ({
       status,
       locked: status ? !status.access_granted : false,
       checking: false,
-      introVisible: true,
     });
   },
 

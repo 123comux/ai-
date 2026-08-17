@@ -35,7 +35,13 @@ def _load_json(filename: str):
 
 @router.get("/ability-report", response_model=AbilityReport)
 async def get_ability_report(request: Request):
-    """User's latest ability report (per-user), with global demo fallback."""
+    """User's latest ability report (per-user only).
+
+    已登录用户只返回**自己的**报告：无个人记录则返回空初始态（前端据此判为"未测评"，
+    引导重新测评），**不** fallback 到全局 demo 文件——否则未登录时做的一次匿名测评
+    会被误当成该账号的能力报告（数据凭空"继承"匿名结果，不合理）。
+    全局 demo 文件仅供未登录场景 / job-matching 等不区分用户的用途使用。
+    """
     user = await get_optional_user(request)
     if user:
         row = get_latest_user_ability_report(user["id"])
@@ -49,7 +55,12 @@ async def get_ability_report(request: Request):
                 recommendedDirection=row["recommended_direction"],
                 estimatedHours=row["estimated_hours"],
             )
-    # Fallback to the seeded global demo report
+        # 已登录但无个人报告：返回初始态，不落全局文件
+        return AbilityReport(
+            overallScore=0, level="初级", dimensions=[],
+            strengths=[], weaknesses=[], recommendedDirection="", estimatedHours=0,
+        )
+    # 未登录会话才回落全局 demo 报告
     data = _load_json("ability_report.json")
     if not data:
         return AbilityReport(

@@ -468,6 +468,10 @@ class TestUserData(unittest.TestCase):
         token, _ = _login("udata_user")
         r = client.get("/api/user/ability-report", headers=auth_header(token))
         self.assertEqual(r.status_code, 200)
+        # 新用户尚无个人测评：应返回空初始态（overallScore=0、dimensions 空），
+        # 而不是 fallback 到全局 demo 报告——未登录匿名测评不能被算到该账号头上
+        self.assertEqual(r.json()["overallScore"], 0)
+        self.assertEqual(r.json()["dimensions"], [])
         r = client.get("/api/user/learning-stats", headers=auth_header(token))
         self.assertEqual(r.status_code, 200)
         self.assertIn("learningDays", r.json())

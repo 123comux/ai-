@@ -7,7 +7,7 @@ interface LearningState {
   courses: Course[];
   projects: Project[];
   selectedTopic: string;  // 从首页选择的学习方向，用于学习页预过滤
-  setAbilityReport: (report: AbilityReport) => void;
+  setAbilityReport: (report: AbilityReport | null) => void;
   setCurrentPath: (path: LearningPath) => void;
   setCourses: (courses: Course[]) => void;
   setProjects: (projects: Project[]) => void;

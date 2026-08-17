@@ -135,9 +135,14 @@ async function apiDelete<T>(path: string): Promise<T> {
   return res.data;
 }
 
-/** 获取能力报告 */
-export const fetchAbilityReport = async (): Promise<AbilityReport> => {
-  return apiGet<AbilityReport>('/api/user/ability-report');
+/** 获取能力报告；无有效报告（未测评）时返回 null，供页面判定"去测评"态 */
+export const fetchAbilityReport = async (): Promise<AbilityReport | null> => {
+  const report = await apiGet<AbilityReport>('/api/user/ability-report');
+  // 空初始态（无个人报告）视为"未测评"：overallScore=0 且 dimensions 为空
+  if (report && !report.overallScore && Array.isArray(report.dimensions) && report.dimensions.length === 0) {
+    return null;
+  }
+  return report;
 };
 
 /** 获取学习路径 */

@@ -10,3 +10,9 @@ page {
   color: $color-text-primary;
   background-color: $color-bg-page;
 }
+
+// App 根节点：透传页面布局，不引入额外盒模型影响（小程序端 App 需单根包裹）
+.app-root {
+  width: 100%;
+  min-height: 100%;
+}

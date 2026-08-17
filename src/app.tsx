@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDidShow, useDidHide } from '@tarojs/taro';
 // 全局样式
 import './app.scss';
+import { View } from '@tarojs/components';
 import AccessGate from '@/components/AccessGate';
 import { useUserStore } from '@/store/useUserStore';
 import { useAccessStore } from '@/store/useAccessStore';
@@ -35,11 +36,13 @@ function App(props) {
   // 对应 onHide
   useDidHide(() => {});
 
+  // 注意：微信小程序 App 组件必须返回**单根**节点（不能返回 Fragment 多根），
+  // 否则渲染帧异常导致整页白屏 / getCurrentInstanceFrame 超时。
   return (
-    <>
+    <View className="app-root">
       {props.children}
       <AccessGate />
-    </>
+    </View>
   );
 }
 

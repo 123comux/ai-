@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAccessStore, formatTrialRemaining } from '@/store/useAccessStore';
 import type { AccessConfig } from '@/types/index';
@@ -106,7 +106,8 @@ export default function AccessGate() {
           </View>
         )}
 
-        <ScrollView scrollY className={styles.body}>
+        {/* 内容区：用普通 View（App 层不适合渲染页面级 ScrollView；内层已有 max-height 兜底） */}
+        <View className={styles.body}>
           <Text className={styles.usageIntro}>{cfg.usage_intro}</Text>
 
           <View className={styles.sectionTitle}>主要功能介绍</View>
@@ -127,7 +128,7 @@ export default function AccessGate() {
             <View className={styles.policyRow}><Text className={styles.policyLabel}>🎯 未达标</Text><Text className={styles.policyText}>{cfg.refund_rules.failed}</Text></View>
             <View className={styles.policyRow}><Text className={styles.policyLabel}>🛡️ 诚信保障</Text><Text className={styles.policyText}>{cfg.refund_rules.anti_fraud}</Text></View>
           </View>
-        </ScrollView>
+        </View>
 
         <View className={styles.footer}>
           {locked ? (

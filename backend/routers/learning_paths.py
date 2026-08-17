@@ -14,6 +14,7 @@ from database import (
     record_user_path_node,
     get_user_path_progress,
     get_user_path_completed,
+    get_latest_user_ability_report,
     safe_load_json,
     query_one,
     parse_json_field,
@@ -136,8 +137,16 @@ def _build_path(direction: str) -> LearningPathItem:
     )
 
 
-def _recommended_direction() -> str | None:
-    """Read the recommended direction from the persisted ability report."""
+def _recommended_direction(user_id: int | None = None) -> str | None:
+    """Read the user's own recommended direction from their ability report.
+
+    登录用户读自己 DB 里的 recommended_direction（数据隔离），避免把匿名测评
+    或全局 demo 的方向算到他头上；仅未登录/无个人报告时回退全局文件。
+    """
+    if user_id is not None:
+        row = get_latest_user_ability_report(user_id)
+        if row:
+            return row.get("recommended_direction") or None
     report = _load_json("ability_report.json")
     if report:
         return report.get("recommendedDirection")
@@ -247,8 +256,8 @@ async def list_paths(request: Request, direction: str | None = Query(None, descr
         return [_apply_user_progress(path, set(progress.get(path.id, [])), user_id)]
 
     paths = []
-    # 推荐方向排最前，其余方向按顺序列出
-    rec_dir = _recommended_direction()
+    # 推荐方向排最前（按当前用户自己的能力报告方向），其余方向按顺序列出
+    rec_dir = _recommended_direction(user_id)
     directions = list(_DIRECTION_PLAN.keys())
     if rec_dir and rec_dir in directions:
         directions.remove(rec_dir)

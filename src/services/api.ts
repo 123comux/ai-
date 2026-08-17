@@ -42,7 +42,7 @@ export function resolveAssetUrl(url: string | undefined | null): string {
  * 必须 uploadAvatar 转成后端 /static/avatars 持久文件后才能长期展示；
  * 只有后端自己的 avatar 地址（含 /static/avatars/）才是已持久化的。
  */
-export function needsAvatarUpload(url: string): boolean {
+export function needsAvatarUpload(url: string | null | undefined): boolean {
   if (!url) return false;
   if (url.startsWith('wxfile://')) return true;
   if (/^https?:\/\//.test(url) && !url.includes('/static/avatars/')) return true;

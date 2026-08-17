@@ -27,7 +27,10 @@
     "dev:rn": "npm run build:rn -- --watch",
     "dev:qq": "npm run build:qq -- --watch",
     "dev:jd": "npm run build:jd -- --watch",
-    "dev:quickapp": "npm run build:quickapp -- --watch"
+    "dev:quickapp": "npm run build:quickapp -- --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run"
   },
   "browserslist": [
     "last 3 versions",
@@ -85,6 +88,7 @@
     "tsconfig-paths-webpack-plugin": "^4.0.1",
     "tt-ide-cli": "^0.1.31",
     "typescript": "^5.1.0",
+    "vitest": "^4.1.10",
     "webpack": "5.78.0"
   }
 }

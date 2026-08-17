@@ -1,9 +1,9 @@
 import { useLaunch, useDidShow, useDidHide } from '@tarojs/taro';
-// 全局样式
-import './app.scss';
 import { View } from '@tarojs/components';
 import { useUserStore } from '@/store/useUserStore';
 import { useAccessStore } from '@/store/useAccessStore';
+// 全局样式
+import './app.scss';
 
 function App(props) {
   const restore = useUserStore((s) => s.restore);

@@ -80,6 +80,12 @@ jobs:
       - name: Install frontend deps
         # --legacy-peer-deps：Taro 4 + webpack 5 存在 peer 依赖冲突，npm ci 严格解析会 ERESOLVE 失败
         run: npm ci --legacy-peer-deps
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test
       - name: Build weapp
         run: npm run build:weapp
       - name: Build h5

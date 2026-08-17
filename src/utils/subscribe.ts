@@ -13,7 +13,9 @@ export async function requestSubscriptions(): Promise<void> {
   const tmplIds = Object.values(SUB_TEMPLATES).filter(Boolean);
   if (tmplIds.length === 0) return;
   try {
-    const res = await Taro.requestSubscribeMessage({ tmplIds });
+    // 微信端官方参数确实为 tmplIds；Taro 4.1.9 把 weapp 的 tmplIds 与 alipay 的 entityIds
+    // 合并成 AtLeastOne 联合类型，导致需未命中的 entityIds，属 Taro 类型定义缺陷，故放宽断言。
+    const res = await Taro.requestSubscribeMessage({ tmplIds } as any);
     console.log('[Subscribe] result:', res);
   } catch (err: any) {
     console.warn('[Subscribe] skipped:', err?.errMsg || err);

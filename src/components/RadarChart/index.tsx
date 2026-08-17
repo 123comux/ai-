@@ -33,10 +33,9 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
     const draw = () => {
       try {
         const ctx = Taro.createCanvasContext(canvasId);
-        const size = pxSize;
-        const center = size / 2;
-        // 半径按比例取 size 的 36%，与 H5 端（radius=size/2-60，size=400 时占 35%）视觉一致
-        const radius = size * 0.36;
+        const center = pxSize / 2;
+        // 半径按比例取 pxSize 的 36%，与 H5 端（radius=size/2-60，size=400 时占 35%）视觉一致
+        const radius = pxSize * 0.36;
         const angleStep = (Math.PI * 2) / dimensions.length;
 
         const getPoint = (index: number, ratio: number) => {

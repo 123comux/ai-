@@ -53,26 +53,17 @@ export const useAccessStore = create<AccessState>((set, get) => ({
 
   init: async () => {
     // 先立即置弹窗可见（用兜底文案渲染），数据到达后再刷新——避免在微信端
-    // 因登录/网络慢导致弹窗迟迟不出现
+    // 因登录/网络慢导致弹窗迟迟不出现。
+    // 注意：冷启动瞬间登录态往往未就绪，此时拉 /status 必 401（DevTools 网络面板红标噪音）。
+    // 状态统一交给登录完成后的 refresh() 拉取，这里只拉公开的 intro。
     set({ checking: true, introVisible: true });
     let config: AccessConfig | null = null;
-    let status: AccessStatus | null = null;
     try {
       config = await fetchAccessIntro();
     } catch {
       /* 导语配置失败：组件用兜底文案（5 天 / ¥199），不影响弹窗 */
     }
-    try {
-      status = await fetchAccessStatus();
-    } catch {
-      /* 状态失败（未登录/网络）：fail-open，不误锁 */
-    }
-    set({
-      config,
-      status,
-      locked: status ? !status.access_granted : false,
-      checking: false,
-    });
+    set({ config, locked: false, checking: false });
   },
 
   confirmIntro: () => {

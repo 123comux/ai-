@@ -3,7 +3,7 @@ import { View, Text, Image, ScrollView, Button, Input } from '@tarojs/components
 import Taro, { useDidShow } from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
 import { useUserStore } from '@/store/useUserStore';
-import { fetchAbilityReport, fetchLearningStats, fetchMenuItems, uploadAvatar } from '@/services/api';
+import { fetchAbilityReport, fetchLearningStats, fetchMenuItems, uploadAvatar, needsAvatarUpload } from '@/services/api';
 import type { MenuItem } from '@/services/api';
 import styles from './index.module.scss';
 
@@ -90,10 +90,10 @@ const MinePage: React.FC = () => {
     if (!editNickname.trim()) { Taro.showToast({ title: '请输入昵称', icon: 'none' }); return; }
     try {
       Taro.showLoading({ title: '保存中...', mask: true });
-      // 新选的微信头像是临时路径（会话结束会失效），先上传换取永久 URL 再落库；
-      // 已是 http(s) 的（复用已保存头像）直接透传
+      // 微信原生头像/本地路径是会过期的临时地址，必须先上传换持久 URL 再落库；
+      // 已是后端 /static/avatars 持久地址的（复用已保存头像）直接透传
       let finalAvatar = editAvatar;
-      if (finalAvatar && !/^https?:\/\//.test(finalAvatar)) {
+      if (needsAvatarUpload(finalAvatar)) {
         finalAvatar = await uploadAvatar(finalAvatar);
       }
       await updateProfile({ nickname: editNickname.trim(), avatar: finalAvatar });

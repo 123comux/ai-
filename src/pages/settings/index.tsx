@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, Input, Picker, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useUserStore } from '@/store/useUserStore';
-import { uploadAvatar, fetchDevConfig, fetchDevUsers } from '@/services/api';
+import { uploadAvatar, fetchDevConfig, fetchDevUsers, needsAvatarUpload } from '@/services/api';
 import type { DevUser } from '@/services/api';
 import styles from './index.module.scss';
 
@@ -109,7 +109,8 @@ const SettingsPage: React.FC = () => {
     if (!url) return;
     try {
       Taro.showLoading({ title: '更新中...', mask: true });
-      const finalUrl = /^https?:\/\//.test(url) ? url : await uploadAvatar(url);
+      // 微信临时头像路径（wxfile/http://tmp）先上传换持久 URL；已是后端 /static/avatars 地址直接透传
+      const finalUrl = needsAvatarUpload(url) ? await uploadAvatar(url) : url;
       await updateProfile({ nickname, avatar: finalUrl });
       Taro.hideLoading();
       Taro.showToast({ title: '头像已更新', icon: 'success' });

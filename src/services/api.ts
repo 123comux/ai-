@@ -37,6 +37,20 @@ export function resolveAssetUrl(url: string | undefined | null): string {
 }
 
 /**
+ * 判断头像 URL 是否需要上传成持久地址。
+ * 微信原生头像路径（wxfile:// 或 http://tmp/...）是会过期的临时地址，
+ * 必须 uploadAvatar 转成后端 /static/avatars 持久文件后才能长期展示；
+ * 只有后端自己的 avatar 地址（含 /static/avatars/）才是已持久化的。
+ */
+export function needsAvatarUpload(url: string): boolean {
+  if (!url) return false;
+  if (url.startsWith('wxfile://')) return true;
+  if (/^https?:\/\//.test(url) && !url.includes('/static/avatars/')) return true;
+  if (!/^https?:\/\//.test(url) && !url.startsWith('/static/avatars/')) return true;
+  return false;
+}
+
+/**
  * 统一识别后端 403 access_denied（试用期已结束但未缴押金）。
  * 命中时把锁定状态写进 useAccessStore，前端全屏锁定遮罩即时接管。
  */

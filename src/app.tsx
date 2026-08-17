@@ -13,6 +13,9 @@ function App(props) {
 
   // 启动即恢复登录态；未登录则自动登录（建立真实用户，支撑多用户数据隔离）
   useEffect(() => {
+    // 冷启动：先立即弹「功能使用说明」弹窗（内部先置 visible 再拉数据，用兜底图文即时渲染），
+    // 不等登录完成——登录/网络较慢时弹窗也能第一时间出现。
+    useAccessStore.getState().init();
     (async () => {
       await restore();
       if (!useUserStore.getState().isLoggedIn) {
@@ -23,8 +26,8 @@ function App(props) {
           console.warn('[App] auto login skipped:', err);
         }
       }
-      // 冷启动：拉取导语配置 + 试用状态 → 弹「功能使用说明」弹窗（仅冷启动一次）
-      useAccessStore.getState().init();
+      // 登录态就绪后静默刷新试用/解锁状态，更新弹窗状态章颜色（不重复弹窗）
+      useAccessStore.getState().refresh();
     })();
   }, []);
 

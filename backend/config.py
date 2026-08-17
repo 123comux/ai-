@@ -124,6 +124,24 @@ if not JWT_SECRET:
         )
 TOKEN_EXPIRE_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
 
+# ============ 功能使用权限（5 天免费试用 + 缴纳押金解锁） ============
+# 全部功能模块统一 5 天免费试用期：自用户首次打开小程序/首次使用功能（服务端首次确认）起算。
+# 试用期结束后限制使用，直至缴纳押金（复用押金式培训的收押金通道，缴纳后实时解锁）。
+ACCESS_TRIAL_DAYS = int(os.getenv("ACCESS_TRIAL_DAYS", "5"))                        # 免费试用期时长（天）
+ACCESS_TRIAL_WARN_SECONDS = int(os.getenv("ACCESS_TRIAL_WARN_SECONDS", "86400"))    # 试用即将结束提醒窗口（秒），默认提前 24 小时
+
+# 服务端授权校验的豁免前缀（路径以该段开头即放行，不参与试用期拦截）：
+# /api/auth 登录 | /api/access 权限状态/导语本身 | /api/deposit 押金收付（解锁通道）| /api/pay 支付回调
+# /api/admin + /admin 后台 | /static 静态资源 | /health 探活
+ACCESS_EXEMPT_PREFIXES = (
+    "/api/auth", "/api/access", "/api/deposit", "/api/pay",
+    "/api/admin", "/admin", "/static", "/health",
+)
+
+# 押金式培训：已缴纳押金（active）、或退费流程中（refund_pending/refunded）视为已付费解锁；
+# 押金转为培训费可续学（converted）同样解锁。pending_payment（未完成支付）与 forfeited 不予解锁。
+DEPOSIT_UNLOCKED_STATUSES = ("active", "refund_pending", "refunded", "converted")
+
 # ============ 押金式培训（Deposit-style training）参数 ============
 # 与商业评审报告《押金式培训版》对齐：
 # 三锁门槛：时间锁 90 天 / 过程锁 完课率 100% + 作业 / 考核锁 均分 ≥85 + 实战项目

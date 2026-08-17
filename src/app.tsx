@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { useDidShow, useDidHide } from '@tarojs/taro';
 // 全局样式
 import './app.scss';
+import AccessGate from '@/components/AccessGate';
 import { useUserStore } from '@/store/useUserStore';
+import { useAccessStore } from '@/store/useAccessStore';
 
 function App(props) {
   const restore = useUserStore((s) => s.restore);
@@ -20,16 +22,25 @@ function App(props) {
           console.warn('[App] auto login skipped:', err);
         }
       }
+      // 冷启动：拉取导语配置 + 试用状态 → 弹「功能使用说明」弹窗（仅冷启动一次）
+      useAccessStore.getState().init();
     })();
   }, []);
 
-  // 对应 onShow
-  useDidShow(() => {});
+  // 对应 onShow：每次回到前台静默刷新解锁状态（缴押金返回后锁定遮罩即时消失；不重复弹窗）
+  useDidShow(() => {
+    useAccessStore.getState().refresh();
+  });
 
   // 对应 onHide
   useDidHide(() => {});
 
-  return props.children;
+  return (
+    <>
+      {props.children}
+      <AccessGate />
+    </>
+  );
 }
 
 export default App;

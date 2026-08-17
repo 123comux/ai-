@@ -7,6 +7,7 @@ import CourseCard from '@/components/CourseCard';
 import ProjectCard from '@/components/ProjectCard';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
+import { useAccessStore, formatTrialRemaining } from '@/store/useAccessStore';
 import { fetchAbilityReport, fetchLearningPath, fetchCourses, fetchProjects, getRecommendedCourses, fetchBanners, fetchDirections, fetchLearningStats } from '@/services/api';
 import type { Course, Project } from '@/types/index';
 import type { CourseRecommendation, BannerItem, DirectionItem } from '@/services/api';
@@ -52,6 +53,10 @@ const TOPIC_CN_MAP: Record<string, string> = {
 
 const HomePage: React.FC = () => {
   const { nickname, targetDirection } = useUserStore();
+  // 试用期即将到期提醒横幅（试用到期的全屏锁定由 AccessGate 遮罩接管，此处不重复）
+  const accessStatus = useAccessStore((s) => s.status);
+  const warnExpiring = accessStatus?.warn_expiring ?? false;
+  const goDeposit = () => Taro.navigateTo({ url: '/pages/deposit/index' });
   const {
     abilityReport, setAbilityReport,
     currentPath, setCurrentPath,
@@ -171,6 +176,17 @@ const HomePage: React.FC = () => {
           </View>
         </View>
       </View>
+
+      {/* 试用期即将到期提醒 */}
+      {warnExpiring && accessStatus && (
+        <View className={styles.trialWarn} onClick={goDeposit}>
+          <Text className={styles.trialWarnIcon}>⏳</Text>
+          <Text className={styles.trialWarnText}>
+            试用期还剩 {formatTrialRemaining(accessStatus.trial_remaining_seconds)}，到期未缴押金将暂停使用
+          </Text>
+          <Text className={styles.trialWarnAction}>去缴纳 ›</Text>
+        </View>
+      )}
 
       {/* Banner 轮播 */}
       {banners.length > 0 && (

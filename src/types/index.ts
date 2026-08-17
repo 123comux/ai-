@@ -259,4 +259,34 @@ export interface DepositStatus {
   };
 }
 
+// ============ 功能使用权限（5 天免费试用 → 缴纳押金解锁） ============
+export interface AccessFeature {
+  icon: string;
+  title: string;
+  desc: string;
+}
+
+export interface AccessConfig {
+  trial_days: number;
+  trial_warn_seconds: number;
+  deposit_amount: number;
+  currency: string;
+  refund_rules: { amount: string; timing: string; failed: string; anti_fraud: string };
+  features: AccessFeature[];
+  usage_intro: string;
+}
+
+export interface AccessStatus {
+  user_id: number;
+  in_trial: boolean;
+  deposit_paid: boolean;
+  access_granted: boolean;
+  warn_expiring: boolean;
+  trial_remaining_seconds: number;
+  trial_end_at: string | null;
+  trial_started_at: string;
+  server_time: string;
+  config?: AccessConfig;
+}
+
 

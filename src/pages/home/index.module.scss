@@ -441,3 +441,30 @@
   color: $color-text-tertiary;
   display: block;
 }
+/* 试用期即将到期提醒横幅 */
+.trialWarn {
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-md;
+  background: rgba($color-warning, 0.1);
+  border: 1rpx solid rgba($color-warning, 0.4);
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  font-size: $font-size-sm;
+}
+
+.trialWarnIcon {
+  margin-right: $spacing-xs;
+}
+
+.trialWarnText {
+  flex: 1;
+  color: $color-warning;
+  line-height: $line-height-normal;
+}
+
+.trialWarnAction {
+  color: $color-warning;
+  font-weight: $font-weight-medium;
+  margin-left: $spacing-sm;
+}

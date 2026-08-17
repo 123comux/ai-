@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Textarea, Button } from '@tarojs/components';
-import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
+import Taro, { useDidShow, useDidHide, useShareAppMessage } from '@tarojs/taro';
 import {
   fetchDepositStatus, fetchDepositConfig, enrollDeposit,
   requestRefund, recordStageAssessment, passHomework, submitProject,
@@ -8,6 +8,7 @@ import {
   fetchHomeworkStatus, submitHomework, type HomeworkItem,
 } from '@/services/api';
 import { useUserStore } from '@/store/useUserStore';
+import { useAccessStore } from '@/store/useAccessStore';
 import type { DepositStatus, DepositConfig } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -62,8 +63,17 @@ const DepositPage: React.FC = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
-  useDidShow(() => { load(); });
+  useEffect(() => {
+    // 押金页是解锁通道：锁定遮罩不在本页拦截（否则用户永远点不到缴纳按钮）
+    useAccessStore.getState().setOnUnlockPage(true);
+    load();
+    return () => useAccessStore.getState().setOnUnlockPage(false);
+  }, []);
+  useDidShow(() => {
+    useAccessStore.getState().setOnUnlockPage(true);
+    load();
+  });
+  useDidHide(() => useAccessStore.getState().setOnUnlockPage(false));
 
   const handleEnroll = async () => {
     setBusy(true); setResult(null);
@@ -80,9 +90,13 @@ const DepositPage: React.FC = () => {
           const msg = payErr?.message || payErr?.errMsg || '支付未完成';
           setResult({ type: 'err', msg: msg.includes('cancel') ? '已取消支付，可重新报名' : msg });
         }
+        // 缴押金即解锁：支付成功后刷新权限状态，返回主界面锁定遮罩即时消失
+        useAccessStore.getState().refresh();
         await load();
       } else {
         Taro.showToast({ title: '报名成功，押金已记录', icon: 'success' });
+        // 占位报名（未配微信支付）同样即时解锁
+        useAccessStore.getState().refresh();
         await load();
       }
     } catch (err: any) {

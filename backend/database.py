@@ -497,6 +497,16 @@ def init_db():
         except Exception:
             pass
 
+    # 功能使用权限：5 天免费试用期起点（服务端首次确认时间，用户不可篡改）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_access (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            trial_started_at TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
     seed_homework_questions(cur)
 
     conn.commit()
@@ -849,6 +859,35 @@ def upsert_deposit(user_id: int, fields: dict) -> dict:
     conn.commit()
     conn.close()
     return get_deposit(user_id)
+
+
+def get_user_access(user_id: int) -> Optional[dict]:
+    """返回用户的权限记录（含服务端试用期起点），无记录则 None。"""
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM user_access WHERE user_id=?", (user_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def upsert_user_access(user_id: int, fields: dict) -> dict:
+    """创建/更新用户权限记录。trial_started_at 仅由服务端写入，客户端传入的其它字段一律丢弃。"""
+    fields = {k: v for k, v in fields.items() if k in ("trial_started_at",)}
+    fields["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM user_access WHERE user_id=?", (user_id,)).fetchone()
+    if existing:
+        sets = ", ".join(f"{k}=?" for k in fields)
+        conn.execute(f"UPDATE user_access SET {sets} WHERE user_id=?", list(fields.values()) + [user_id])
+    else:
+        cols = ["user_id"] + list(fields.keys())
+        placeholders = ["?"] + ["?"] * len(fields)
+        conn.execute(
+            f"INSERT INTO user_access ({', '.join(cols)}) VALUES ({', '.join(placeholders)})",
+            [user_id] + list(fields.values()),
+        )
+    conn.commit()
+    conn.close()
+    return get_user_access(user_id)
 
 
 # ============ 作业提交 / 评审 Helpers ============

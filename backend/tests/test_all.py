@@ -809,5 +809,185 @@ class TestTeams(unittest.TestCase):
         return r.json()["token"], r.json()["user"]
 
 
+class TestAccessControl(unittest.TestCase):
+    """功能使用权限：5 天免费试用 → 缴纳押金解锁（边界计算 + 集成链路）。"""
+
+    def _login(self, nickname):
+        code = f"acc_{int(time.time()*1000)}_{nickname}"
+        r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
+        assert r.status_code == 200, r.text
+        token = r.json()["token"]
+        uid = r.json()["user"]["id"]
+        # 清掉历史权限/押金，保证每个用例从"全新用户 + 试用期"起步
+        from database import get_connection
+        conn = get_connection()
+        conn.execute("DELETE FROM user_access WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM user_deposits WHERE user_id=?", (uid,))
+        conn.commit()
+        conn.close()
+        return token, uid
+
+    def _expire(self, uid, days=10):
+        """把试用起点推到指定天数前（服务端落库，等价真实到期）。"""
+        from datetime import datetime, timedelta
+        from database import upsert_user_access
+        old = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+        upsert_user_access(uid, {"trial_started_at": old})
+
+    # ---------- 纯函数：试用期计算边界 ----------
+
+    def test_compute_access_in_trial_day1(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        started = datetime(2026, 8, 12, 10, 0, 0)
+        now = datetime(2026, 8, 13, 10, 0, 0)  # 第 1 天中期
+        s = compute_access(now, started, False)
+        self.assertTrue(s["in_trial"])
+        self.assertTrue(s["access_granted"])
+        self.assertFalse(s["warn_expiring"])
+        self.assertEqual(s["trial_remaining_seconds"], int(4 * 86400))
+        self.assertEqual(s["trial_end_at"], "2026-08-17 10:00:00")
+
+    def test_compute_access_warn_window(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        started = datetime(2026, 8, 12, 10, 0, 0)
+        now = datetime(2026, 8, 17, 0, 0, 0)  # 距终点 10 小时 < 24h 提醒窗
+        s = compute_access(now, started, False)
+        self.assertTrue(s["in_trial"])
+        self.assertTrue(s["warn_expiring"])
+        self.assertLessEqual(s["trial_remaining_seconds"], 86400)
+        self.assertGreater(s["trial_remaining_seconds"], 0)
+
+    def test_compute_access_expiry_at_zero(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        started = datetime(2026, 8, 12, 10, 0, 0)
+        now = datetime(2026, 8, 17, 10, 0, 0)  # 恰好到期：剩余 0 → 立即锁定
+        s = compute_access(now, started, False)
+        self.assertFalse(s["in_trial"])
+        self.assertFalse(s["access_granted"])
+        self.assertEqual(s["trial_remaining_seconds"], 0)
+
+    def test_compute_access_one_second_before_end(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        started = datetime(2026, 8, 12, 10, 0, 0)
+        now = datetime(2026, 8, 17, 9, 59, 59)
+        s = compute_access(now, started, False)
+        self.assertTrue(s["in_trial"])
+        self.assertEqual(s["trial_remaining_seconds"], 1)
+
+    def test_compute_access_cross_midnight(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        started = datetime(2026, 8, 12, 23, 30, 0)   # 终点 8/17 23:30
+        now = datetime(2026, 8, 18, 0, 5, 0)         # 跨零点后 35 分钟 → 已过期
+        s = compute_access(now, started, False)
+        self.assertFalse(s["in_trial"])
+        self.assertFalse(s["access_granted"])
+        self.assertEqual(s["trial_remaining_seconds"], 0)
+
+    def test_compute_access_new_user_no_start(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        s = compute_access(datetime(2026, 8, 13, 12, 0, 0), None, False)
+        self.assertTrue(s["in_trial"])
+        self.assertTrue(s["access_granted"])
+        self.assertIsNone(s["trial_end_at"])
+        self.assertEqual(s["trial_remaining_seconds"], 5 * 86400)
+
+    def test_compute_access_deposit_override(self):
+        from datetime import datetime
+        from services.access_service import compute_access
+        started = datetime(2026, 8, 1, 0, 0, 0)
+        now = datetime(2026, 8, 20, 0, 0, 0)  # 远超 5 天：试用已结束
+        s = compute_access(now, started, True)
+        self.assertFalse(s["in_trial"])
+        self.assertTrue(s["access_granted"])  # 已缴押金 → 恒解锁
+        self.assertTrue(s["deposit_paid"])
+
+    # ---------- resolve_access：幂等落库 ----------
+
+    def test_resolve_access_writes_and_keeps_trial_start(self):
+        from datetime import datetime
+        from database import get_user_access
+        from services.access_service import resolve_access
+        _, uid = self._login("trial_idem")
+        resolve_access(uid, now=datetime(2026, 8, 12, 9, 0, 0))
+        stored1 = get_user_access(uid)["trial_started_at"]
+        self.assertEqual(stored1, "2026-08-12 09:00:00")
+        # 第二次传入更晚时间 → 起点保持首次值，不被客户端/重复请求重置
+        resolve_access(uid, now=datetime(2026, 8, 20, 9, 0, 0))
+        self.assertEqual(get_user_access(uid)["trial_started_at"], stored1)
+
+    def test_upsert_user_access_ignores_client_fields(self):
+        from database import get_user_access, upsert_user_access
+        _, uid = self._login("tamper")
+        upsert_user_access(uid, {"trial_started_at": "2026-08-01 00:00:00", "access_granted": 1, "foo": "bar"})
+        row = get_user_access(uid)
+        self.assertEqual(row["trial_started_at"], "2026-08-01 00:00:00")
+        self.assertNotIn("access_granted", row)
+        self.assertNotIn("foo", row)
+
+    # ---------- 中间件集成链路 ----------
+
+    def test_gated_path_ok_during_trial(self):
+        token, _ = self._login("gated_trial")
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 200)
+
+    def test_expired_user_gets_403(self):
+        from services.access_service import resolve_access
+        token, uid = self._login("gated_expired")
+        self._expire(uid)
+        self.assertFalse(resolve_access(uid)["access_granted"])
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 403)
+        body = r.json()["detail"]
+        self.assertEqual(body["code"], "access_denied")
+        self.assertIn("access", body)
+        self.assertFalse(body["access"]["access_granted"])
+
+    def test_exempt_paths_work_when_locked(self):
+        token, uid = self._login("gated_exempt")
+        self._expire(uid)
+        # 功能使用权限接口本身 / 押金接口 = 解锁通道，锁定状态下仍可访问
+        r = client.get("/api/access/status", headers=auth_header(token))
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.json()["access_granted"])
+        r = client.get("/api/deposit/status", headers=auth_header(token))
+        self.assertEqual(r.status_code, 200)
+        # 公开导语（无需登录）
+        r = client.get("/api/access/intro")
+        self.assertEqual(r.status_code, 200)
+        intro = r.json()
+        self.assertEqual(intro["trial_days"], 5)
+        self.assertGreater(len(intro["features"]), 0)
+
+    def test_deposit_active_unlocks_expired_user(self):
+        from database import upsert_deposit
+        token, uid = self._login("gated_pay")
+        self._expire(uid)
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 403)
+        # 缴纳押金（active）后 → 实时解锁，无需额外同步
+        upsert_deposit(uid, {"status": "active", "amount": 199})
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 200)
+
+    def test_no_token_passthrough_public(self):
+        # 未登录 → 中间件放行，公开接口保持原有行为（不因权限中间件改变）
+        r = client.get("/api/courses")
+        self.assertNotEqual(r.status_code, 403)
+        self.assertNotIn("access_denied", r.text)
+
+    def test_invalid_token_passthrough(self):
+        # 坏 token → 放行给路由自身处理（非 403 access_denied）
+        r = client.get("/api/courses", headers={"Authorization": "Bearer bad.token.garbage"})
+        self.assertNotEqual(r.status_code, 403)
+        self.assertNotIn("access_denied", r.text)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

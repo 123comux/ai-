@@ -5,8 +5,9 @@
  * All data is fetched from the FastAPI backend (http://localhost:8000).
  */
 import Taro from '@tarojs/taro';
-import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem, LoginResult, AuthUser, DepositConfig, DepositStatus } from '@/types/index';
+import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem, LoginResult, AuthUser, DepositConfig, DepositStatus, AccessConfig, AccessStatus } from '@/types/index';
 import { API_BASE } from '@/config/env';
+import { useAccessStore } from '@/store/useAccessStore';
 
 // API 地址来自环境配置（见 src/config/env.ts）。生产构建注入 TARO_APP_API_BASE=HTTPS 域名，
 // 微信小程序同时需在小程序后台配置该域名为合法 request/uploadFile 域名。
@@ -24,6 +25,20 @@ function buildUrl(path: string): string {
   return full.replace(/([^:])\/{2,}/g, '$1/');
 }
 
+/**
+ * 统一识别后端 403 access_denied（试用期已结束但未缴押金）。
+ * 命中时把锁定状态写进 useAccessStore，前端全屏锁定遮罩即时接管。
+ */
+function maybeAccessDenied(res: { statusCode: number; data?: any }): boolean {
+  if (res.statusCode !== 403) return false;
+  const d = res.data?.detail;
+  if (d && d.code === 'access_denied') {
+    useAccessStore.getState().handleAccessDenied(d.access);
+    return true;
+  }
+  return false;
+}
+
 /** GET 辅助函数 */
 async function apiGet<T>(path: string, timeoutMs: number = 15000): Promise<T> {
   const res = await Taro.request<T>({
@@ -33,7 +48,10 @@ async function apiGet<T>(path: string, timeoutMs: number = 15000): Promise<T> {
     timeout: timeoutMs,
     dataType: 'json',
   });
-  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  if (res.statusCode !== 200) {
+    if (maybeAccessDenied(res)) throw new Error('功能已锁定，缴纳押金即可解锁');
+    throw new Error(`HTTP ${res.statusCode}`);
+  }
   return res.data;
 }
 
@@ -48,6 +66,7 @@ async function apiPost<T>(path: string, body: Record<string, unknown>, timeoutMs
     dataType: 'json',
   });
   if (res.statusCode !== 200) {
+    if (maybeAccessDenied(res)) throw new Error('功能已锁定，缴纳押金即可解锁');
     // 后端 FastAPI 错误响应带 detail 字段（如"还有 n/m 个视频未看完"）
     const detail = (res.data as any)?.detail;
     const msg = typeof detail === 'string' ? detail : `HTTP ${res.statusCode}`;
@@ -67,6 +86,7 @@ async function apiPut<T>(path: string, body: Record<string, unknown>): Promise<T
     dataType: 'json',
   });
   if (res.statusCode !== 200) {
+    if (maybeAccessDenied(res)) throw new Error('功能已锁定，缴纳押金即可解锁');
     // 与 apiPost 一致：优先取后端 FastAPI 的 detail 错误信息
     const detail = (res.data as any)?.detail;
     throw new Error(typeof detail === 'string' ? detail : `HTTP ${res.statusCode}`);
@@ -83,7 +103,10 @@ async function apiDelete<T>(path: string): Promise<T> {
     timeout: 15000,
     dataType: 'json',
   });
-  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+  if (res.statusCode !== 200) {
+    if (maybeAccessDenied(res)) throw new Error('功能已锁定，缴纳押金即可解锁');
+    throw new Error(`HTTP ${res.statusCode}`);
+  }
   return res.data;
 }
 
@@ -273,7 +296,12 @@ export const askTutor = async (question: string): Promise<TutorResponse> => {
   }, 120000);
   try {
     const res = await requestTask;
-    if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}`);
+    if (res.statusCode !== 200) {
+      if (maybeAccessDenied({ statusCode: res.statusCode, data: res.data as any })) {
+        throw new Error('功能已锁定，缴纳押金即可解锁');
+      }
+      throw new Error(`HTTP ${res.statusCode}`);
+    }
     return res.data;
   } catch (err: any) {
     if (err.errMsg === 'abort' || err.errMsg?.includes('abort')) {
@@ -516,6 +544,18 @@ export const submitProject = async (passed: boolean): Promise<any> => {
 /** 标记作业通过（过程锁用） */
 export const passHomework = async (passed: boolean): Promise<any> => {
   return apiPost<any>('/api/deposit/homework', { passed });
+};
+
+// ============ 功能使用权限 API（5 天免费试用 → 缴纳押金解锁） ============
+
+/** 功能说明导语配置（公开，冷启动弹窗在登录确认前即可渲染；失败时前端有兜底文案） */
+export const fetchAccessIntro = async (): Promise<AccessConfig> => {
+  return apiGet<AccessConfig>('/api/access/intro');
+};
+
+/** 当前用户试用/解锁状态（服务端时间计算；试用中/已缴押金——解锁状态由服务端裁决） */
+export const fetchAccessStatus = async (): Promise<AccessStatus> => {
+  return apiGet<AccessStatus>('/api/access/status');
 };
 
 // ============ 作业提交 / 评审（过程锁完整闭环） ============

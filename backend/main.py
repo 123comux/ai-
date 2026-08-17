@@ -22,7 +22,7 @@ import os
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, HOST, PORT
-from routers import knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data, auth, deposit, community, homework, pay
+from routers import access, knowledge, assessment, courses, projects, learning_paths, ai, user_data, videos, content, admin, admin_panel, mine_data, auth, deposit, community, homework, pay
 from database import init_db
 
 app = FastAPI(
@@ -32,7 +32,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS
+# 中间件注册顺序（Starlette 为"后注册者最外层"）：先把 log/权限 中间件注册好，
+# CORS **最后**注册 → 位于最外层，即使权限中间件短路返回 403，出站仍会补 CORS 头，H5 端才能读到错误体。
+# Debug: log Origin header of all requests
+@app.middleware("http")
+async def log_origin(request: Request, call_next):
+    origin = request.headers.get("origin", "NONE")
+    logging.info(f"Request: {request.method} {request.url.path} Origin={origin}")
+    response = await call_next(request)
+    return response
+
+# 功能使用权限校验：5 天免费试用 → 逾期未缴押金则 403（豁免路径见 config.ACCESS_EXEMPT_PREFIXES）
+from services.access_service import access_control_middleware
+app.middleware("http")(access_control_middleware)
+
+# CORS（最外层，须最后注册）
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -42,15 +56,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Debug: log Origin header of all requests
-@app.middleware("http")
-async def log_origin(request: Request, call_next):
-    origin = request.headers.get("origin", "NONE")
-    logging.info(f"Request: {request.method} {request.url.path} Origin={origin}")
-    response = await call_next(request)
-    return response
-
 # Register routers
+app.include_router(access.router)
 app.include_router(knowledge.router)
 app.include_router(assessment.router)
 app.include_router(courses.router)

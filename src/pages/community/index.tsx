@@ -65,6 +65,8 @@ const CommunityPage: React.FC = () => {
   };
 
   const loadAll = () => { loadCheckin(); loadRank(); loadPosts(); };
+  // 仅挂载时加载一次，后续靠 useDidShow 刷新；load* 只用 setState/store，不依赖可变状态
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadAll(); }, []);
   useDidShow(() => {
     loadAll();

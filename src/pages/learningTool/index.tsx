@@ -33,7 +33,11 @@ const LearningToolPage: React.FC = () => {
     } catch (e) { console.error('[Tool] history', e); }
   };
 
+  // cat 变化时重新加载模板；loadTemplates 每次渲染是新闭包但捕获当前 cat，行为正确
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadTemplates(); }, [cat]);
+  // 仅挂载时加载一次，后续靠 useDidShow 刷新
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadHistory(); }, []);
   useDidShow(() => { loadHistory(); });
 

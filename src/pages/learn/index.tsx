@@ -58,7 +58,7 @@ const LearnPage: React.FC = () => {
     } catch (err) {
       console.error('[Learn] load data error:', err);
     }
-  }, []);
+  }, [setCourses, setCategories, setActiveCategory, setCurrentPath]);
 
   useEffect(() => {
     loadData();

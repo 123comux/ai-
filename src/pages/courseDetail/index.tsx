@@ -144,9 +144,12 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
+  // 仅挂载时加载一次，后续靠 useDidShow 刷新；loadCourse 只用 setState/store
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadCourse(true);
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // 从视频页标记"已看完"后返回，刷新学习进度
   useDidShow(() => {

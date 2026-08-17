@@ -8,6 +8,9 @@ import styles from './index.module.scss';
 
 const IS_WEAPP = process.env.TARO_ENV === 'weapp';
 
+/** 判断是否为 B 站嵌入 URL（纯函数，模块级以保持引用稳定，供 effect 依赖） */
+const isBilibiliUrl = (url: string) => url.includes('bilibili.com');
+
 /** 对可能 URL 编码的字符串做安全解码 */
 const safeDecode = (s: string | undefined): string => {
   if (!s) return '';
@@ -161,7 +164,7 @@ const VideoPage: React.FC = () => {
     return () => {
       if (iframeTimerRef.current) clearTimeout(iframeTimerRef.current);
     };
-  }, [currentVideo?.id, currentVideo?.url]);
+  }, [currentVideo, biliError]);
 
   const handleVideoClick = (video: VideoType) => {
     setCurrentVideo(video);
@@ -198,9 +201,6 @@ const VideoPage: React.FC = () => {
   const handleBack = () => {
     Taro.navigateBack();
   };
-
-  /** 判断是否为 B 站嵌入 URL */
-  const isBilibiliUrl = (url: string) => url.includes('bilibili.com');
 
   /** 切换到降级视图（手动触发） */
   const handleReportPlaybackIssue = () => {

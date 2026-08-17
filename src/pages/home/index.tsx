@@ -74,9 +74,12 @@ const HomePage: React.FC = () => {
 
   const firstShow = useRef(true);
 
+  // 仅挂载时加载一次，后续靠 useDidShow 刷新；loadData 只用 setState/store
+  /* eslint-disable react-hooks/exhaustive-deps -- 仅挂载时加载一次，后续靠 useDidShow 刷新 */
   useEffect(() => {
     loadData();
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // 每次页面显示时刷新（从学习路径/课程页标记完成后返回，路径进度同步更新）；
   // 首次显示由 useEffect 承担，这里跳过避免重复请求

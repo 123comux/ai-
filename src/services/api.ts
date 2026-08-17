@@ -454,12 +454,15 @@ export const removeFavorite = async (id: number): Promise<{ ok: boolean }> => {
 
 /** 微信登录：用 wx.login 拿到的 code 换取登录态 token */
 export const wechatLogin = async (code: string): Promise<LoginResult> => {
-  return apiPost<LoginResult>('/api/auth/wechat-login', { code });
+  const data = await apiPost<LoginResult>('/api/auth/wechat-login', { code });
+  if (data?.user) data.user.avatar = resolveAssetUrl(data.user.avatar);
+  return data;
 };
 
 /** 获取当前登录用户信息 */
 export const fetchMe = async (): Promise<AuthUser> => {
-  return apiGet<AuthUser>('/api/auth/me');
+  const user = await apiGet<AuthUser>('/api/auth/me');
+  return user ? { ...user, avatar: resolveAssetUrl(user.avatar) } : user;
 };
 
 /** 更新当前用户资料（昵称/头像 + 学员自填的年级/专业/目标方向），后端为唯一数据源 */
@@ -478,7 +481,8 @@ export const updateProfile = async (profile: {
     target_direction: profile.targetDirection ?? '',
   };
   const res = await apiPut<{ ok: boolean; user: AuthUser }>('/api/auth/profile', body);
-  return res.user;
+  const user = res?.user;
+  return user ? { ...user, avatar: resolveAssetUrl(user.avatar) } : user;
 };
 
 /** 上传头像文件（chooseAvatar 的临时路径会过期），返回可持久访问的完整 URL */
@@ -526,7 +530,9 @@ export const fetchDevUsers = async (): Promise<DevUser[]> => {
 
 /** 以指定用户身份签发登录态（模拟切换） */
 export const devImpersonate = async (userId: number): Promise<LoginResult> => {
-  return apiPost<LoginResult>(`/api/auth/dev/impersonate?user_id=${userId}`, {});
+  const data = await apiPost<LoginResult>(`/api/auth/dev/impersonate?user_id=${userId}`, {});
+  if (data?.user) data.user.avatar = resolveAssetUrl(data.user.avatar);
+  return data;
 };
 
 // ============ 押金式培训 API ============

@@ -1,13 +1,11 @@
 @use '@/styles/variables.scss' as *;
 
 /* 通用蒙层（导语弹窗 + 锁定遮罩共用）
-   微信端：App 组件里渲染的 fixed 元素需用 vw/vh 显式铺满视口 + 极高 z-index，
-   否则易被页面层(page 固有层级)盖住而不可见 */
+   微信端：用四向 0 铺满视口（不用 vw/vh——小程序 vh 不可靠，会导致遮罩/卡片尺寸异常）；
+   极高 z-index 盖过页面层 */
 .mask {
   position: fixed;
-  top: 0; left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 99999;
   display: flex;
@@ -21,7 +19,8 @@
 .card {
   width: 100%;
   max-width: 640rpx;
-  max-height: 88vh;
+  /* 不用 vh：用百分比相对遮罩(视口)高度，微信端才可靠；配合 body 滚动，footer 固定可见 */
+  max-height: 88%;
   background: $color-bg-card;
   border-radius: $radius-xl;
   box-shadow: $shadow-popup;
@@ -75,9 +74,10 @@
 .body {
   flex: 1;
   min-height: 0;
-  max-height: 600rpx;
   padding: $spacing-lg;
   box-sizing: border-box;
+  /* 卡片超高时内部滚动，保证 footer 按钮固定在底部可见 */
+  overflow-y: auto;
 }
 
 .usageIntro {
@@ -191,9 +191,7 @@
 /* —— 锁定全屏遮罩 —— */
 .lockMask {
   position: fixed;
-  top: 0; left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: $color-bg-page;
   z-index: 99999;
   display: flex;

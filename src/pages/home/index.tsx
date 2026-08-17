@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Fragment } from 'react';
 import { View, Text, ScrollView, Swiper, SwiperItem, Image } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import AssessmentCard from '@/components/AssessmentCard';
@@ -157,9 +157,10 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <ScrollView className={styles.page} scrollY>
-      {/* 顶部用户信息 */}
-      <View className={styles.header}>
+    <Fragment>
+      <ScrollView className={styles.page} scrollY>
+        {/* 顶部用户信息 */}
+        <View className={styles.header}>
         <View className={styles.headerTop}>
           <View className={styles.userInfo}>
             {avatar ? (
@@ -364,11 +365,13 @@ const HomePage: React.FC = () => {
         </View>
       </View>
 
-      {/* 导语弹窗 + 锁定遮罩（微信端 App 组件渲染会被页面层盖住，故在首页渲染；
-          首页是冷启动首屏，覆盖导语弹窗与试用到期锁定的主要场景） */}
-      <AccessGate />
     </ScrollView>
-  );
+
+    {/* 导语弹窗 + 锁定遮罩（不放 ScrollView 内：微信端 scroll-view 内的 fixed 元素
+        会被滚动容器裁剪/失效，导致弹窗不可见；须作为页面的兄弟节点渲染） */}
+    <AccessGate />
+  </Fragment>
+);
 };
 
 export default HomePage;

@@ -26,6 +26,17 @@ function buildUrl(path: string): string {
 }
 
 /**
+ * 把后端返回的相对静态资源路径（如 /static/avatars/x.png、/static/covers/x.png）
+ * 拼成完整 URL 供 <Image> 渲染；已是绝对 / 外部地址则原样返回。
+ */
+export function resolveAssetUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  if (url.startsWith('/')) return buildUrl(url);
+  return url;
+}
+
+/**
  * 统一识别后端 403 access_denied（试用期已结束但未缴押金）。
  * 命中时把锁定状态写进 useAccessStore，前端全屏锁定遮罩即时接管。
  */
@@ -136,12 +147,14 @@ export const completeLearningPathNode = async (pathId: string, nodeId: string): 
 export const fetchCourses = async (topic?: string): Promise<Course[]> => {
   // limit=100：课程 24 门超过后端默认 20，避免漏掉末尾课程
   const query = topic && topic !== 'all' ? `?topic=${encodeURIComponent(topic)}&limit=100` : '?limit=100';
-  return apiGet<Course[]>(`/api/courses${query}`);
+  const list = await apiGet<Course[]>(`/api/courses${query}`);
+  return (list || []).map((c) => ({ ...c, coverImg: resolveAssetUrl(c.coverImg) }));
 };
 
 /** 获取单个课程详情（含 chapters） */
-export const fetchCourseDetail = async (courseId: string): Promise<any> => {
-  return apiGet<any>(`/api/courses/${courseId}`);
+export const fetchCourseDetail = async (courseId: string): Promise<Course> => {
+  const c = await apiGet<Course>(`/api/courses/${courseId}`);
+  return c ? { ...c, coverImg: resolveAssetUrl(c.coverImg) } : c;
 };
 
 /** 课程章节学习进度（七阶段课程按章节计进度） */
@@ -172,12 +185,14 @@ export const fetchCourseCategories = async () => {
 export const fetchProjects = async (difficulty?: string): Promise<Project[]> => {
   // limit=100：避免项目数超过后端默认 20 时被截断
   const query = difficulty && difficulty !== 'all' ? `?difficulty=${encodeURIComponent(difficulty)}&limit=100` : '?limit=100';
-  return apiGet<Project[]>(`/api/projects${query}`);
+  const list = await apiGet<Project[]>(`/api/projects${query}`);
+  return (list || []).map((p) => ({ ...p, coverImg: resolveAssetUrl(p.coverImg) }));
 };
 
 /** 推进项目一步（完成当前步骤），返回更新后的项目 */
 export const advanceProject = async (projectId: string): Promise<Project> => {
-  return apiPost<Project>(`/api/projects/${projectId}/advance`, {});
+  const p = await apiPost<Project>(`/api/projects/${projectId}/advance`, {});
+  return p ? { ...p, coverImg: resolveAssetUrl(p.coverImg) } : p;
 };
 
 /** 获取项目分类 */
@@ -209,12 +224,14 @@ export const fetchLearningStats = async (): Promise<{
 /** 获取视频列表 */
 export const fetchVideos = async (courseId?: string): Promise<Video[]> => {
   const query = courseId ? `?course_id=${courseId}` : '';
-  return apiGet<Video[]>(`/api/videos${query}`);
+  const list = await apiGet<Video[]>(`/api/videos${query}`);
+  return (list || []).map((v) => ({ ...v, coverUrl: resolveAssetUrl(v.coverUrl) }));
 };
 
 /** 获取课程视频 */
 export const fetchCourseVideos = async (courseId: string): Promise<Video[]> => {
-  return apiGet<Video[]>(`/api/videos/course/${courseId}`);
+  const list = await apiGet<Video[]>(`/api/videos/course/${courseId}`);
+  return (list || []).map((v) => ({ ...v, coverUrl: resolveAssetUrl(v.coverUrl) }));
 };
 
 /** 标记视频为已看完（持久化），minutes 为实际观看分钟数 */
@@ -372,7 +389,8 @@ export interface MenuItem {
 
 /** 获取首页Banner */
 export const fetchBanners = async (): Promise<BannerItem[]> => {
-  return apiGet<BannerItem[]>('/api/content/banners');
+  const list = await apiGet<BannerItem[]>('/api/content/banners');
+  return (list || []).map((b) => ({ ...b, image_url: resolveAssetUrl(b.image_url) }));
 };
 
 /** 获取学习方向 */
@@ -392,7 +410,8 @@ export const analyzeJobMatching = async (jobDescription: string): Promise<JobMat
 
 /** 获取作品集 */
 export const fetchPortfolio = async (): Promise<PortfolioItem[]> => {
-  return apiGet<PortfolioItem[]>('/api/mine/portfolio');
+  const list = await apiGet<PortfolioItem[]>('/api/mine/portfolio');
+  return (list || []).map((p) => ({ ...p, coverImg: resolveAssetUrl(p.coverImg) }));
 };
 
 /** 获取学习目标列表 */
@@ -417,7 +436,8 @@ export const deleteGoal = async (id: number): Promise<{ ok: boolean }> => {
 
 /** 获取收藏列表 */
 export const fetchFavorites = async (): Promise<FavoriteItem[]> => {
-  return apiGet<FavoriteItem[]>('/api/mine/favorites');
+  const list = await apiGet<FavoriteItem[]>('/api/mine/favorites');
+  return (list || []).map((f) => ({ ...f, cover_img: resolveAssetUrl(f.cover_img) }));
 };
 
 /** 添加收藏 */
@@ -481,7 +501,7 @@ export const uploadAvatar = async (tempPath: string): Promise<string> => {
   }
   const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
   // 后端返回相对路径 /static/avatars/xx.png，拼成完整 URL 供 <Image> 渲染
-  return API_BASE + data.avatar_url;
+  return resolveAssetUrl(data.avatar_url);
 };
 
 // ============ 开发期"模拟切换用户"（后端 DEV_IMPERSONATE=true 才可用） ============

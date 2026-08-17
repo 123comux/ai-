@@ -226,7 +226,7 @@ def save_json(filename, data):
 
 
 def gen_cover(seed_id):
-    return f"https://picsum.photos/seed/{seed_id}/300/200"
+    return f"/static/covers/{seed_id}.png"
 
 
 # ============================================================

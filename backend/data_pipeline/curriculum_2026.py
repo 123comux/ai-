@@ -41,7 +41,7 @@ def _course(cid, title, description, topic, difficulty, hours, chapters, video_b
         "id": cid, "title": title, "description": description,
         "topic": topic, "difficulty": difficulty, "estimated_hours": hours,
         "lessons": lessons, "source": "curriculum-2026",
-        "coverImg": f"https://picsum.photos/seed/{cid}/300/200",
+        "coverImg": f"/static/covers/{cid}.png",
         "isFree": 1, "price": 0, "chapters": chapters,
     }
 

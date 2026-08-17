@@ -1265,9 +1265,9 @@ def seed_from_json():
 
     # Seed default banners
     default_banners = [
-        {"title": "AI 能力测评", "description": "测测你的 AI 水平", "image_url": "https://picsum.photos/id/160/750/400", "link_url": "/pages/assessment/index", "sort_order": 1},
-        {"title": "实战项目", "description": "做出可写进简历的作品", "image_url": "https://picsum.photos/id/201/750/400", "link_url": "/pages/project/index", "sort_order": 2},
-        {"title": "岗位对标", "description": "看看你离目标岗位差多少", "image_url": "https://picsum.photos/id/119/750/400", "link_url": "/pages/jobMatching/index", "sort_order": 3},
+        {"title": "AI 能力测评", "description": "测测你的 AI 水平", "image_url": "/static/covers/banner-160.png", "link_url": "/pages/assessment/index", "sort_order": 1},
+        {"title": "实战项目", "description": "做出可写进简历的作品", "image_url": "/static/covers/banner-201.png", "link_url": "/pages/project/index", "sort_order": 2},
+        {"title": "岗位对标", "description": "看看你离目标岗位差多少", "image_url": "/static/covers/banner-119.png", "link_url": "/pages/jobMatching/index", "sort_order": 3},
     ]
     for b in default_banners:
         insert_row("banners", b)

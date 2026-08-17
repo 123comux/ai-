@@ -23,7 +23,9 @@ backend/data/cms.db
 backend/database.sqlite3
 
 # Uploaded user files (avatars etc.)
-backend/static/
+backend/static/*
+# 内置课程/项目封面占位图（随仓库提交，运行时由后端 /static 提供）
+!backend/static/covers/
 
 # Environment
 .env

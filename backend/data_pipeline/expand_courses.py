@@ -29,7 +29,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage1-boundary/300/200",
+        "coverImg": "/static/covers/stage1-boundary.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -113,7 +113,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage2-writing/300/200",
+        "coverImg": "/static/covers/stage2-writing.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -197,7 +197,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage2-media/300/200",
+        "coverImg": "/static/covers/stage2-media.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -281,7 +281,7 @@ NEW_COURSES = [
         "estimated_hours": 3,
         "lessons": 4,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage3-prompt4/300/200",
+        "coverImg": "/static/covers/stage3-prompt4.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -388,7 +388,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage3-structure/300/200",
+        "coverImg": "/static/covers/stage3-structure.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -472,7 +472,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage4-weekly/300/200",
+        "coverImg": "/static/covers/stage4-weekly.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -556,7 +556,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage4-planning/300/200",
+        "coverImg": "/static/covers/stage4-planning.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -640,7 +640,7 @@ NEW_COURSES = [
         "estimated_hours": 2,
         "lessons": 3,
         "source": "seed-v3",
-        "coverImg": "https://picsum.photos/seed/stage4-ppt/300/200",
+        "coverImg": "/static/covers/stage4-ppt.png",
         "isFree": 1,
         "price": 0,
         "chapters": [

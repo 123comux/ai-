@@ -29,7 +29,7 @@ COURSES = [
         "description": "从零开始认识AI，了解AI是什么、能帮我们做什么、有什么局限性。适合完全不会用AI的普通人，不需要任何技术背景。学完本阶段你将建立正确的AI认知，知道什么时候该用AI、什么时候不该用。",
         "topic": "认知", "difficulty": "beginner", "estimated_hours": 4,
         "lessons": 4, "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/stage1-cognition/300/200",
+        "coverImg": "/static/covers/stage1-cognition.png",
         "isFree": 1, "price": 0,
         "chapters": [
             {"id": "ch-cog-1", "title": "AI是什么？从日常生活中的AI说起", "content_summary": "用生活化例子解释AI：手机语音助手、拍照翻译、购物推荐都是AI。区分AI不是机器人、不是科幻电影里的东西，而是已经渗透到日常生活中的工具。", "duration_minutes": 30,
@@ -61,7 +61,7 @@ COURSES = [
         "description": "认识并学会使用主流AI工具：大模型对话（DeepSeek/豆包/Kimi）、AI写作、AI绘图、AI办公。本阶段以实操为主，每节课都有动手练习，学完就能独立使用常见AI工具解决日常问题。",
         "topic": "入门", "difficulty": "beginner", "estimated_hours": 6,
         "lessons": 5, "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/stage2-basics/300/200",
+        "coverImg": "/static/covers/stage2-basics.png",
         "isFree": 1, "price": 0,
         "chapters": [
             {"id": "ch-basic-1", "title": "大模型对话入门：和AI好好聊天", "content_summary": "手把手教你打开DeepSeek/豆包/Kimi，进行第一次对话。介绍基本交互方式：直接提问、追问、纠错。", "duration_minutes": 40,
@@ -98,7 +98,7 @@ COURSES = [
         "description": "从「能用AI」升级到「用好AI」。掌握万能四段式提示词框架、角色限定法、链式追问等核心技巧，让AI的输出质量提升一个档次。本阶段是学习效果的分水岭。",
         "topic": "进阶", "difficulty": "intermediate", "estimated_hours": 8,
         "lessons": 5, "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/stage3-advanced/300/200",
+        "coverImg": "/static/covers/stage3-advanced.png",
         "isFree": 1, "price": 0,
         "chapters": [
             {"id": "ch-adv-1", "title": "万能四段式提示词：清晰/角色/场景/限制", "content_summary": "揭示高质量提示词的核心框架：①说清楚要什么 ②给AI一个角色 ③描述使用场景 ④设定输出限制。掌握这个框架就掌握了80%的提示词技巧。", "duration_minutes": 45,
@@ -135,7 +135,7 @@ COURSES = [
         "description": "将AI应用于学习、办公、写作、求职四大真实场景。每节课都是一次完整的实操项目，学完就能把AI融入日常工作和学习中，真正实现效率提升。",
         "topic": "实战", "difficulty": "intermediate", "estimated_hours": 10,
         "lessons": 5, "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/stage4-practice/300/200",
+        "coverImg": "/static/covers/stage4-practice.png",
         "isFree": 1, "price": 0,
         "chapters": [
             {"id": "ch-prac-1", "title": "周报自动生成：从流水账到结构化周报", "content_summary": "实战项目：建立个人周报生成工作流。只需输入本周的关键事项关键词，AI自动输出格式规范、重点突出、数据量化的专业周报。", "duration_minutes": 50,
@@ -172,7 +172,7 @@ COURSES = [
         "description": "从单次使用AI进步到建立自动化工作流。学习组合使用多个AI工具完成复杂任务，建立持续优化的AI使用习惯。本阶段帮你从「会用AI」升级到「善用AI」，让AI成为你工作和学习中的得力助手。",
         "topic": "熟练", "difficulty": "advanced", "estimated_hours": 8,
         "lessons": 4, "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/stage5-mastery/300/200",
+        "coverImg": "/static/covers/stage5-mastery.png",
         "isFree": 1, "price": 0,
         "chapters": [
             {"id": "ch-mas-1", "title": "AI自动化流程搭建：一次设置，持续提效", "content_summary": "学会设计可复用的AI工作流：把高频重复任务变成标准化提示词模板，实现「输入关键信息→AI自动输出完整成果」。", "duration_minutes": 45,
@@ -413,7 +413,7 @@ PROJECTS = [
         "description": "设计并建立属于你自己的AI周报自动生成流程。从整理本周事项→AI生成→优化完善→发布，形成一个可每周复用的标准化工作流。产出物：你个人的周报提示词模板 + 一份示例周报。",
         "tech_stack": ["AI对话", "提示词设计", "文档"], "difficulty": "beginner", "estimated_hours": 3,
         "topics_covered": ["AI办公", "工作流设计"], "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/project-0/300/200",
+        "coverImg": "/static/covers/project-0.png",
         "isFree": 1, "price": 0,
     },
     {
@@ -422,7 +422,7 @@ PROJECTS = [
         "description": "用AI从零完成一场校园/社区活动的完整策划：主题创意→方案细化→物料清单→宣传文案→执行流程。产出物：完整的活动策划方案文档（含时间线、预算、分工、应急预案）。",
         "tech_stack": ["AI对话", "策划", "项目管理"], "difficulty": "intermediate", "estimated_hours": 4,
         "topics_covered": ["活动策划", "全链路AI"], "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/project-1/300/200",
+        "coverImg": "/static/covers/project-1.png",
         "isFree": 1, "price": 0,
     },
     {
@@ -431,7 +431,7 @@ PROJECTS = [
         "description": "用AI全面提升你的求职准备：简历诊断与优化→目标岗位JD分析→模拟面试→面试问题准备。产出物：优化后的简历 + 个性化面试准备手册。",
         "tech_stack": ["AI对话", "简历优化", "面试模拟"], "difficulty": "intermediate", "estimated_hours": 4,
         "topics_covered": ["求职", "AI辅助"], "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/project-2/300/200",
+        "coverImg": "/static/covers/project-2.png",
         "isFree": 1, "price": 0,
     },
     {
@@ -440,7 +440,7 @@ PROJECTS = [
         "description": "系统整理你学到的所有提示词技巧，建立属于你自己的分类提示词库（学习/办公/写作/生活四大类）。每类至少5条经过验证的高质量提示词。产出物：个人AI提示词手册。",
         "tech_stack": ["提示词设计", "知识管理"], "difficulty": "beginner", "estimated_hours": 3,
         "topics_covered": ["提示词工程", "知识管理"], "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/project-3/300/200",
+        "coverImg": "/static/covers/project-3.png",
         "isFree": 1, "price": 0,
     },
     {
@@ -449,7 +449,7 @@ PROJECTS = [
         "description": "综合运用五阶段全部技能，完成一个端到端的AI项目。可选方向：AI学习笔记系统、AI日报生成器、AI读书助手、AI课程设计等。产出物：完整的项目方案+提示词链+示例输出。",
         "tech_stack": ["综合应用", "AI工作流"], "difficulty": "advanced", "estimated_hours": 6,
         "topics_covered": ["全链路实战", "项目综合"], "source": "seed-v2",
-        "coverImg": "https://picsum.photos/seed/project-4/300/200",
+        "coverImg": "/static/covers/project-4.png",
         "isFree": 1, "price": 0,
     },
 ]

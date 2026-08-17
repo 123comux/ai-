@@ -558,7 +558,7 @@ PROJECT_COURSES = [
         "difficulty": "beginner",
         "estimated_hours": 3,
         "source": "project-course",
-        "coverImg": "https://picsum.photos/seed/project-course-1/300/200",
+        "coverImg": "/static/covers/project-course-1.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -641,7 +641,7 @@ PROJECT_COURSES = [
         "difficulty": "intermediate",
         "estimated_hours": 4,
         "source": "project-course",
-        "coverImg": "https://picsum.photos/seed/project-course-2/300/200",
+        "coverImg": "/static/covers/project-course-2.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -724,7 +724,7 @@ PROJECT_COURSES = [
         "difficulty": "intermediate",
         "estimated_hours": 4,
         "source": "project-course",
-        "coverImg": "https://picsum.photos/seed/project-course-3/300/200",
+        "coverImg": "/static/covers/project-course-3.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -807,7 +807,7 @@ PROJECT_COURSES = [
         "difficulty": "beginner",
         "estimated_hours": 3,
         "source": "project-course",
-        "coverImg": "https://picsum.photos/seed/project-course-4/300/200",
+        "coverImg": "/static/covers/project-course-4.png",
         "isFree": 1,
         "price": 0,
         "chapters": [
@@ -890,7 +890,7 @@ PROJECT_COURSES = [
         "difficulty": "advanced",
         "estimated_hours": 6,
         "source": "project-course",
-        "coverImg": "https://picsum.photos/seed/project-course-5/300/200",
+        "coverImg": "/static/covers/project-course-5.png",
         "isFree": 1,
         "price": 0,
         "chapters": [

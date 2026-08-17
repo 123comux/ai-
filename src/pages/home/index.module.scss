@@ -33,6 +33,17 @@
   background: $color-bg-hover;
 }
 
+.avatarPlaceholder {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-lg;
+}
+
 .userText {
   display: flex;
   flex-direction: column;

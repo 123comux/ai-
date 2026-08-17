@@ -52,7 +52,7 @@ const TOPIC_CN_MAP: Record<string, string> = {
 };
 
 const HomePage: React.FC = () => {
-  const { nickname, targetDirection } = useUserStore();
+  const { nickname, avatar, targetDirection } = useUserStore();
   // 试用期即将到期提醒横幅（试用到期的全屏锁定由 AccessGate 遮罩接管，此处不重复）
   const accessStatus = useAccessStore((s) => s.status);
   const warnExpiring = accessStatus?.warn_expiring ?? false;
@@ -161,7 +161,11 @@ const HomePage: React.FC = () => {
       <View className={styles.header}>
         <View className={styles.headerTop}>
           <View className={styles.userInfo}>
-            <Image className={styles.avatar} src="https://picsum.photos/id/64/200/200" mode="aspectFill" />
+            {avatar ? (
+              <Image className={styles.avatar} src={avatar} mode="aspectFill" />
+            ) : (
+              <View className={styles.avatarPlaceholder}><Text>👤</Text></View>
+            )}
             <View className={styles.userText}>
               <Text className={styles.greeting}>你好，{nickname}</Text>
               {targetDirection ? (

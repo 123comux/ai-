@@ -87,6 +87,16 @@ def resolve_access(user_id: int, now: Optional[datetime] = None) -> dict:
     deposit = get_deposit(user_id)
     deposit_paid = bool(deposit and deposit.get("status") in DEPOSIT_UNLOCKED_STATUSES)
     state = compute_access(now, started, deposit_paid)
+    # 后台人工覆盖：'lock' 强制锁定、'unlock' 强制解锁，空串保持派生规则（仅核对用户本人/deposit）
+    if row and row.get("admin_override") == "lock":
+        state["access_granted"] = False
+    elif row and row.get("admin_override") == "unlock":
+        state["access_granted"] = True
+        state["in_trial"] = True
+        trial_end = started + timedelta(days=36500)  # 覆盖解锁视为长期授权
+        state["trial_end_at"] = trial_end.strftime(TS_FMT)
+        state["trial_remaining_seconds"] = int((trial_end - now).total_seconds())
+    state["admin_override"] = row.get("admin_override", "") if row else ""
     state["user_id"] = user_id
     state["trial_started_at"] = started.strftime(TS_FMT)
     state["server_time"] = now.strftime(TS_FMT)

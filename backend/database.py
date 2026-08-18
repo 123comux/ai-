@@ -509,9 +509,15 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL UNIQUE,
             trial_started_at TEXT NOT NULL DEFAULT '',
+            admin_override TEXT NOT NULL DEFAULT '',  -- ''=按规则, 'lock'=强制锁定, 'unlock'=强制解锁
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
+    # 兼容旧库：为缺少 admin_override 列的 user_access 表补列（后台用户权限/试用管理用）
+    try:
+        cur.execute("ALTER TABLE user_access ADD COLUMN admin_override TEXT NOT NULL DEFAULT ''")
+    except Exception:
+        pass
 
     # AI 每日调用计数（未缴押金/试用期用户限流用）。每用户每天每个功能一行。
     cur.execute("""
@@ -528,6 +534,7 @@ def init_db():
 
     seed_homework_questions(cur)
     backfill_project_steps_from_json(cur)
+    seed_learning_paths_from_direction_plan(cur)
 
     conn.commit()
     conn.close()
@@ -669,6 +676,133 @@ def backfill_project_steps_from_json(cur=None):
     if conn is not None:
         conn.commit()
         conn.close()
+
+
+# ============ 学习路径（方向路径）种子 ============
+
+# 方向 → (按序课程 id, 按序项目 id)。这是学习路径列表的"内容蓝图"：
+# 后台管理可直接编辑 learning_paths 表中的方向路径，改动即时生效。
+# 分享「大模型基础 + Agent 概念」打底，再按方向追加差异化技术模块。
+_LEARNING_DIRECTION_PLAN = {
+    "大模型应用开发": (
+        ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-rag", "s3-langchain", "s6-rag-project"],
+        ["project-3", "project-0", "project-4"],
+    ),
+    "机器学习工程师": (
+        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-agent-core", "s2-agent-arch", "s3-rag", "s5-observability"],
+        ["project-0", "project-3", "project-4"],
+    ),
+    "深度学习工程师": (
+        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-langgraph", "s3-agentic-rag"],
+        ["project-4", "project-3"],
+    ),
+    "数据科学家": (
+        ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s2-agent-core", "s3-rag", "s5-observability", "s5-deploy"],
+        ["project-0", "project-4", "project-3"],
+    ),
+    "AI 应用开发": (
+        ["s1-llm-basics", "s1-api-dev", "s2-tool-calling", "s3-langchain", "s3-langgraph", "s4-multi-agent", "s5-deploy", "s6-rag-project", "s6-cs-agent", "s7-career"],
+        ["project-1", "project-4", "project-2"],
+    ),
+    "计算机视觉工程师": (
+        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-tool-calling", "s3-mcp", "s4-orchestration"],
+        ["project-4", "project-0"],
+    ),
+}
+
+# 兜底蓝图：方向不在上面差异化蓝图时使用（作为 on-demand 兜底路径，不入列表 Tab）
+_DEFAULT_PLAN = (
+    ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-rag", "s3-langchain"],
+    ["project-3", "project-4"],
+)
+
+# 旧版 pipeline 遗留的方向路径（path-2026* 阶段式静态路径），已被方向蓝图取代。
+# 保留在表里以便追溯，但默认停用，不作为列表Tab展示。
+_LEGACY_PATH_IDS = {"path-2026", "path-2026-rag", "path-2026-agent", "path-2026-fullstack"}
+
+
+def seed_learning_paths_from_direction_plan(cur=None, force=False):
+    """把方向蓝图（学习路径的"内容"）灌入 learning_paths 表，作为数据库驱动的种子。
+
+    数据源统一（learning_paths 改数据库驱动）后：
+    - 方向路径内容（含节点课程序列、标题、进度锚点）以数据库为准，后台可编辑、即时生效；
+    - 仅当表中缺少对应 id 时才插入（不覆盖后台已编辑的内容），force=True 可整体重建；
+    - 课程/项目标题从 courses/projects 表实时读取（存在则用中文展示名，否则回退 id）。
+    """
+    conn = None
+    if cur is None:
+        conn = get_connection()
+        cur = conn.cursor()
+
+    def _titles(table, id_col, id_val):
+        row = cur.execute(f"SELECT {id_col}, title FROM {table} WHERE id=?", (id_val,)).fetchone()
+        return (row["title"] if row else id_val)
+
+    def _course_title(cid):
+        return _titles("courses", "id", cid)
+
+    def _project_title(pid):
+        return _titles("projects", "id", pid).replace("Project: ", "", 1)
+
+    def _build(direction, courses, projects):
+        nodes = []
+        for i, cid in enumerate(courses):
+            nodes.append({
+                "id": f"gen-{direction}-course-{i}",
+                "title": _course_title(cid),
+                "type": "course",
+                "items": [cid],
+                "status": "current" if i == 0 else "locked",
+                "progress": 0,
+                "courseId": cid,
+            })
+        for j, pid in enumerate(projects):
+            nodes.append({
+                "id": f"gen-{direction}-project-{j}",
+                "title": _project_title(pid),
+                "type": "project",
+                "items": [pid],
+                "status": "locked",
+                "progress": 0,
+                "courseId": None,
+            })
+        return {
+            "id": f"path-{direction}",
+            "direction": direction,
+            "title": f"{direction}学习路径",
+            "description": "",
+            "nodes": nodes,
+            "total_weeks": len(nodes),
+            "current_week": 1,
+            "created_at": "2026-08-07",
+        }
+
+    try:
+        for direction, (courses, projects) in _LEARNING_DIRECTION_PLAN.items():
+            path = _build(direction, courses, projects)
+            row = cur.execute("SELECT id FROM learning_paths WHERE id=?", (path["id"],)).fetchone()
+            if row is not None and not force:
+                continue  # 已有内容，尊重后台编辑
+            cur.execute(
+                """INSERT INTO learning_paths
+                   (id, direction, title, description, total_weeks, current_week, nodes, is_active, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now'))
+                   ON CONFLICT(id) DO UPDATE SET
+                     direction=excluded.direction, title=excluded.title,
+                     description=excluded.description, total_weeks=excluded.total_weeks,
+                     current_week=excluded.current_week, nodes=excluded.nodes, updated_at=datetime('now')
+                """,
+                (path["id"], direction, path["title"], path["description"],
+                 path["total_weeks"], path["current_week"],
+                 json.dumps(path["nodes"], ensure_ascii=False), path["created_at"]),
+            )
+        # 停用旧版遗留路径，避免作为列表 Tab 展示（保留行以便追溯/恢复）
+        for legacy_id in _LEGACY_PATH_IDS:
+            cur.execute("UPDATE learning_paths SET is_active=0 WHERE id=?", (legacy_id,))
+    finally:
+        if conn is not None:
+            conn.commit()
+            conn.close()
 
 
 # ============ 用户体系 Helpers ============
@@ -935,8 +1069,9 @@ def get_user_access(user_id: int) -> Optional[dict]:
 
 
 def upsert_user_access(user_id: int, fields: dict) -> dict:
-    """创建/更新用户权限记录。trial_started_at 仅由服务端写入，客户端传入的其它字段一律丢弃。"""
-    fields = {k: v for k, v in fields.items() if k in ("trial_started_at",)}
+    """创建/更新用户权限记录。trial_started_at 与 admin_override 仅由服务端写入，
+    客户端传入的其它字段一律丢弃。"""
+    fields = {k: v for k, v in fields.items() if k in ("trial_started_at", "admin_override")}
     fields["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     conn = get_connection()
     existing = conn.execute("SELECT id FROM user_access WHERE user_id=?", (user_id,)).fetchone()
@@ -1434,6 +1569,10 @@ def seed_from_json():
     for f in default_faqs:
         insert_row("faq_items", f)
     print(f"  Seeded {len(default_faqs)} FAQ items")
+
+    # 课程/项目已灌入后，方向学习路径再回填一次（init_db 阶段课程未就绪时标题会回退为 id；
+    # 这里用真实标题覆盖，保证数据库驱动的学习路径标题正确）。
+    seed_learning_paths_from_direction_plan()
 
 
 if __name__ == "__main__":

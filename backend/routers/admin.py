@@ -118,6 +118,97 @@ def dashboard(request: Request):
     return data
 
 
+@router.get("/users/permissions")
+def list_user_permissions(request: Request):
+    """列出全部用户 + 权限/试用/押金状态，供后台「用户权限/试用」管理。
+
+    只读视角：combine 访问记录与押金状态，展示派生权限（不在此处落库试用起点，
+    避免后台浏览触发副作用；status 端 /api/access 才会正式确认起点）。
+    """
+    verify_token(request)
+    from database import get_deposit, get_user_access
+    from services.access_service import compute_access, _parse_dt
+
+    users = query_all("users")
+    result = []
+    for u in users:
+        uid = u["id"]
+        acc = get_user_access(uid)
+        dep = get_deposit(uid)
+        started = _parse_dt(acc["trial_started_at"]) if acc else None
+        deposit_paid = bool(dep and dep.get("status") in ("active", "unlocked"))
+        state = compute_access(datetime.now(), started, deposit_paid)
+        override = (acc or {}).get("admin_override", "") if acc else ""
+        # 后台人工覆盖：与 services.access_service.resolve_access 同一套规则
+        if override == "lock":
+            state["access_granted"] = False
+        elif override == "unlock":
+            state["access_granted"] = True
+            state["in_trial"] = True
+        state["admin_override"] = override
+        result.append({
+            "id": uid,
+            "openid": u.get("openid", ""),
+            "nickname": u.get("nickname", ""),
+            "created_at": u.get("created_at", ""),
+            "trial_started_at": (acc or {}).get("trial_started_at", "") if acc else "",
+            "deposit_status": (dep or {}).get("status", "none") if dep else "none",
+            "access": state,
+        })
+    return result
+
+
+class PermissionUpdate(BaseModel):
+    """后台对单个用户权限的修改指令。"""
+    action: str  # reset_trial | extend_trial | clear_trial | set_override | clear_override
+    days: int = 0
+    override: str = ""  # action=set_override 时：'lock' | 'unlock'
+
+
+@router.post("/users/{user_id}/permission")
+def update_user_permission(user_id: int, body: PermissionUpdate, request: Request):
+    """后台手动调整用户试用/权限（替代直接改库）。
+
+    - reset_trial：把试用期起点重置为服务端当前时间（重新开始 5 天试用）；
+    - extend_trial：把试用期起点前移 days 天（延长试用窗口）；
+    - clear_trial：清空试用起点（下次请求由服务端重新确认起点）；
+    - set_override：设置人工覆盖（'lock' 强制锁定 / 'unlock' 强制解锁）；
+    - clear_override：清除人工覆盖，恢复按规则派生。
+    """
+    verify_token(request)
+    from datetime import timedelta
+    from database import get_user, get_user_access, upsert_user_access
+
+    if get_user(user_id) is None:
+        raise HTTPException(404, "User not found")
+
+    acc = get_user_access(user_id)
+    current_start = (acc or {}).get("trial_started_at", "") if acc else ""
+    now = datetime.now().replace(microsecond=0)
+
+    if body.action == "reset_trial":
+        upsert_user_access(user_id, {"trial_started_at": now.strftime("%Y-%m-%d %H:%M:%S")})
+    elif body.action == "extend_trial":
+        if current_start:
+            base = datetime.strptime(current_start, "%Y-%m-%d %H:%M:%S")
+        else:
+            base = now
+        new_start = (base - timedelta(days=body.days)).strftime("%Y-%m-%d %H:%M:%S")
+        upsert_user_access(user_id, {"trial_started_at": new_start})
+    elif body.action == "clear_trial":
+        upsert_user_access(user_id, {"trial_started_at": ""})
+    elif body.action == "set_override":
+        if body.override not in ("lock", "unlock"):
+            raise HTTPException(400, "override 必须是 lock 或 unlock")
+        upsert_user_access(user_id, {"admin_override": body.override})
+    elif body.action == "clear_override":
+        upsert_user_access(user_id, {"admin_override": ""})
+    else:
+        raise HTTPException(400, f"未知 action: {body.action}")
+
+    return {"message": f"permission updated: {body.action}"}
+
+
 @router.get("/{table}")
 def read_all(table: str, request: Request):
     """Read all rows from a table."""

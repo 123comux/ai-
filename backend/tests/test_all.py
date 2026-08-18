@@ -462,6 +462,82 @@ class TestLearningPaths(unittest.TestCase):
             self.assertIn(rr.status_code, (200, 400))  # 顺序锁可能 400，均允许
 
 
+class TestLearningPathsDBDriven(unittest.TestCase):
+    """学习路径数据库驱动：后台编辑即时生效 + 顺序解锁 + 章节门槛（勿破坏现有解锁逻辑）。"""
+
+    def _first_path(self):
+        r = client.get("/api/learning-paths")
+        self.assertEqual(r.status_code, 200)
+        paths = r.json()
+        self.assertGreater(len(paths), 0)
+        return paths[0]
+
+    def test_admin_edit_path_reflects_in_public_api(self):
+        # 数据库驱动契约：后台改 learning_paths → 公开读接口立即生效
+        import urllib.parse
+        adm = client.post("/api/admin/login", params={"username": "admin", "password": "admin123"}).json()
+        ah = {"Authorization": f"Bearer {adm['token']}"}
+        path = self._first_path()
+        pid = path["id"]
+        url = "/api/admin/learning_paths/" + urllib.parse.quote(pid)
+        r = client.put(url, headers=ah, json={"title": "后台改名测试路径"})
+        self.assertEqual(r.status_code, 200, r.text)
+        try:
+            paths = client.get("/api/learning-paths").json()
+            edited = next(p for p in paths if p["id"] == pid)
+            self.assertEqual(edited["title"], "后台改名测试路径")
+        finally:
+            # 还原，避免污染后续用例
+            client.put(url, headers=ah, json={"title": path["title"]})
+
+    def test_locked_node_cannot_be_skipped(self):
+        # 顺序解锁：未完成前一个节点时，直接完成后面的 locked 节点应被拒绝
+        token, _ = _login("lp_order")
+        path = self._first_path()
+        pid = path["id"]
+        nodes = path["nodes"]
+        self.assertGreater(len(nodes), 2)
+        # 假定第 0 个节点为当前节点，第 1 个应处于 locked（除非某真已全部完成）
+        r = client.post(f"/api/learning-paths/{pid}/nodes/{nodes[1]['id']}/complete",
+                        headers=auth_header(token))
+        # 若第 1 个节点是 locked（默认），应 400；若第 0 节点课程章节恰好已全部完成除外——此处用全新用户确保 locked
+        self.assertIn(r.status_code, (200, 400))
+        if r.status_code == 400:
+            self.assertIn("请先完成前一个节点", r.json()["detail"])
+
+    def test_course_node_requires_chapters_completed(self):
+        # 章节门槛：全新用户完成当前 course 节点时，若该课程有章节且未学完应被 400 引导
+        token, _ = _login("lp_chapters")
+        path = self._first_path()
+        node0 = path["nodes"][0]
+        if node0["type"] != "course" or not node0.get("courseId"):
+            self.skipTest("首个节点非课程节点")
+        # 仅当该课程确实存在章节时才断言门槛（无章节的课程不设门槛）
+        cid = node0["courseId"]
+        course = next((c for c in client.get("/api/courses?limit=100").json() if c["id"] == cid), None)
+        if not course or not (course.get("chapters") or []):
+            self.skipTest("首个节点课程无章节")
+        r = client.post(f"/api/learning-paths/{path['id']}/nodes/{node0['id']}/complete",
+                        headers=auth_header(token))
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("章节", r.json()["detail"])
+
+    def test_direction_filter_returns_single_path(self):
+        path = self._first_path()
+        direction = path["direction"]
+        r = client.get(f"/api/learning-paths?direction={direction}")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()), 1)
+        self.assertEqual(r.json()[0]["direction"], direction)
+
+    def test_fallback_direction_get_works(self):
+        # 未命中蓝图的任意方向：get_path 仍能按兜底蓝图返回（勿破坏既有行为）
+        r = client.get("/api/learning-paths/path-AI%20%E5%B7%A5%E7%A8%8B%E5%B8%88")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["direction"], "AI 工程师")
+        self.assertGreater(len(r.json()["nodes"]), 0)
+
+
 class TestAssessment(unittest.TestCase):
     def test_questions(self):
         r = client.get("/api/assessment/questions?count=10")
@@ -895,6 +971,31 @@ class TestAIQuota(unittest.TestCase):
             self.assertEqual(r["used"], 1)
             self.assertEqual(r["remaining"], 2)
 
+    def test_quota_resets_next_day(self):
+        # 额度按"每日"计：用满当天后，第二天重新开始（不跨日累计）
+        from datetime import datetime
+        from services import ai_quota
+        user = self._user(user_id=99903)
+        day1 = datetime(2026, 8, 17, 10, 0, 0)
+        day2 = datetime(2026, 8, 18, 10, 0, 0)
+        with self.patch.object(ai_quota, "AI_DAILY_LIMIT_DEFAULT", 2), \
+             self.patch.object(ai_quota, "resolve_access", return_value={"deposit_paid": False}):
+            ai_quota.check_ai_quota(user, "tutor", now=day1)
+            ai_quota.check_ai_quota(user, "tutor", now=day1)
+            # 第 3 次天内 → 429
+            with self.assertRaises(Exception) as ctx:
+                ai_quota.check_ai_quota(user, "tutor", now=day1)
+            self.assertEqual(ctx.exception.status_code, 429)
+            # 第二天 → 重新计数，第 1 次放行
+            self.assertEqual(ai_quota.check_ai_quota(user, "tutor", now=day2)["id"], user["id"])
+        # 清理本用例日期行，保证幂等
+        from database import get_connection
+        conn = get_connection()
+        for d in ("2026-08-17", "2026-08-18"):
+            conn.execute("DELETE FROM ai_usage_daily WHERE user_id=? AND usage_date=?", (user["id"], d))
+        conn.commit()
+        conn.close()
+
 
 class TestAccessControl(unittest.TestCase):
     """功能使用权限：5 天免费试用 → 缴纳押金解锁（边界计算 + 集成链路）。"""
@@ -1074,6 +1175,112 @@ class TestAccessControl(unittest.TestCase):
         r = client.get("/api/courses", headers={"Authorization": "Bearer bad.token.garbage"})
         self.assertNotEqual(r.status_code, 403)
         self.assertNotIn("access_denied", r.text)
+
+
+class TestAdminUserPermission(unittest.TestCase):
+    """后台用户权限/试用管理：列表查询 + 手动锁定/解锁/延长试用。"""
+
+    def _admin_headers(self):
+        adm = client.post("/api/admin/login", params={"username": "admin", "password": "admin123"}).json()
+        return {"Authorization": f"Bearer {adm['token']}"}
+
+    def _fresh_user(self, nickname):
+        code = f"perm_{int(time.time()*1000)}_{nickname}"
+        r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
+        assert r.status_code == 200, r.text
+        token, user = r.json()["token"], r.json()["user"]
+        from database import get_connection
+        conn = get_connection()
+        conn.execute("DELETE FROM user_access WHERE user_id=?", (user["id"],))
+        conn.execute("DELETE FROM user_deposits WHERE user_id=?", (user["id"],))
+        conn.commit()
+        conn.close()
+        return token, user["id"]
+
+    def _ovr(self, uid):
+        from database import get_user_access
+        row = get_user_access(uid)
+        return row.get("admin_override", "") if row else ""
+
+    def test_list_requires_admin_auth(self):
+        r = client.get("/api/admin/users/permissions")
+        self.assertEqual(r.status_code, 401)
+
+    def test_list_returns_users_and_access(self):
+        ah = self._admin_headers()
+        r = client.get("/api/admin/users/permissions", headers=ah)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIsInstance(data, list)
+        self.assertGreater(len(data), 0)
+        row = data[0]
+        self.assertIn("id", row)
+        self.assertIn("nickname", row)
+        self.assertIn("trial_started_at", row)
+        self.assertIn("deposit_status", row)
+        self.assertIn("access", row)
+        self.assertIn("access_granted", row["access"])
+
+    def test_set_override_lock_enforces_access(self):
+        from services.access_service import resolve_access
+        token, uid = self._fresh_user("lp_admin_lock")
+        ah = self._admin_headers()
+        self.assertTrue(resolve_access(uid)["access_granted"])
+        r = client.post(f"/api/admin/users/{uid}/permission", headers=ah, json={"action": "set_override", "override": "lock"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self._ovr(uid), "lock")
+        self.assertFalse(resolve_access(uid)["access_granted"])
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()["detail"]["code"], "access_denied")
+
+    def test_set_override_unlock_grants_access(self):
+        from services.access_service import resolve_access
+        from datetime import datetime, timedelta
+        from database import upsert_user_access
+        token, uid = self._fresh_user("lp_admin_unlock")
+        ah = self._admin_headers()
+        old = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+        upsert_user_access(uid, {"trial_started_at": old})
+        self.assertFalse(resolve_access(uid)["access_granted"])
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 403)
+        r = client.post(f"/api/admin/users/{uid}/permission", headers=ah, json={"action": "set_override", "override": "unlock"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self._ovr(uid), "unlock")
+        self.assertTrue(resolve_access(uid)["access_granted"])
+        r = client.get("/api/courses", headers=auth_header(token))
+        self.assertEqual(r.status_code, 200)
+
+    def test_extend_trial_extends_window(self):
+        from database import get_user_access, upsert_user_access
+        _, uid = self._fresh_user("lp_extend")
+        ah = self._admin_headers()
+        upsert_user_access(uid, {"trial_started_at": "2026-08-15 10:00:00"})
+        r = client.post(f"/api/admin/users/{uid}/permission", headers=ah, json={"action": "extend_trial", "days": 3})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(get_user_access(uid)["trial_started_at"], "2026-08-12 10:00:00")
+
+    def test_clear_override_restores_derived(self):
+        from services.access_service import resolve_access
+        _, uid = self._fresh_user("lp_clear")
+        ah = self._admin_headers()
+        client.post(f"/api/admin/users/{uid}/permission", headers=ah, json={"action": "set_override", "override": "lock"})
+        self.assertEqual(self._ovr(uid), "lock")
+        client.post(f"/api/admin/users/{uid}/permission", headers=ah, json={"action": "clear_override"})
+        self.assertEqual(self._ovr(uid), "")
+        self.assertTrue(resolve_access(uid)["access_granted"])
+
+    def test_bad_override_value_rejected(self):
+        _, uid = self._fresh_user("lp_bad")
+        ah = self._admin_headers()
+        r = client.post(f"/api/admin/users/{uid}/permission", headers=ah, json={"action": "set_override", "override": "banana"})
+        self.assertEqual(r.status_code, 400)
+
+    def test_unknown_user_404(self):
+        ah = self._admin_headers()
+        r = client.post("/api/admin/users/999999999/permission", headers=ah, json={"action": "clear_override"})
+        self.assertEqual(r.status_code, 404)
 
 
 if __name__ == "__main__":

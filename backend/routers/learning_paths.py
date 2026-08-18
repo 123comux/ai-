@@ -1,7 +1,9 @@
-"""Learning paths API router.
+"""Learning paths API router (数据源统一：learning_paths 表驱动，后台可即时生效).
 
-Paths can be returned either from the static enriched data or generated
-dynamically from the user's ability report recommendation direction.
+方向路径的"内容"（节点课程/项目序列、标题、进度锚点）现以 learning_paths 表为准，
+由 database.seed_learning_paths_from_direction_plan 灌入，后台可直接编辑、即时生效。
+动态生成逻辑（方向蓝图 _LEARNING_DIRECTION_PLAN）已收敛到 database.py 的种子阶段。
+此处保留：推荐方向排序 + per-user 进度合并 + 章节自动完成 + 顺序解锁（运行时逻辑）。
 """
 
 import json
@@ -16,90 +18,56 @@ from database import (
     get_user_path_completed,
     get_latest_user_ability_report,
     safe_load_json,
+    query_all,
     query_one,
     parse_json_field,
     get_user_completed_chapter_ids,
+    _DEFAULT_PLAN,
 )
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/learning-paths", tags=["learning-paths"])
 
 
-def _load_paths() -> list[LearningPathItem]:
-    # Try enriched data first, fall back to original
-    path = PROCESSED_DIR / "enriched_learning_paths.json"
-    if not path.exists():
-        path = PROCESSED_DIR / "learning_paths.json"
-    data = safe_load_json(path, [])
-    return [LearningPathItem(**p) for p in data]
-
-
 def _load_json(filename: str):
     return safe_load_json(PROCESSED_DIR / filename, None)
 
 
-# direction family -> (course ids in order, project ids in order)
-# 每个方向差异化选课，让用户能切换不同学习路径。
-# 课程/项目均取当前种子数据中的真实 id（2026 七阶段课程体系，旧 stage-N/course-N 已不再存在）。
-# 所有方向共享「大模型基础 + Agent 概念」打底，再按方向追加差异化技术模块。
-_DIRECTION_PLAN = {
-    "大模型应用开发": (
-        ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-rag", "s3-langchain", "s6-rag-project"],
-        ["project-3", "project-0", "project-4"],
-    ),
-    "机器学习工程师": (
-        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-agent-core", "s2-agent-arch", "s3-rag", "s5-observability"],
-        ["project-0", "project-3", "project-4"],
-    ),
-    "深度学习工程师": (
-        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-langgraph", "s3-agentic-rag"],
-        ["project-4", "project-3"],
-    ),
-    "数据科学家": (
-        ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s2-agent-core", "s3-rag", "s5-observability", "s5-deploy"],
-        ["project-0", "project-4", "project-3"],
-    ),
-    "AI 应用开发": (
-        ["s1-llm-basics", "s1-api-dev", "s2-tool-calling", "s3-langchain", "s3-langgraph", "s4-multi-agent", "s5-deploy", "s6-rag-project", "s6-cs-agent", "s7-career"],
-        ["project-1", "project-4", "project-2"],
-    ),
-    "计算机视觉工程师": (
-        ["s1-llm-basics", "s1-api-dev", "s1-ollama", "s2-tool-calling", "s3-mcp", "s4-orchestration"],
-        ["project-4", "project-0"],
-    ),
-}
+def _db_to_path(row: dict) -> LearningPathItem:
+    """数据库行 → LearningPathItem（snake_case 列 → 前端字段，nodes 解析为节点列表）。"""
+    nodes = parse_json_field(row.get("nodes", "[]"), []) or []
+    return LearningPathItem(
+        id=row["id"],
+        direction=row.get("direction", ""),
+        title=row.get("title", ""),
+        nodes=[LearningPathNode(**n) for n in nodes] if nodes else [],
+        totalWeeks=row.get("total_weeks", 0),
+        currentWeek=row.get("current_week", 0),
+        createdAt=row.get("created_at", ""),
+    )
 
-# fallback plan when direction is not in the map above
-_DEFAULT_PLAN = (
-    ["s1-llm-basics", "s1-prompt", "s1-api-dev", "s1-ollama", "s2-agent-core", "s3-rag", "s3-langchain"],
-    ["project-3", "project-4"],
-)
+
+def _load_paths() -> list[LearningPathItem]:
+    """从 learning_paths 表读取启用路径（后台管理即可即时生效）。"""
+    rows = query_all("learning_paths", {"is_active": 1})
+    return [_db_to_path(r) for r in rows]
 
 
 def _course_title(cid: str) -> str:
-    """读取课程真实标题（从 enriched_courses 或 courses.json）。"""
-    data = _load_json("enriched_courses.json") or _load_json("courses.json") or []
-    for c in data:
-        if c.get("id") == cid:
-            return c.get("title", cid)
-    return cid
+    row = query_one("courses", cid)
+    return row.get("title", cid) if row else cid
 
 
 def _project_title(pid: str) -> str:
-    """读取项目真实标题（从 projects.json）。"""
-    data = _load_json("projects.json") or []
-    for p in data:
-        if p.get("id") == pid:
-            title = p.get("title", pid)
-            # 去掉 "Project: " 前缀，得到中文展示名
-            return title.replace("Project: ", "", 1) if title.startswith("Project: ") else title
-    return pid
+    row = query_one("projects", pid)
+    if not row:
+        return pid
+    return row.get("title", pid).replace("Project: ", "", 1)
 
 
-def _build_path(direction: str) -> LearningPathItem:
-    """Build a LearningPathItem for a recommended direction, grounded in real courses/projects."""
-    courses, projects = _DIRECTION_PLAN.get(direction, _DEFAULT_PLAN)
-
+def _build_default_path(direction: str) -> LearningPathItem:
+    """为未命中蓝图的任意方向构建兜底路径（默认课程/项目序列，从数据库取真实标题）。"""
+    courses, projects = _DEFAULT_PLAN
     nodes: list[LearningPathNode] = []
     for i, cid in enumerate(courses):
         nodes.append(
@@ -125,7 +93,6 @@ def _build_path(direction: str) -> LearningPathItem:
                 courseId=None,
             )
         )
-
     return LearningPathItem(
         id=f"path-{direction}",
         direction=direction,
@@ -154,8 +121,7 @@ def _recommended_direction(user_id: int | None = None) -> str | None:
 
 
 # ===== 用户进度持久化 =====
-# 用一份 path_progress.json 记录每个路径中已完成的节点，运行时数据（gitignore）。
-# 静态路径 JSON 里的 baked 状态 + 用户完成记录合并后，得到最终展示状态。
+# 登录用户以 DB 的 user_path_progress 为准（数据隔离）；匿名用户回退全局 path_progress.json。
 
 
 def _load_progress() -> dict[str, list[str]]:
@@ -227,14 +193,14 @@ def _apply_user_progress(path: LearningPathItem, completed: set[str], user_id: i
 
 
 def _get_base_path(path_id: str) -> LearningPathItem | None:
-    """Return the un-merged base path (static or generated) by id, if it exists."""
+    """Return the un-merged base path by id (from DB), with fallback for unknown directions."""
     for p in _load_paths():
         if p.id == path_id:
             return p
     if path_id.startswith("path-"):
         direction = path_id[len("path-"):]
-        if direction in _DIRECTION_PLAN or direction == "AI 工程师":
-            return _build_path(direction)
+        if direction:
+            return _build_default_path(direction)
     return None
 
 
@@ -242,37 +208,35 @@ def _get_base_path(path_id: str) -> LearningPathItem | None:
 async def list_paths(request: Request, direction: str | None = Query(None, description="Filter / generate path for a direction")):
     """List learning paths.
 
-    - With ?direction=X: return a single path generated for that direction.
-    - Without params: return all direction plans (each with its own course/project set),
-      so the user can browse and switch between learning directions.
+    - With ?direction=X: return a single path for that direction.
+    - Without params: return all direction paths, so the user can browse and switch.
     """
     user = await get_optional_user(request)
     user_id = user["id"] if user else None
     # 登录用户以 DB 进度为准（数据隔离），匿名用户回退全局文件
     progress = get_user_path_progress(user_id) if user_id else _load_progress()
 
+    paths = _load_paths()
     if direction:
-        path = _build_path(direction)
+        path = next((p for p in paths if p.direction == direction), None)
+        if path is None:
+            path = _build_default_path(direction)
         return [_apply_user_progress(path, set(progress.get(path.id, [])), user_id)]
 
-    paths = []
-    # 推荐方向排最前（按当前用户自己的能力报告方向），其余方向按顺序列出
+    # 推荐方向排最前（按当前用户自己的能力报告方向），其余方向保持数据库顺序
     rec_dir = _recommended_direction(user_id)
-    directions = list(_DIRECTION_PLAN.keys())
-    if rec_dir and rec_dir in directions:
-        directions.remove(rec_dir)
-        directions.insert(0, rec_dir)
-    for d in directions:
-        path = _build_path(d)
-        paths.append(_apply_user_progress(path, set(progress.get(path.id, [])), user_id))
-    return paths
+    if rec_dir:
+        rec = [p for p in paths if p.direction == rec_dir]
+        rest = [p for p in paths if p.direction != rec_dir]
+        paths = rec + rest
+    return [_apply_user_progress(p, set(progress.get(p.id, [])), user_id) for p in paths]
 
 
 @router.post("/{path_id}/nodes/{node_id}/complete")
 async def complete_node(path_id: str, node_id: str, request: Request):
     """Mark a node as completed; the next locked node becomes current.
 
-    Persists completion in path_progress.json so it survives restarts.
+    Persists completion (登录用户写入 DB，匿名写 path_progress.json).
     For course nodes, the course's chapters must be completed first (五阶段课程按章节计进度).
     """
     base = _get_base_path(path_id)

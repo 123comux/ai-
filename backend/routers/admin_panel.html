@@ -187,7 +187,7 @@ const GROUP_MAP = {
   'checkins': '平台运营', 'community_posts': '平台运营', 'community_replies': '平台运营',
   'faq_items': '答疑管理', 'teams': '平台运营', 'team_members': '平台运营', 'share_unlocks': '平台运营',
 };
-const GROUP_ORDER = ['数据看板', '复核', '首页内容', '课程内容', '用户体系', '答疑管理', '平台运营'];
+const GROUP_ORDER = ['数据看板', '复核', '用户权限', '首页内容', '课程内容', '用户体系', '答疑管理', '平台运营'];
 
 // ============ 工具 ============
 function toast(msg, isErr) {
@@ -262,6 +262,9 @@ function renderNav() {
     { name: 'homework', label: '作业复核', icon: '✍' },
     { name: 'refund-review', label: '退费复核', icon: '💳' },
   ];
+  groups['用户权限'] = [
+    { name: 'user-permission', label: '用户权限 / 试用', icon: '🔐' },
+  ];
   for (const t of TABLES) {
     const g = GROUP_MAP[t.name] || '其他';
     (groups[g] = groups[g] || []).push(t);
@@ -295,6 +298,7 @@ function navTo(key) {
   if (key === 'dashboard') renderDashboard();
   else if (key === 'tbl:homework') renderHomework();
   else if (key === 'tbl:refund-review') renderRefundReview();
+  else if (key === 'tbl:user-permission') renderUserPermission();
   else {
     const name = key.replace('tbl:', '');
     CURRENT = TABLES.find(t => t.name === name) || null;
@@ -442,6 +446,116 @@ async function judgeRefund(userId, approved) {
     const r = await api('POST', '/deposit/refund-reviews/' + userId, { approved });
     toast(approved ? '已放行退费' : '已驳回该申请');
     renderRefundReview();
+  } catch (e) {
+    toast('操作失败：' + e.message, true);
+  }
+}
+
+// ============ 用户权限 / 试用管理（人工锁定/解锁/延长试用，替代直接改库） ============
+function permStateChip(acc, override) {
+  if (!acc.access_granted) return '<span style="color:#e5484d;font-weight:600">已锁定</span>';
+  if (override === 'unlock') return '<span style="color:#30a46c;font-weight:600">后台解锁</span>';
+  if (acc.warn_expiring) return '<span style="color:#ff9e2c;font-weight:600">试用将到期</span>';
+  return '<span style="color:#30a46c;font-weight:600">可用</span>';
+}
+function permTrialText(acc, override) {
+  if (override === 'unlock') return '后台解锁';
+  const end = acc.trial_end_at;
+  return '试用至 ' + (end ? esc(end) : '-');
+}
+
+async function renderUserPermission() {
+  const area = document.getElementById('mainArea');
+  area.innerHTML = '<div style="padding:40px;text-align:center;color:#8a94a6">加载中...</div>';
+  let users = [];
+  try {
+    users = await api('GET', '/users/permissions');
+  } catch (e) {
+    if (String(e.message).includes('401')) { toast('登录已过期', true); logout(); return; }
+    area.innerHTML = `<div class="empty">加载失败：${esc(e.message)}</div>`;
+    return;
+  }
+  area.innerHTML = `
+    <div class="page-head">
+      <div>
+        <h1>用户权限 / 试用管理</h1>
+        <div class="sub">查看全部用户试用/押金状态，人工锁定/解锁/延长试用（共 ${users.length} 人），替代直接改库</div>
+      </div>
+      <button class="btn btn-ghost" onclick="renderUserPermission()">🔄 刷新</button>
+    </div>
+    <div class="panel">
+      <div class="panel-toolbar">
+        <input type="text" id="permSearch" placeholder="搜索昵称 / OpenID..." oninput="filterPermTable()">
+        <span style="color:#8a94a6">提示：5 天免费试用；未缴押金且试用到期即锁定，可在此延长或人工解锁</span>
+      </div>
+      <div class="table-wrap">
+        <table id="permTable">
+          <thead><tr>
+            <th>ID</th><th>昵称</th><th>OpenID</th><th>试用起点</th><th>押金</th><th>状态</th><th>操作</th>
+          </tr></thead>
+          <tbody id="permBody"></tbody>
+        </table>
+      </div>
+    </div>`;
+  window.__permUsers = users;
+  filterPermTable();
+}
+
+function filterPermTable() {
+  const users = window.__permUsers || [];
+  const q = (document.getElementById('permSearch')?.value || '').toLowerCase();
+  const body = document.getElementById('permBody');
+  const filtered = q ? users.filter(u =>
+    String(u.nickname || '').toLowerCase().includes(q) || String(u.openid || '').toLowerCase().includes(q)) : users;
+  body.innerHTML = filtered.map(u => {
+    const acc = u.access || {};
+    const override = acc.admin_override || '';
+    const depositBadge = u.deposit_status === 'active'
+      ? '<span style="color:#30a46c">已缴押金</span>'
+      : (u.deposit_status === 'refunded' ? '<span style="color:#8a94a6">已退费</span>' : '<span style="color:#8a94a6">未缴</span>');
+    const lockBtn = override === 'lock'
+      ? ''
+      : `<button class="btn btn-danger btn-sm" onclick="setUserOverride(${u.id},'lock')">🔒 锁定</button>`;
+    const unlockBtn = override === 'unlock'
+      ? ''
+      : `<button class="btn btn-primary btn-sm" onclick="setUserOverride(${u.id},'unlock')">🔓 解锁</button>`;
+    const clearBtn = override ? `<button class="btn btn-ghost btn-sm" onclick="setUserOverride(${u.id},'')">↩ 恢复规则</button>` : '';
+    return `<tr>
+      <td style="color:var(--muted)">${u.id}</td>
+      <td>${esc(u.nickname || '-')}</td>
+      <td class="cell" style="max-width:180px" title="${esc(u.openid)}">${esc(u.openid)}</td>
+      <td class="cell" title="${esc(u.trial_started_at)}">${esc(u.trial_started_at || '未确认')}</td>
+      <td>${depositBadge}</td>
+      <td>${permStateChip(acc, override)} <div style="font-size:12px;color:#8a94a6;margin-top:2px">${permTrialText(acc, override)}</div></td>
+      <td><div class="row-actions" style="flex-wrap:wrap">
+        ${lockBtn}${unlockBtn}${clearBtn}
+        <button class="btn btn-ghost btn-sm" onclick="extendTrial(${u.id})">＋7 天</button>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="empty">无匹配用户</td></tr>';
+}
+
+async function setUserOverride(uid, override) {
+  if (override === 'lock' && !confirm('确认锁定该用户？锁定后其所有功能将被禁用。')) return;
+  if (override === 'unlock' && !confirm('确认强制解锁该用户（免押金）？')) return;
+  try {
+    await api('POST', `/users/${uid}/permission`, override ? { action: 'set_override', override } : { action: 'clear_override' });
+    toast(override === 'lock' ? '已锁定' : (override === 'unlock' ? '已强制解锁' : '已恢复按规则派生'));
+    renderUserPermission();
+  } catch (e) {
+    toast('操作失败：' + e.message, true);
+  }
+}
+
+async function extendTrial(uid) {
+  const days = prompt('延长试用天数：', '7');
+  if (days === null) return;
+  const n = parseInt(days, 10);
+  if (!n || n <= 0) { toast('天数无效', true); return; }
+  try {
+    await api('POST', `/users/${uid}/permission`, { action: 'extend_trial', days: n });
+    toast(`已延长 ${n} 天试用`);
+    renderUserPermission();
   } catch (e) {
     toast('操作失败：' + e.message, true);
   }

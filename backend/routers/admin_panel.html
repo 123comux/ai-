@@ -343,7 +343,7 @@ async function renderHomework() {
   const area = document.getElementById('mainArea');
   area.innerHTML = '<div style="padding:40px;text-align:center;color:#8a94a6">加载中...</div>';
   try {
-    const d = await api('GET', '/api/admin/homework/reviews?status=all');
+    const d = await api('GET', '/homework/reviews?status=all');
     const rows = d.reviews || [];
     const stageName = {1:'大模型基础',2:'Agent 概念',3:'开发实战',4:'多 Agent',5:'优化部署',6:'项目实战',7:'求职备战'};
     const statusChip = s => s === 'passed'
@@ -385,7 +385,7 @@ async function judgeHomework(id, status) {
   if (score === null) return;
   const s = Math.max(0, Math.min(100, parseFloat(score) || 0));
   try {
-    await api('POST', '/api/admin/homework/reviews/' + id, { status, score: s });
+    await api('POST', '/homework/reviews/' + id, { status, score: s });
     toast('已更新该作业判定');
     renderHomework();
   } catch (e) {
@@ -398,7 +398,7 @@ async function renderRefundReview() {
   const area = document.getElementById('mainArea');
   area.innerHTML = '<div style="padding:40px;text-align:center;color:#8a94a6">加载中...</div>';
   try {
-    const d = await api('GET', '/api/admin/deposit/refund-reviews');
+    const d = await api('GET', '/deposit/refund-reviews');
     const rows = d.reviews || [];
     area.innerHTML = `
       <div class="page-head">
@@ -439,7 +439,7 @@ async function judgeRefund(userId, approved) {
     : confirm('确认驳回该退费申请？用户押金将回到有效状态。');
   if (!ok) return;
   try {
-    const r = await api('POST', '/api/admin/deposit/refund-reviews/' + userId, { approved });
+    const r = await api('POST', '/deposit/refund-reviews/' + userId, { approved });
     toast(approved ? '已放行退费' : '已驳回该申请');
     renderRefundReview();
   } catch (e) {

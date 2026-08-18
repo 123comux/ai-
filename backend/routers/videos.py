@@ -1,4 +1,4 @@
-"""Videos API router."""
+"""Videos API router - reads from CMS database (数据源统一：video 表驱动，后台可即时生效)."""
 
 import json
 from datetime import datetime
@@ -6,17 +6,45 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from models.schemas import VideoItem
+from models.schemas import VideoItem, VideoQuality
 from auth_utils import get_optional_user
-from database import record_user_video, get_user_watched_video_ids, safe_load_json
+from database import (
+    record_user_video,
+    get_user_watched_video_ids,
+    safe_load_json,
+    query_all,
+    parse_json_field,
+)
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 
+def _db_to_video(row: dict) -> VideoItem:
+    """数据库行 → VideoItem（snake_case 列 → camelCase 前端字段）。"""
+    quality_dict = parse_json_field(row.get("quality", "{}"), {}) or {}
+    quality = VideoQuality(**quality_dict) if quality_dict else None
+    return VideoItem(
+        id=row["id"],
+        title=row["title"],
+        subtitle=row.get("subtitle") or None,
+        description=row.get("description", ""),
+        coreInfo=parse_json_field(row.get("core_info", "[]"), []) or None,
+        narrative=row.get("narrative") or None,
+        visual=row.get("visual") or None,
+        quality=quality,
+        url=row.get("url", ""),
+        coverUrl=row.get("cover_url", ""),
+        duration=row.get("duration", 0),
+        chapter=row.get("chapter", ""),
+        courseId=row.get("course_id", ""),
+    )
+
+
 def _load_videos() -> list[VideoItem]:
-    data = safe_load_json(PROCESSED_DIR / "videos.json", [])
-    return [VideoItem(**v) for v in data]
+    """从 videos 表读取启用视频（后台管理即可即时生效）。"""
+    rows = query_all("videos", {"is_active": 1})
+    return [_db_to_video(r) for r in rows]
 
 
 def _load_watched(user_id: int | None = None) -> dict[str, dict]:

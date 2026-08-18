@@ -89,12 +89,18 @@ def init_db():
             is_free INTEGER NOT NULL DEFAULT 1,
             price REAL NOT NULL DEFAULT 0,
             topics_covered TEXT NOT NULL DEFAULT '[]',
+            steps TEXT NOT NULL DEFAULT '[]',
             source TEXT NOT NULL DEFAULT '',
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
+    # 兼容旧库：为缺少 steps 列的 projects 表补列（保存分步实践指南，数据源统一后用）
+    try:
+        cur.execute("ALTER TABLE projects ADD COLUMN steps TEXT NOT NULL DEFAULT '[]'")
+    except Exception:
+        pass
 
     # Videos
     cur.execute("""
@@ -521,6 +527,7 @@ def init_db():
     """)
 
     seed_homework_questions(cur)
+    backfill_project_steps_from_json(cur)
 
     conn.commit()
     conn.close()
@@ -617,6 +624,51 @@ def parse_json_field(value: str, default=None):
         return json.loads(value) if value else (default or [])
     except (json.JSONDecodeError, TypeError):
         return default or []
+
+
+def backfill_project_steps_from_json(cur=None):
+    """把 processed 的 projects JSON 中的分步实践指南（steps）回填进 projects 表。
+
+    数据源统一（videos/projects 改数据库驱动）后，分步实践指南 `steps` 需以数据库为准；
+    旧库/新库首次初始化时 projects 表的 steps 列为空，这里从种子 JSON 幂等回填：
+    - 仅回填 steps 仍为空的记录，不覆盖后台已编辑的值；
+    - 缺失/损坏的 JSON 或已无匹配 id 时静默跳过，不影响启动。
+    """
+    conn = None
+    if cur is None:
+        conn = get_connection()
+        cur = conn.cursor()
+    from pathlib import Path as _P
+    data_dir = _P(__file__).resolve().parent / "data" / "processed"
+    path = data_dir / "enriched_projects.json"
+    if not path.exists():
+        path = data_dir / "projects.json"
+    if not path.exists():
+        if conn is not None:
+            conn.close()
+        return
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            projects = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        if conn is not None:
+            conn.close()
+        return
+    for p in projects:
+        pid = p.get("id")
+        steps = p.get("steps")
+        if not pid or not steps:
+            continue
+        row = cur.execute("SELECT steps FROM projects WHERE id=?", (pid,)).fetchone()
+        if row is None or parse_json_field(row["steps"] if row else "[]"):
+            continue
+        cur.execute(
+            "UPDATE projects SET steps=?, updated_at=datetime('now') WHERE id=?",
+            (json.dumps(steps, ensure_ascii=False), pid),
+        )
+    if conn is not None:
+        conn.commit()
+        conn.close()
 
 
 # ============ 用户体系 Helpers ============
@@ -1214,6 +1266,7 @@ def seed_from_json():
                 "is_free": p.get("isFree", 1),
                 "price": p.get("price", 0),
                 "topics_covered": json.dumps(p.get("topics_covered", []), ensure_ascii=False),
+                "steps": json.dumps(p.get("steps", []), ensure_ascii=False),
                 "source": p.get("source", ""),
             })
         print(f"  Seeded {len(projects)} projects")

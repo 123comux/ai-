@@ -1,4 +1,4 @@
-"""Projects API router."""
+"""Projects API router - reads from CMS database (数据源统一：projects 表驱动，后台可即时生效)."""
 
 import json
 from pathlib import Path
@@ -6,7 +6,13 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import ProjectItem
 from auth_utils import get_optional_user
-from database import record_user_project, get_user_project_progress, safe_load_json
+from database import (
+    record_user_project,
+    get_user_project_progress,
+    query_all,
+    parse_json_field,
+    safe_load_json,
+)
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -19,13 +25,31 @@ def _difficulty_sort_key(p: ProjectItem) -> tuple:
     return (_DIFFICULTY_ORDER.get(p.difficulty.lower(), 9), p.id)
 
 
+def _db_to_project(row: dict) -> ProjectItem:
+    """数据库行 → ProjectItem（snake_case 列 → 前端字段，含分步实践指南 steps）。"""
+    return ProjectItem(
+        id=row["id"],
+        title=row["title"],
+        description=row.get("description", ""),
+        tech_stack=parse_json_field(row.get("tech_stack", "[]"), []),
+        difficulty=row.get("difficulty", "beginner"),
+        estimated_hours=row.get("estimated_hours", 0),
+        topics_covered=parse_json_field(row.get("topics_covered", "[]"), []),
+        source=row.get("source", ""),
+        coverImg=row.get("cover_img", ""),
+        stepCount=row.get("step_count", 0),
+        status=row.get("status", "available"),
+        progress=row.get("progress", 0),
+        isFree=bool(row.get("is_free", 1)),
+        price=row.get("price", 0),
+        steps=parse_json_field(row.get("steps", "[]"), []),
+    )
+
+
 def _load_projects() -> list[ProjectItem]:
-    # Try enriched data first, fall back to original
-    path = PROCESSED_DIR / "enriched_projects.json"
-    if not path.exists():
-        path = PROCESSED_DIR / "projects.json"
-    data = safe_load_json(path, [])
-    return [ProjectItem(**p) for p in data]
+    """从 projects 表读取启用项目（后台管理即可即时生效）。"""
+    rows = query_all("projects", {"is_active": 1})
+    return [_db_to_project(r) for r in rows]
 
 
 def _load_progress() -> dict[str, int]:

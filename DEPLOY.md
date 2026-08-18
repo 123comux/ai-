@@ -196,12 +196,21 @@ cd backend && DEV_MODE=true DB_ENGINE=mysql DB_HOST=... python -m pytest tests/ 
 ## 8. 快速核对命令
 
 ```bash
-# 后端单测（54 项，SQLite + MySQL 双引擎应全绿）
+# 后端单测（SQLite + MySQL 双引擎应全绿；当前 78 项）
 cd backend && DEV_MODE=true python -m pytest tests/ -q
 
-# 前端类型检查（应 0 错误）
-npx tsc --noEmit -p tsconfig.json
+# 前端质量门禁（CI 同款）：类型检查 + ESLint + 单测
+npm run typecheck      # tsc --noEmit，应 0 错误
+npm run lint           # ESLint，应 0 error 0 warning
+npm run test           # Vitest 单测，应全绿
 
 # 构建双端
 npm run build:weapp && npm run build:h5
 ```
+
+## 9. 上线安全要点（务必核对）
+
+- **支付未配置时的行为**：`enroll` 在**生产（DEV_MODE=false）且未配商户号时直接拒绝报名（503）**，绝不免费解锁付费墙；仅 `DEV_MODE=true` 走占位报名（开发自测）。上线前务必在 `.env` 设 `DEV_MODE=false` 并配齐 `WXPAY_MCHID/SERIAL_NO/PRIVATE_KEY/APIV3_KEY/NOTIFY_URL`，否则缴不了押金。
+- **能力报告数据隔离**：已登录用户只读/写自己的 `user_ability_reports`，不再 fallback 全局 demo 文件；未登录的匿名测评不会算到登录账号头上（需重新测评）。全局 `ability_report.json` 仅供未登录会话 / job-matching。
+- **`JWT_SECRET`**：生产必须替换为足够长的随机串，否则登录 token 可被伪造。
+

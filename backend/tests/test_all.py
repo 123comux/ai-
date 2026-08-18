@@ -201,8 +201,12 @@ class TestDeposit(unittest.TestCase):
         ah = {"Authorization": f"Bearer {adm['token']}"}
         rv = client.get("/api/admin/deposit/refund-reviews", headers=ah)
         self.assertGreater(rv.json()["count"], 0)
-        uid = rv.json()["reviews"][0]["user_id"]
-        r = client.post(f"/api/admin/deposit/refund-reviews/{uid}", json={"approved": True}, headers=ah)
+        # 从复核队列中定位当前用户（而非 reviews[0]——共享开发库里可能有其它历史待复核记录，
+        # 取 reviews[0] 会复核错人导致本用例不幂等；CI 靠全新库掩盖了该问题）。
+        current_uid = user["id"]
+        own_review = next((rv for rv in rv.json()["reviews"] if rv["user_id"] == current_uid), None)
+        self.assertIsNotNone(own_review, "复核队列中应包含当前用户的待退费申请")
+        r = client.post(f"/api/admin/deposit/refund-reviews/{current_uid}", json={"approved": True}, headers=ah)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["result"], "approved")
         st2 = client.get("/api/deposit/status", headers=auth_header(token)).json()
@@ -826,6 +830,70 @@ class TestTeams(unittest.TestCase):
         r = client.post("/api/auth/wechat-login", json={"code": code, "nickname": nickname})
         self.assertEqual(r.status_code, 200)
         return r.json()["token"], r.json()["user"]
+
+
+class TestAIQuota(unittest.TestCase):
+    """AI 每日额度限流：未缴押金（含试用期）用户限流，已缴押金/匿名不限。
+
+    直接测 service 纯逻辑（patch 小额上限与权限判定），快且不依赖真实网络调用。
+    """
+
+    from unittest.mock import patch
+
+    FAKE_UIDS = (99901, 99902)
+
+    def setUp(self):
+        # 共享开发库会跨测试运行残留计数，先清掉本用例用到的假用户当日用量，保证幂等
+        from database import get_connection
+        conn = get_connection()
+        for uid in self.FAKE_UIDS:
+            conn.execute("DELETE FROM ai_usage_daily WHERE user_id=?", (uid,))
+        conn.commit()
+        conn.close()
+
+    def _user(self, user_id=99901, paid=False):
+        # resolve_access 只用了 user["id"]，这里给个假 user 即可
+        return {"id": user_id, "nickname": "quota_user"}
+
+    def test_trial_user_limited_after_daily_cap(self):
+        from services import ai_quota
+        user = self._user()
+        with self.patch.object(ai_quota, "AI_DAILY_LIMIT_DEFAULT", 3), \
+             self.patch.object(ai_quota, "resolve_access", return_value={"deposit_paid": False}):
+            self.assertEqual(ai_quota.check_ai_quota(user, "tutor")["id"], user["id"])
+            ai_quota.check_ai_quota(user, "assessment")
+            ai_quota.check_ai_quota(user, "recommend")
+            # 第 4 次（跨功能累计）应 429
+            with self.assertRaises(Exception) as ctx:
+                ai_quota.check_ai_quota(user, "practice")
+            self.assertEqual(ctx.exception.status_code, 429)
+            self.assertEqual(ctx.exception.detail["code"], "ai_quota_exceeded")
+
+    def test_paid_user_unlimited(self):
+        from services import ai_quota
+        user = self._user()
+        with self.patch.object(ai_quota, "AI_DAILY_LIMIT_DEFAULT", 3), \
+             self.patch.object(ai_quota, "resolve_access", return_value={"deposit_paid": True}):
+            # 即使远超上限也不拒绝
+            for _ in range(10):
+                self.assertEqual(ai_quota.check_ai_quota(user, "tutor")["id"], user["id"])
+
+    def test_anonymous_no_count_no_block(self):
+        from services import ai_quota
+        with self.patch.object(ai_quota, "AI_DAILY_LIMIT_DEFAULT", 0):
+            # 匿名返回 None，不抛 429
+            self.assertIsNone(ai_quota.check_ai_quota(None, "tutor"))
+
+    def test_remaining_reflects_usage(self):
+        from services import ai_quota
+        user = self._user(user_id=99902)
+        with self.patch.object(ai_quota, "AI_DAILY_LIMIT_DEFAULT", 3), \
+             self.patch.object(ai_quota, "resolve_access", return_value={"deposit_paid": False}):
+            ai_quota.check_ai_quota(user, "tutor")
+            r = ai_quota.ai_quota_remaining(user["id"])
+            self.assertTrue(r["limited"])
+            self.assertEqual(r["used"], 1)
+            self.assertEqual(r["remaining"], 2)
 
 
 class TestAccessControl(unittest.TestCase):

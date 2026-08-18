@@ -322,7 +322,7 @@ export const askTutor = async (question: string): Promise<TutorResponse> => {
   const requestTask = Taro.request<TutorResponse>({
     url: buildUrl('/api/tutor/chat'),
     method: 'POST',
-    header: { 'Content-Type': 'application/json' },
+    header: { 'Content-Type': 'application/json', ...authHeaders() },
     data: { question },
     timeout: 120000,
     dataType: 'json',

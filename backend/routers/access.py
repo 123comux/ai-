@@ -14,6 +14,7 @@ from config import (
 )
 from auth_utils import get_current_user
 from services.access_service import resolve_access
+from services.ai_quota import ai_quota_remaining
 
 router = APIRouter(prefix="/api/access", tags=["access"])
 
@@ -59,4 +60,5 @@ async def access_intro():
 async def access_status(user: dict = Depends(get_current_user)):
     """当前用户的功能使用权限状态（服务端时间计算，客户端时间无法影响结果）。"""
     state = resolve_access(user["id"])
+    state["ai_quota"] = ai_quota_remaining(user["id"])
     return {**state, "config": _config()}

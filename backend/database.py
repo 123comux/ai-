@@ -507,6 +507,19 @@ def init_db():
         )
     """)
 
+    # AI 每日调用计数（未缴押金/试用期用户限流用）。每用户每天每个功能一行。
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ai_usage_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            usage_date VARCHAR(20) NOT NULL,  -- YYYY-MM-DD
+            feature VARCHAR(50) NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(user_id, usage_date, feature)
+        )
+    """)
+
     seed_homework_questions(cur)
 
     conn.commit()
@@ -890,7 +903,48 @@ def upsert_user_access(user_id: int, fields: dict) -> dict:
     return get_user_access(user_id)
 
 
-# ============ 作业提交 / 评审 Helpers ============
+# ============ AI 每日调用计数 Helpers（试用/未缴押金用户限流） ============
+
+def get_ai_usage(user_id: int, usage_date: str, feature: str) -> Optional[dict]:
+    """查询某用户某天某 AI 功能的用量记录，无记录则 None。"""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM ai_usage_daily WHERE user_id=? AND usage_date=? AND feature=?",
+        (user_id, usage_date, feature),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def increment_ai_usage(user_id: int, usage_date: str, feature: str) -> int:
+    """把某用户某天某 AI 功能的计数 +1（首次则建行=1），返回最新计数。
+
+    用 upsert（ON CONFLICT / ON DUPLICATE KEY）保证并发下计数不丢。
+    """
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO ai_usage_daily (user_id, usage_date, feature, count) VALUES (?,?,?,1) "
+        "ON CONFLICT(user_id, usage_date, feature) DO UPDATE SET count=excluded.count+1, updated_at=datetime('now')",
+        (user_id, usage_date, feature),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT count FROM ai_usage_daily WHERE user_id=? AND usage_date=? AND feature=?",
+        (user_id, usage_date, feature),
+    ).fetchone()
+    conn.close()
+    return int(row["count"]) if row else 1
+
+
+def get_ai_usage_total(user_id: int, usage_date: str) -> int:
+    """某用户某天所有 AI 功能的总调用次数。"""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT COALESCE(SUM(count), 0) AS total FROM ai_usage_daily WHERE user_id=? AND usage_date=?",
+        (user_id, usage_date),
+    ).fetchone()
+    conn.close()
+    return int(row["total"]) if row else 0
 
 # 七阶段作业题库：对齐 2026 AI Agent 学习路线七阶段课程，支撑过程锁「每阶段作业提交并通过」
 HOMEWORK_QUESTIONS = [

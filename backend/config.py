@@ -130,6 +130,15 @@ TOKEN_EXPIRE_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
 ACCESS_TRIAL_DAYS = int(os.getenv("ACCESS_TRIAL_DAYS", "5"))                        # 免费试用期时长（天）
 ACCESS_TRIAL_WARN_SECONDS = int(os.getenv("ACCESS_TRIAL_WARN_SECONDS", "86400"))    # 试用即将结束提醒窗口（秒），默认提前 24 小时
 
+# ============ AI 每日额度（试用/未缴押金用户限流） ============
+# 未解锁（未缴押金）的已登录用户，AI 功能每日调用上限。已缴押金/解锁用户不限。
+# 该上限按「天 × 用户」累计全部 AI 功能（导师/测评分析/课程推荐/实操分析）的总次数。
+# 匿名（未登录）用户无身份可追踪，不计数也不限流，保持原有公开行为。
+AI_DAILY_LIMIT_DEFAULT = int(os.getenv("AI_DAILY_LIMIT_DEFAULT", "20"))
+
+# AI 功能标识（用于 ai_usage_daily.feature 区分统计口径，可分别查询/调上限）
+AI_FEATURES = ("tutor", "assessment", "recommend", "practice")
+
 # 服务端授权校验的豁免前缀（路径以该段开头即放行，不参与试用期拦截）：
 # /api/auth 登录 | /api/access 权限状态/导语本身 | /api/deposit 押金收付（解锁通道）| /api/pay 支付回调
 # /api/admin + /admin 后台 | /static 静态资源 | /health 探活

@@ -3,9 +3,12 @@
 import concurrent.futures
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
+
+from auth_utils import get_optional_user
+from services.ai_quota import check_ai_quota
 
 router = APIRouter(prefix="/api", tags=["ai"])
 
@@ -52,12 +55,15 @@ class AnalyzeResponse(BaseModel):
 # ---- Routes ----
 
 @router.post("/tutor/chat", response_model=TutorResponse)
-async def tutor_chat(req: TutorRequest):
+async def tutor_chat(req: TutorRequest, user: Optional[dict] = Depends(get_optional_user)):
     """AI tutor: answer student questions.
 
     Primary: Zhipu GLM API (fast, no local model loading) with course-RAG.
     Fallback: local Qwen LoRA model (requires GPU).
     """
+    # 每日 AI 额度：未解锁（未缴押金/试用期）用户限流
+    check_ai_quota(user, "tutor")
+
     if req.system_prompt is None:
         system_prompt = (
             "你是一位专业的 AI 学习导师，请用中文给出深入而清晰的讲解。\n"
@@ -115,8 +121,9 @@ async def tutor_chat(req: TutorRequest):
 
 
 @router.post("/assessment/analyze", response_model=AnalyzeResponse)
-async def analyze_ability(req: AnalyzeRequest):
+async def analyze_ability(req: AnalyzeRequest, user: Optional[dict] = Depends(get_optional_user)):
     """AI assessment: analyze student's content to determine knowledge domain."""
+    check_ai_quota(user, "assessment")
     try:
         from services.assessment_ai_service import analyze_content
         result = analyze_content(req.content)
@@ -132,8 +139,10 @@ async def recommend_courses(
     interest: str,
     limit: int = 10,
     topic: Optional[str] = None,
+    user: Optional[dict] = Depends(get_optional_user),
 ):
     """Course recommendation: suggest courses based on user interest."""
+    check_ai_quota(user, "recommend")
     from services.recommend_service import recommend_courses as recommend
 
     # BERT 冷加载可能很慢：在线程中运行并设超时，超时后回退到纯关键词匹配，
@@ -209,12 +218,13 @@ class PracticeResponse(BaseModel):
 
 
 @router.post("/practice/analyze", response_model=PracticeResponse)
-async def practice_analyze(req: PracticeRequest):
+async def practice_analyze(req: PracticeRequest, user: Optional[dict] = Depends(get_optional_user)):
     """提示词实操：把用户粗糙的提问，改写成高质量提示词并说明优化点。
 
     This is the core of the "在线 AI 实操练习台" — 用户输入自己写的提问，
     AI 给出优化后的提示词 + 优化建议，帮助用户学会写出高质量提示词。
     """
+    check_ai_quota(user, "practice")
     try:
         from services.model_router import chat_flash
     except Exception:

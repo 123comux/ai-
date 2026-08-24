@@ -9,14 +9,17 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Header, Request
 from pydantic import BaseModel, Field
 
-from database import query_all, query_one, insert_row, update_row, delete_row, parse_json_field, get_connection
+from database import (
+    query_all, query_one, insert_row, update_row, delete_row, parse_json_field, get_connection,
+    save_admin_session, get_admin_session, delete_admin_session,
+)
 from cache import clear as cache_clear
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # ============ Auth ============
 
-ADMIN_TOKEN_CACHE: dict[str, str] = {}
+# admin token 已持久化到 admin_sessions 表（重启不失效），无需进程内存缓存。
 
 
 def verify_token(request: Request) -> str:
@@ -24,15 +27,16 @@ def verify_token(request: Request) -> str:
 
     注意：必须用 Request 手动读 header——带 prefix 的 APIRouter 里 Header(None)
     参数注入会失效（FastAPI 已知行为），导致 auth 恒为 None。
+    token 存库并带过期时间，后端重启后会话仍有效。
     """
     auth = request.headers.get("authorization") or request.headers.get("Authorization")
     if not auth:
         raise HTTPException(401, "Missing authorization header")
     token = auth.replace("Bearer ", "")
-    username = ADMIN_TOKEN_CACHE.get(token)
-    if not username:
+    session = get_admin_session(token)
+    if not session:
         raise HTTPException(401, "Invalid or expired token")
-    return username
+    return session["username"]
 
 
 @router.post("/login")
@@ -45,11 +49,25 @@ def admin_login(username: str, password: str):
     pwd_hash = hashlib.sha256(password.encode()).hexdigest()
     if user["password_hash"] != pwd_hash:
         raise HTTPException(401, "Invalid credentials")
-    # Generate simple token
+    # 生成 token 并持久化（7 天有效，重启不失效）
     import secrets
+    from datetime import datetime, timedelta
     token = f"admin_{secrets.token_hex(16)}"
-    ADMIN_TOKEN_CACHE[token] = username
-    return {"token": token, "username": username, "role": user["role"]}
+    expires_at = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    save_admin_session(token, username, user.get("role", "admin"), expires_at)
+    return {"token": token, "username": username, "role": user.get("role", "admin")}
+
+
+@router.post("/logout")
+def admin_logout(request: Request):
+    """退出登录：删除当前会话 token（可选，前端登出时调用）。"""
+    from routers.admin import verify_token as _vt
+    _vt(request)  # 校验有效性
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    token = auth.replace("Bearer ", "") if auth else ""
+    if token:
+        delete_admin_session(token)
+    return {"ok": True}
 
 
 # ============ Generic CRUD Helpers ============

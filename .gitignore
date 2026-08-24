@@ -51,6 +51,10 @@ Thumbs.db
 # WorkBuddy internal state (not project source)
 .workbuddy/
 
+# IDE / 辅助工具私有配置（含内部训练方案文档，不入公共仓库）
+.pai/
+.trae/
+
 # Frontend H5 build output (regenerable via npm run build:h5)
 dist-h5/
 

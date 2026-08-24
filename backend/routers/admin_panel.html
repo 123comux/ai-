@@ -107,11 +107,11 @@
     <div class="login-err" id="loginErr"></div>
     <div class="form-item">
       <label>用户名</label>
-      <input type="text" id="loginUser" placeholder="admin" value="admin">
+      <input type="text" id="loginUser" placeholder="请输入用户名" value="">
     </div>
     <div class="form-item">
       <label>密码</label>
-      <input type="password" id="loginPass" placeholder="admin123" value="admin123">
+      <input type="password" id="loginPass" placeholder="请输入密码" value="">
     </div>
     <button class="btn btn-primary" onclick="doLogin()">登录</button>
   </div>
@@ -232,6 +232,8 @@ async function doLogin() {
   }
 }
 function logout() {
+  // 通知后端删除该会话 token（失败也本地清除，不影响登出）
+  try { api('POST', '/logout'); } catch (e) { /* 忽略 */ }
   TOKEN = '';
   localStorage.removeItem('admin_token');
   show('loginPage'); hide('appPage');

@@ -250,6 +250,17 @@ def init_db():
         )
     """)
 
+    # 后台管理员会话（持久化 token，重启不失效；带过期时间）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+            token TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'admin',
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
     # 每日 AI 打卡（学习激励）
     cur.execute("""
         CREATE TABLE IF NOT EXISTS checkins (
@@ -608,6 +619,39 @@ def delete_row(table: str, id_value: Any) -> bool:
     affected = cur.rowcount > 0
     conn.close()
     return affected
+
+
+# ============ 后台管理员会话（token 持久化） ============
+
+def save_admin_session(token: str, username: str, role: str, expires_at: str) -> None:
+    """写一条管理员会话（token 存库，后端重启不失效）。"""
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO admin_sessions (token, username, role, expires_at, created_at) "
+        "VALUES (?,?,?,?, datetime('now'))",
+        (token, username, role, expires_at),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_admin_session(token: str) -> Optional[dict]:
+    """按 token 查会话（忽略已过期行，返回 None 表示无效/过期）。"""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM admin_sessions WHERE token=? AND expires_at > datetime('now')",
+        (token,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def delete_admin_session(token: str) -> None:
+    """删除一条会话（退出登录用）。"""
+    conn = get_connection()
+    conn.execute("DELETE FROM admin_sessions WHERE token=?", (token,))
+    conn.commit()
+    conn.close()
 
 
 def safe_load_json(path, default=None):

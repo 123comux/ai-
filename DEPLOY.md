@@ -147,6 +147,7 @@ TARO_APP_API_BASE=https://your-domain.com npm run build:h5
 | `DEEPSEEK_API_KEY` | DeepSeek Key（standard/pro 档） | 建议填，提升 pro 档推理 |
 | `WECHAT_APPID` / `WECHAT_SECRET` | 微信登录 | 必填（生产） |
 | `DEV_MODE` | 开发模式 | **生产设为 false**（同时强制关闭 DEV_IMPERSONATE） |
+| `DEV_IMPERSONATE` | 模拟切换用户（仅本地自测） | **生产必须 false**，否则可切换他人账号 |
 | `ALLOWED_CORS_ORIGINS` | 额外 CORS 域名（逗号分隔） | `https://your-domain.com` |
 | `WXPAY_MCHID` 等 6 项 | 微信支付商户号 | 涉及真实收退款时必填 |
 | `WX_SUB_TEMPLATE_*` | 订阅消息模板 ID | 申请后填入（未填则静默不推送） |
@@ -196,8 +197,9 @@ cd backend && DEV_MODE=true DB_ENGINE=mysql DB_HOST=... python -m pytest tests/ 
 ## 8. 快速核对命令
 
 ```bash
-# 后端单测（SQLite + MySQL 双引擎应全绿；当前 78 项）
-cd backend && DEV_MODE=true python -m pytest tests/ -q
+# 后端单测（SQLite + MySQL 双引擎应全绿；当前 96 项）
+# conftest.py 已自动用独立临时库（不污染开发库）并强制 DEV_MODE=true，直接跑即可
+cd backend && python -m pytest tests/ -q
 
 # 前端质量门禁（CI 同款）：类型检查 + ESLint + 单测
 npm run typecheck      # tsc --noEmit，应 0 错误

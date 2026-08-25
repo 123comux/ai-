@@ -129,6 +129,9 @@ TOKEN_EXPIRE_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
 # 试用期结束后限制使用，直至缴纳押金（复用押金式培训的收押金通道，缴纳后实时解锁）。
 ACCESS_TRIAL_DAYS = int(os.getenv("ACCESS_TRIAL_DAYS", "5"))                        # 免费试用期时长（天）
 ACCESS_TRIAL_WARN_SECONDS = int(os.getenv("ACCESS_TRIAL_WARN_SECONDS", "86400"))    # 试用即将结束提醒窗口（秒），默认提前 24 小时
+# 全部免费开关：置 true 时关闭「试用期结束 → 缴押金解锁」的收费墙，所有用户一律放行。
+# 用于演示/公测阶段，无需缴纳押金即可使用全部功能。
+ACCESS_ALL_FREE = os.getenv("ACCESS_ALL_FREE", "false").lower() in ("1", "true", "yes", "on")
 
 # ============ AI 每日额度（试用/未缴押金用户限流） ============
 # 未解锁（未缴押金）的已登录用户，AI 功能每日调用上限。已缴押金/解锁用户不限。

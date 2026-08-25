@@ -25,7 +25,7 @@ const FALLBACK_CONFIG: AccessConfig = {
     { icon: '💼', title: '求职匹配', desc: '岗位要求全面解析，帮你补齐能力短板' },
   ],
   usage_intro:
-    '打开小程序 → 免费试用 5 天全部功能自由体验 → 试用到期后缴纳押金 ¥199 解锁持续使用 → 完成七阶段学习与考核达标后，押金全额原路退还。',
+    '打开小程序 → 全部功能免费开放，无需付费即可使用 → 按学习路径完成七阶段课程与实战项目 → 达标后可申请能力认证。',
 };
 
 function goDeposit() {
@@ -73,8 +73,10 @@ export default function AccessGate() {
   if (!introVisible) return null;
 
   const warnHappening = status?.warn_expiring ?? false;
-  // 状态拉取失败（未登录/网络异常）时按“试用中”处理，不阻断进入（fail-open）
+  // 状态拉取失败（未登录/网络异常）时按”试用中”处理，不阻断进入（fail-open）
   const inTrial = status?.in_trial ?? true;
+  // 全部免费模式：无到期时间（trial_end_at 为空），不显示试用倒计时
+  const allFree = !!status && !status.trial_end_at;
 
   return (
     <View className={styles.mask}>
@@ -85,12 +87,18 @@ export default function AccessGate() {
         </View>
 
         {/* 状态章：绿/琥珀/红，视觉区分试用中 / 即将到期 / 已锁定 */}
-        {!locked && inTrial && !warnHappening && (
+        {!locked && inTrial && !warnHappening && !allFree && (
           <View className={`${styles.statusChip} ${styles.statusOk}`}>
             <Text className={styles.statusDot}>●</Text>
             <Text>
               免费试用中{status ? ` · 剩余 ${formatTrialRemaining(status.trial_remaining_seconds)}` : ''}
             </Text>
+          </View>
+        )}
+        {allFree && !locked && (
+          <View className={`${styles.statusChip} ${styles.statusOk}`}>
+            <Text className={styles.statusDot}>●</Text>
+            <Text>当前全部功能免费开放</Text>
           </View>
         )}
         {warnHappening && (

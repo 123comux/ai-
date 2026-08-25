@@ -19,6 +19,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from config import (
+    ACCESS_ALL_FREE,
     ACCESS_EXEMPT_PREFIXES,
     ACCESS_TRIAL_DAYS,
     ACCESS_TRIAL_WARN_SECONDS,
@@ -47,7 +48,17 @@ def compute_access(
     - 剩余试用秒数 == 0 即视为试用结束（最后一天到期后立即锁定，跨零点/到期瞬间即失效）。
     - 试用剩余 0 < remaining <= WARN_SECONDS 时置 warn_expiring，供客户端提前提醒。
     - 押金已缴纳（deposit_paid）→ access_granted 恒为 True，与试用期无关。
+    - ACCESS_ALL_FREE=true 时关闭收费墙：所有用户一律 access_granted（演示/公测阶段）。
     """
+    if ACCESS_ALL_FREE:
+        return {
+            "in_trial": True,
+            "deposit_paid": deposit_paid,
+            "access_granted": True,
+            "warn_expiring": False,
+            "trial_remaining_seconds": 0,
+            "trial_end_at": None,
+        }
     if trial_started_at is None:
         # 全新用户：尚未确认试用起点（调用方随后用服务端时间落库）
         remaining = ACCESS_TRIAL_DAYS * 86400.0

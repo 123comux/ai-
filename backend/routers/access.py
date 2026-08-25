@@ -6,6 +6,7 @@
 from fastapi import APIRouter, Depends
 
 from config import (
+    ACCESS_ALL_FREE,
     ACCESS_TRIAL_DAYS,
     ACCESS_TRIAL_WARN_SECONDS,
     DEPOSIT_CURRENCY,
@@ -27,10 +28,16 @@ FEATURE_INTRO = [
     {"icon": "🤖", "title": "AI 导师", "desc": "遇到问题随时提问，7×24 小时 AI 导师陪伴"},
     {"icon": "💼", "title": "求职匹配", "desc": "岗位要求全面解析，帮你补齐能力短板"},
 ]
-USAGE_INTRO = (
-    f"打开小程序 → 免费试用 {ACCESS_TRIAL_DAYS} 天全部功能自由体验 → 试用到期后缴纳押金 "
-    f"¥{int(DEPOSIT_DEFAULT_AMOUNT)} 解锁持续使用 → 完成七阶段学习与考核达标后，押金全额原路退还。"
-)
+# ACCESS_ALL_FREE=true（演示/公测）时导语变为全部免费；否则保留押金式培训流程说明。
+if ACCESS_ALL_FREE:
+    USAGE_INTRO = (
+        "打开小程序 → 全部功能免费开放，无需付费即可使用 → 按学习路径完成七阶段课程与实战项目 → 达标后可申请能力认证。"
+    )
+else:
+    USAGE_INTRO = (
+        f"打开小程序 → 免费试用 {ACCESS_TRIAL_DAYS} 天全部功能自由体验 → 试用到期后缴纳押金 "
+        f"¥{int(DEPOSIT_DEFAULT_AMOUNT)} 解锁持续使用 → 完成七阶段学习与考核达标后，押金全额原路退还。"
+    )
 
 
 def _config() -> dict:

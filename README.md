@@ -39,10 +39,12 @@ cd backend
 pip install -r requirements.txt
 cp .env.example .env          # 配置 ZHIPU_API_KEY / WECHAT_* / DEV_MODE
 python -m database            # 首次建表 + 灌种子数据
-uvicorn main:app --reload     # 启动，默认 http://localhost:8000
+python main.py                # 启动（读取 config 的 HOST/PORT，默认 http://localhost:8010）
 ```
+> 注意：直接敲 `uvicorn main:app` 会用 uvicorn 自己的默认端口 **8000**（常被别的服务占用），
+> 请用 `python main.py` 或显式指定 `uvicorn main:app --port 8010`。
 
-- 运营后台：`http://localhost:8000/admin`（账号见 admin_users 表）
+- 运营后台：`http://localhost:8010/admin`（账号见 admin_users 表）
 - 健康检查：`GET /health`
 
 ### 前端（微信小程序）

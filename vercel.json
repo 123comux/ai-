@@ -4,6 +4,7 @@
   "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist-h5",
+  "regions": ["hkg1"],
   "functions": {
     "api/index.py": {
       "maxDuration": 60,

@@ -112,6 +112,7 @@
   left: 0; right: 0; bottom: 0;
   background: $color-bg-card;
   padding: $spacing-md $spacing-lg;
+  @include safe-area-bottom($spacing-md);
   display: flex;
   gap: $spacing-md;
   align-items: center;

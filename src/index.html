@@ -2,7 +2,9 @@
 <html>
   <head>
     <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
-    <meta name="viewport" content="width=375,user-scalable=no" />
+    <!-- 定宽 375 布局 + 由浏览器等比缩放到屏宽；viewport-fit=cover 让 iOS 全面屏可用 env(safe-area-inset-*)。
+         不再写 user-scalable=no：保留双指放大能力（无障碍），新版 iOS/Android 本就忽略该限制。 -->
+    <meta name="viewport" content="width=375,viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-touch-fullscreen" content="yes" />
     <meta name="format-detection" content="telephone=no,address=no" />

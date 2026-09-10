@@ -2,7 +2,8 @@
  * API Service Layer
  *
  * Uses Taro.request() for cross-platform compatibility (WeChat mini-program + H5).
- * All data is fetched from the FastAPI backend (http://localhost:8000).
+ * All data is fetched from the FastAPI backend (本地默认 http://localhost:8010，
+ * 见 src/config/env.ts；网页端走同源相对路径，由反向代理转发)。
  */
 import Taro from '@tarojs/taro';
 import type { AbilityReport, LearningPath, Course, Project, LearningRecord, JobMatchingResult, Video, PortfolioItem, Goal, FavoriteItem, LoginResult, AuthUser, DepositConfig, DepositStatus, AccessConfig, AccessStatus } from '@/types/index';
@@ -474,6 +475,19 @@ export const removeFavorite = async (id: number): Promise<{ ok: boolean }> => {
 /** 微信登录：用 wx.login 拿到的 code 换取登录态 token */
 export const wechatLogin = async (code: string): Promise<LoginResult> => {
   const data = await apiPost<LoginResult>('/api/auth/wechat-login', { code });
+  if (data?.user) data.user.avatar = resolveAssetUrl(data.user.avatar);
+  return data;
+};
+
+/**
+ * 网页端（手机浏览器）手机号登录。
+ *
+ * H5 没有 wx.login，后端以「手机号 ↔ openid=h5_<手机号>」映射后签发同一套 token，
+ * 因此网页端与小程序端共享同一用户与全部业务数据。
+ * ⚠️ 当前后端不校验短信验证码（内测阶段），上线前需补验证码或改微信网页授权。
+ */
+export const h5PhoneLogin = async (phone: string): Promise<LoginResult> => {
+  const data = await apiPost<LoginResult>('/api/auth/h5-login', { phone });
   if (data?.user) data.user.avatar = resolveAssetUrl(data.user.avatar);
   return data;
 };

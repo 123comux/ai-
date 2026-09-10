@@ -251,9 +251,11 @@ def init_db():
     """)
 
     # 后台管理员会话（持久化 token，重启不失效；带过期时间）
+    # 注意：token 必须是 VARCHAR 而不是 TEXT —— MySQL 不允许 TEXT 直接做 PRIMARY KEY
+    # （报 1170 BLOB/TEXT column used in key specification without a key length）。
     cur.execute("""
         CREATE TABLE IF NOT EXISTS admin_sessions (
-            token TEXT PRIMARY KEY,
+            token VARCHAR(255) PRIMARY KEY,
             username TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'admin',
             expires_at TEXT NOT NULL,

@@ -13,7 +13,7 @@ const IS_WEAPP = process.env.TARO_ENV === 'weapp';
 const PLACEHOLDER_NICKNAME = '微信用户';
 
 const MinePage: React.FC = () => {
-  const { isLoggedIn, nickname, avatar, login, logout, updateProfile } = useUserStore();
+  const { isLoggedIn, nickname, avatar, login, phoneLogin, logout, updateProfile } = useUserStore();
   const [abilityReport, setAbilityReport] = useState<any>(null);
   const [stats, setStats] = useState({ learningDays: 0, totalMinutes: 0, completedProjects: 0, completedLessons: 0 });
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -21,6 +21,10 @@ const MinePage: React.FC = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [editNickname, setEditNickname] = useState('');
   const [editAvatar, setEditAvatar] = useState('');
+  // 网页端手机号登录面板
+  const [showPhoneLogin, setShowPhoneLogin] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [phoneLogging, setPhoneLogging] = useState(false);
 
   const loadData = async () => {
     try {
@@ -86,6 +90,47 @@ const MinePage: React.FC = () => {
     if (url) setEditAvatar(url);
   };
 
+  // 网页端没有 open-type=chooseAvatar，改用 Taro.chooseImage
+  // （H5 端由 Taro 调起浏览器文件选择，返回 blob 临时路径，保存时照常经 uploadAvatar 上传换持久地址）
+  const onPickAvatarH5 = async () => {
+    try {
+      const res = await Taro.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+      });
+      const path = res?.tempFilePaths?.[0];
+      if (path) setEditAvatar(path);
+    } catch (err) {
+      // 用户取消选择，忽略
+    }
+  };
+
+  // 网页端手机号登录（后端以手机号映射用户并签发同一套 token，与小程序端数据互通）
+  const handlePhoneLogin = async () => {
+    if (phoneLogging) return;
+    const phone = phoneInput.trim();
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      Taro.showToast({ title: '请输入正确的 11 位手机号', icon: 'none' });
+      return;
+    }
+    setPhoneLogging(true);
+    Taro.showLoading({ title: '登录中...', mask: true });
+    try {
+      await phoneLogin(phone);
+      Taro.hideLoading();
+      setShowPhoneLogin(false);
+      setPhoneInput('');
+      Taro.showToast({ title: '登录成功', icon: 'success' });
+      loadData();
+    } catch (err: any) {
+      Taro.hideLoading();
+      Taro.showToast({ title: err?.message || '登录失败，请重试', icon: 'none' });
+    } finally {
+      setPhoneLogging(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!editNickname.trim()) { Taro.showToast({ title: '请输入昵称', icon: 'none' }); return; }
     try {
@@ -147,7 +192,7 @@ const MinePage: React.FC = () => {
               ) : (
                 <View className={styles.avatarPlaceholder}><Text className={styles.avatarPlaceholderIcon}>👤</Text></View>
               )}
-              <View className={styles.wechatBadge}><Text className={styles.wechatBadgeText}>微信</Text></View>
+              <View className={styles.wechatBadge}><Text className={styles.wechatBadgeText}>{IS_WEAPP ? '微信' : '网页'}</Text></View>
             </View>
             <Text className={styles.nickname} onClick={openProfile}>{nickname || '未设置昵称'}</Text>
             {/* 资料仍是占位时，引导用户授权真实头像昵称 */}
@@ -157,18 +202,29 @@ const MinePage: React.FC = () => {
               </View>
             )}
             <View className={styles.directionBadge}>
-              <Text className={styles.directionText}>微信快捷登录 · 学习记录已同步</Text>
+              <Text className={styles.directionText}>
+                {IS_WEAPP ? '微信快捷登录 · 学习记录已同步' : '手机号登录 · 学习记录已同步'}
+              </Text>
             </View>
             <View className={styles.logoutBtn} onClick={handleLogout}>
               <Text className={styles.logoutText}>退出登录</Text>
             </View>
           </View>
-        ) : (
+        ) : IS_WEAPP ? (
           <View className={styles.loginEntry} onClick={handleWechatLogin}>
             <Text className={styles.loginEntryIcon}>💬</Text>
             <View className={styles.loginEntryText}>
               <Text className={styles.loginEntryTitle}>微信快捷登录</Text>
               <Text className={styles.loginEntryDesc}>一键登录，保存你的学习记录与能力档案</Text>
+            </View>
+            <Text className={styles.loginEntryArrow}>→</Text>
+          </View>
+        ) : (
+          <View className={styles.loginEntry} onClick={() => setShowPhoneLogin(true)}>
+            <Text className={styles.loginEntryIcon}>📱</Text>
+            <View className={styles.loginEntryText}>
+              <Text className={styles.loginEntryTitle}>手机号登录</Text>
+              <Text className={styles.loginEntryDesc}>登录后同步学习记录、收藏与能力档案</Text>
             </View>
             <Text className={styles.loginEntryArrow}>→</Text>
           </View>
@@ -293,11 +349,19 @@ const MinePage: React.FC = () => {
                   )}
                 </Button>
               ) : (
-                <View className={styles.avatarPickerPlaceholder}>
-                  <Text className={styles.avatarPickerPlus}>👤</Text>
+                <View className={styles.avatarPicker} onClick={onPickAvatarH5}>
+                  {editAvatar ? (
+                    <Image className={styles.avatarPickerImage} src={editAvatar} mode="aspectFill" />
+                  ) : (
+                    <View className={styles.avatarPickerPlaceholder}>
+                      <Text className={styles.avatarPickerPlus}>📷</Text>
+                    </View>
+                  )}
                 </View>
               )}
-              <Text className={styles.avatarPickerLabel}>{IS_WEAPP ? '点击选择微信头像' : 'H5 暂不支持微信头像'}</Text>
+              <Text className={styles.avatarPickerLabel}>
+                {IS_WEAPP ? '点击选择微信头像' : '点击从相册或相机选择头像'}
+              </Text>
             </View>
 
             <Input
@@ -314,6 +378,36 @@ const MinePage: React.FC = () => {
               </View>
               <View className={styles.btnSave} onClick={handleSaveProfile}>
                 <Text className={styles.btnSaveText}>保存</Text>
+              </View>
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* 网页端手机号登录面板（小程序端不会出现：入口只在 H5 渲染） */}
+      {!IS_WEAPP && showPhoneLogin && (
+        <>
+          <View className={styles.mask} onClick={() => setShowPhoneLogin(false)} />
+          <View className={styles.sheet}>
+            <Text className={styles.sheetTitle}>手机号登录</Text>
+            <Text className={styles.sheetDesc}>
+              网页端用手机号登录，学习记录与微信小程序端互通
+            </Text>
+            <Input
+              className={styles.input}
+              type="number"
+              maxlength={11}
+              placeholder="请输入手机号"
+              value={phoneInput}
+              onInput={(e) => setPhoneInput(e.detail.value)}
+            />
+            <Text className={styles.sheetDesc}>当前为内测阶段：无需验证码，输入手机号即可登录</Text>
+            <View className={styles.sheetActions}>
+              <View className={styles.btnCancel} onClick={() => setShowPhoneLogin(false)}>
+                <Text className={styles.btnCancelText}>取消</Text>
+              </View>
+              <View className={styles.btnSave} onClick={handlePhoneLogin}>
+                <Text className={styles.btnSaveText}>{phoneLogging ? '登录中…' : '登录'}</Text>
               </View>
             </View>
           </View>

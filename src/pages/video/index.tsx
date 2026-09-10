@@ -132,10 +132,13 @@ const VideoPage: React.FC = () => {
         }
 
         // 如果传入了 videoId，匹配对应视频；否则播第一个
-        const target = videoId
-          ? decodedVideos.find((v) => v.id === videoId)
-          : decodedVideos[0];
-        setCurrentVideo(target || decodedVideos[0] || null);
+        // 注意：明确指定了 videoId 却找不到（例如该课程视频待补充/已停用）时，**不能**退化成
+        // “播第一个视频”——那会让人以为看的就是该课程内容，属于误导。此时留空走「暂无视频」。
+        if (videoId) {
+          setCurrentVideo(decodedVideos.find((v) => v.id === videoId) || null);
+        } else {
+          setCurrentVideo(decodedVideos[0] || null);
+        }
       } catch (err) {
         console.error('[Video] load error:', err);
       } finally {
@@ -207,10 +210,23 @@ const VideoPage: React.FC = () => {
     setBiliError(true);
   };
 
+  /**
+   * 当前视频对应的 B 站站点链接。
+   * 视频 url 现在是「合集 + 具体分P」（player.bilibili.com/...?bvid=X&page=N），
+   * 跳到 B 站时要带上分P（?p=N），否则会跳回合集第 1 集。
+   */
+  const bilibiliSiteUrl = (): string => {
+    const raw = currentVideo?.url || '';
+    const bv = bvFromUrl(raw);
+    if (!bv) return raw;
+    const m = raw.match(/[?&]page=(\d+)/);
+    const p = m && m[1] !== '1' ? `?p=${m[1]}` : '';
+    return `https://www.bilibili.com/video/${bv}${p}`;
+  };
+
   /** 在 Bilibili 站点打开当前视频 */
   const handleOpenOnBilibili = () => {
-    const bv = bvFromUrl(currentVideo?.url || '');
-    const biliUrl = bv ? `https://www.bilibili.com/video/${bv}` : (currentVideo?.url || '');
+    const biliUrl = bilibiliSiteUrl();
     if (IS_WEAPP) {
       // 小程序：跳转到内置 web-view 页内嵌打开 B 站
       Taro.navigateTo({
@@ -223,8 +239,7 @@ const VideoPage: React.FC = () => {
 
   /** 复制 B 站链接（web-view 业务域名未配置导致打不开时，可手动复制到浏览器观看） */
   const handleCopyLink = () => {
-    const bv = bvFromUrl(currentVideo?.url || '');
-    const biliUrl = bv ? `https://www.bilibili.com/video/${bv}` : (currentVideo?.url || '');
+    const biliUrl = bilibiliSiteUrl();
     Taro.setClipboardData({
       data: biliUrl,
       success: () => Taro.showToast({ title: '链接已复制', icon: 'success' }),

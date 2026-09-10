@@ -36,14 +36,28 @@ const CourseDetailPage: React.FC = () => {
   };
 
   // 标记某章节学完（幂等；学完计入课程进度与押金完课率）
-  const markChapterDone = async (chapterId: string) => {
+  // 后端要求先看完本章配套视频（完课率是押金达标依据，不能空点），未看完时引导直接去播放
+  const markChapterDone = async (chapterId: string, chapter?: Chapter) => {
     if (chapterDone.has(chapterId) || !courseIdRef.current) return;
     try {
       await completeCourseChapter(courseIdRef.current, chapterId);
       setChapterDone((prev) => new Set(prev).add(chapterId));
       Taro.showToast({ title: '本章已学完', icon: 'success' });
     } catch (err: any) {
-      Taro.showToast({ title: err?.message || '标记失败', icon: 'none' });
+      const msg = err?.message || '标记失败';
+      if (msg.includes('视频')) {
+        Taro.showModal({
+          title: '需要先看完本章视频',
+          content: '完课率是押金达标的依据，请先完整观看本章配套视频，再回来标记学完。',
+          confirmText: '去看视频',
+          cancelText: '稍后',
+          success: (res) => {
+            if (res.confirm && chapter && chapter.video_bv) handleChapterVideo(chapter);
+          },
+        });
+        return;
+      }
+      Taro.showToast({ title: msg, icon: 'none' });
     }
   };
 
@@ -342,7 +356,7 @@ const CourseDetailPage: React.FC = () => {
                   <View className={styles.chapterActions}>
                     <View
                       className={chapterDone.has(ch.id) ? styles.chapterDoneBtn : styles.chapterDoneBtnGhost}
-                      onClick={(e) => { e.stopPropagation(); markChapterDone(ch.id); }}
+                      onClick={(e) => { e.stopPropagation(); markChapterDone(ch.id, ch); }}
                     >
                       <Text className={chapterDone.has(ch.id) ? styles.chapterDoneText : styles.chapterDoneGhostText}>
                         {chapterDone.has(ch.id) ? '✓ 已学完' : '标记学完'}
@@ -351,9 +365,13 @@ const CourseDetailPage: React.FC = () => {
                     <View className={styles.chapterDetailBtn} onClick={(e) => { e.stopPropagation(); handleChapterDetail(ch); }}>
                       <Text className={styles.chapterDetailText}>详情</Text>
                     </View>
-                    {ch.video_bv && (
+                    {ch.video_bv ? (
                       <View className={styles.chapterVideoBtn} onClick={(e) => { e.stopPropagation(); handleChapterVideo(ch); }}>
                         <Text className={styles.chapterVideoIcon}>▶</Text>
+                      </View>
+                    ) : (
+                      <View className={styles.chapterVideoPending}>
+                        <Text className={styles.chapterVideoPendingText}>待补充</Text>
                       </View>
                     )}
                   </View>

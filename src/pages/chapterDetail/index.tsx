@@ -113,7 +113,7 @@ const ChapterDetailPage: React.FC = () => {
           <Text className={styles.metaText}>{chapter.sections?.length || 0} 个小节</Text>
         </View>
 
-        {chapter.video_bv && (
+        {chapter.video_bv ? (
           <View className={styles.playBtn} onClick={handlePlayVideo}>
             <View className={styles.playIconWrap}>
               <Text className={styles.playIcon}>▶</Text>
@@ -121,6 +121,15 @@ const ChapterDetailPage: React.FC = () => {
             <View className={styles.playBtnText}>
               <Text className={styles.playBtnTitle}>观看本章视频</Text>
               <Text className={styles.playBtnDesc}>B站视频 · 支持全屏</Text>
+            </View>
+          </View>
+        ) : (
+          <View className={styles.playBtnPending}>
+            <View className={styles.playBtnText}>
+              <Text className={styles.playBtnPendingTitle}>本章视频待补充</Text>
+              <Text className={styles.playBtnPendingDesc}>
+                现有教学素材暂无对应内容，可先按下面的小节文字学习；视频链接补齐后会自动出现在这里。
+              </Text>
             </View>
           </View>
         )}

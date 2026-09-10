@@ -14,9 +14,12 @@ import os
 PROCESSED_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "processed")
 
 # 各阶段映射到的真实教学视频（来自学习路线「学习资源」章节）
-BILIBILI_BLACKHORSE = "BV1h1VbzHER2"   # 黑马 Python+AI 大模型（阶段一）
-BILIBILI_AGENT = "BV18hWtzuErE"        # 2025 AI Agent 智能体全套（阶段二/四）
-BILIBILI_LANGCHAIN = "BV1xr3Mz2EXD"    # 2025 最好的 LangChain Agent 实战（阶段三/五）
+# ⚠️ 这三个只作「课程级兜底」，逐章精确映射见 data_pipeline/video_mapping.py
+BILIBILI_BLACKHORSE = "BV1h1VbzHER2"   # 黑马 Python+AI 大模型（阶段一，131P，已核实有效）
+# 2026-09 核实：原来的 BV18hWtzuErE 已失效（B站接口返回 62012 稿件不可见），
+# 换成吴恩达大模型合集（含 Agentic AI 分P），避免兜底指向死链。
+BILIBILI_AGENT = "BV1Bq421A74G"        # 吴恩达大模型/Agentic AI（阶段二/四）
+BILIBILI_LANGCHAIN = "BV1xr3Mz2EXD"    # LangChain Agent 实战（阶段三/五，92P，已核实有效）
 
 
 def _sec(sec_id, title, content, knowledge_points, case=""):
@@ -1115,15 +1118,50 @@ COURSE_CORE_INFO = {
 }
 
 
+def _first_mapped_chapter(co):
+    """该课程第一个配了真实视频的章节 → (章节id, 章节标题, BV, 分P)；都没有则 None。
+
+    以「章节级权威映射」video_mapping.VIDEO_MAP 为准（build_videos 读的是未加工的
+    ALL_STAGE_COURSES，章节上还没有 video_bv，所以不能依赖章节字段）。
+    """
+    try:
+        from .video_mapping import VIDEO_MAP
+    except ImportError:
+        from video_mapping import VIDEO_MAP
+    for ch in co.get("chapters", []):
+        hit = VIDEO_MAP.get(ch.get("id"))
+        if hit:
+            return ch.get("id"), ch.get("title", ""), hit[0], hit[1]
+    return None
+
+
 def build_videos():
-    """为 24 门课各生成一条配套视频。"""
+    """每门课生成一条配套视频记录（指向真实合集的**具体分P**，并绑上对应章节）。
+
+    历史问题：这里原先只写合集首页 URL（不带分P）、chapter 留空，加上章节侧 page 恒为 1，
+    导致同一阶段看到的内容完全一样。现在优先取该课程章节的精确映射；
+    整门课都没有素材（全部待补充）时 url 置空，前端显示「暂无视频」。
+    """
+    try:
+        from .video_mapping import player_url
+    except ImportError:
+        from video_mapping import player_url
+
     videos = []
     for stage, courses in ALL_STAGE_COURSES.items():
         for co in courses:
             cid = co["id"]
-            url, source_name = VIDEO_RESOURCE[cid]
-            if url.startswith("BV"):
-                url = f"https://www.bilibili.com/video/{url}"
+            _url, source_name = VIDEO_RESOURCE[cid]
+            hit = _first_mapped_chapter(co)
+            if hit:
+                chap_id, chap_title, bv, page = hit
+                url = player_url(bv, page)
+                chapter_id = chap_id
+                subtitle = f"{bv} P{page} · 对应章节：{chap_title}"
+            else:
+                url = ""
+                chapter_id = ""
+                subtitle = "视频待补充（现有素材暂无对应内容）"
             description = (
                 f"本视频对应课程《{co['title']}》，属于{STAGE_TITLE[stage]}。"
                 f"资源来源：{source_name}。覆盖知识点：{'、'.join(COURSE_CORE_INFO.get(cid, []))}。"
@@ -1132,7 +1170,7 @@ def build_videos():
             videos.append({
                 "id": f"video-{cid}",
                 "title": f"{STAGE_TITLE[stage]} · {co['title']} · 配套视频",
-                "subtitle": STAGE_TITLE[stage],
+                "subtitle": subtitle,
                 "description": description,
                 "coreInfo": COURSE_CORE_INFO.get(cid, []),
                 "narrative": "",
@@ -1141,7 +1179,7 @@ def build_videos():
                 "url": url,
                 "coverUrl": co["coverImg"],
                 "duration": sum(ch.get("duration_minutes", 0) for ch in co["chapters"]) * 60,
-                "chapter": "",
+                "chapter": chapter_id,
                 "courseId": cid,
             })
     return videos
@@ -1361,18 +1399,33 @@ def _enrich_projects():
 
 
 def _apply_video_bv(all_courses):
-    """按 VIDEO_RESOURCE 给映射到 B 站视频的课程章节补 video_bv（章节页内嵌/跳转 B 站）。"""
-    applied = 0
+    """章节级视频映射：优先用 video_mapping.VIDEO_MAP 逐章指定 BV + **具体分P**。
+
+    历史问题：这里原先只按「课程」给一个 BV（VIDEO_RESOURCE），且 video_page 恒为 1，
+    于是同一阶段所有章节都播放同一个视频的同一集（用户反馈「每个视频都是一样的」）。
+    现在按优先级：
+      1) 命中 VIDEO_MAP（已人工核对）→ 写入精确的 video_bv + video_page；
+      2) 命中 PENDING（现有素材确实没有对应内容）→ 清空 video_bv，页面显示「视频待补充」；
+      3) 其余章节 → 才退回课程级 BV 兜底。
+    """
+    try:
+        from .video_mapping import apply_video_mapping, PENDING
+    except ImportError:  # 以脚本方式直接运行本文件时
+        from video_mapping import apply_video_mapping, PENDING
+
+    mapped, pending = apply_video_mapping(all_courses)
+    pending_ids = set(PENDING)
+    fallback = 0
     for co in all_courses:
         url, _ = VIDEO_RESOURCE.get(co["id"], ("", ""))
         bv = url if isinstance(url, str) and url.startswith("BV") else ""
         if not bv:
             continue
         for ch in co.get("chapters", []):
-            if not ch.get("video_bv"):
+            if not ch.get("video_bv") and ch.get("id") not in pending_ids:
                 ch["video_bv"] = bv
-                applied += 1
-    print(f"  [curriculum-2026] 章节 video_bv 已补齐：{applied}")
+                fallback += 1
+    print(f"  [curriculum-2026] 章节视频映射：精确 {mapped} 条 / 待补充 {pending} 条 / 课程级兜底 {fallback} 条")
     return all_courses
 
 

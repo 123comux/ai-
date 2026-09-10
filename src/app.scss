@@ -2,7 +2,11 @@
 @use '@/styles/variables.scss' as *;
 
 // 全局样式
-page {
+// 注意：小程序端根节点是 <page>；H5 端 Taro 渲染的页面容器是 <div class="taro_page">，
+// 页面里并不存在 page 元素。所以必须把 .taro_page 一起声明，否则字体族/基准字号/
+// 文字色/页面底色在网页端会整体丢失（网页会退回浏览器默认 16px 字号 + 白底）。
+page,
+.taro_page {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB',
     sans-serif;
   font-size: $font-size-md;
@@ -16,3 +20,50 @@ page {
   width: 100%;
   min-height: 100%;
 }
+
+/* #ifdef h5 */
+// ===== 以下仅网页端生效（小程序端构建时会被条件编译剔除） =====
+
+// 【tab 页底部被裁】Taro H5 把底部 tab 栏当作页面的兄弟节点：
+//   body(整屏) → .taro-tabbar__container → .taro-tabbar__panel(视口 - tab栏, overflow:hidden) + tab栏(50px)
+// 面板高度已经扣掉了 tab 栏，但页面包装链（.app-root / .taro_page）的高度是内容驱动 /
+// 按 100vh 算的，会比面板高出正好一个 tab 栏（实测 811 vs 761），溢出的 50px 被面板
+// overflow:hidden 裁掉且滚不到 —— 表现为 tab 页最底部一条内容（如「我的 → 设置」）看不见、点不到。
+// 这里把包装链的高度基准从「视口」改成「面板」，由 .taro_page 自己滚动。
+.taro-tabbar__panel .app-root,
+.taro-tabbar__panel .taro_page {
+  height: 100%;
+  min-height: 0;
+}
+
+// 关闭 Android / 微信内置浏览器的"字体自动放大"(font boosting)：
+// 否则系统会按自己的算法重算字号，破坏固定 375 布局的排布。
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+// 兜底底色：page/.taro_page 之外（橡皮筋回弹区）也用页面底色，避免露出白边
+body {
+  margin: 0;
+  background-color: $color-bg-page;
+}
+
+// 大屏兜底（PC / 平板）：桌面浏览器会忽略 viewport meta，
+// 若不约束宽度，所有 width:100% 的块会被拉伸到整个窗口宽度，字小框大完全变形。
+// 这里把 App 收敛成居中的 375 定宽列，视觉上等同手机页面。
+// 注意：position:fixed 的弹层/底部栏仍相对窗口定位（本产品以手机为主，桌面仅兜底）。
+@media (min-width: 600px) {
+  body {
+    background-color: #eef0f3;
+  }
+
+  #app {
+    width: 375px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background-color: $color-bg-page;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.06);
+  }
+}
+/* #endif */

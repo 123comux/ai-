@@ -61,3 +61,5 @@ dist-h5/
 # User scripts / binary docs (per project agreement, not committed)
 scripts/
 *.docx
+.vercel
+.env*

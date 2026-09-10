@@ -208,6 +208,7 @@
   left: $spacing-lg;
   right: $spacing-lg;
   bottom: 40rpx;
+  @include safe-area-bottom-offset(40rpx);
   height: $button-height-md;
   background: $gradient-primary;
   border-radius: $radius-button;
@@ -228,7 +229,7 @@
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  z-index: $z-index-mask;
 }
 
 .sheet {
@@ -237,7 +238,8 @@
   background: $color-bg-card;
   border-radius: $radius-xl $radius-xl 0 0;
   padding: $spacing-lg;
-  z-index: 101;
+  @include safe-area-bottom($spacing-lg);
+  z-index: $z-index-sheet;
 }
 
 .sheetTitle {

@@ -89,12 +89,28 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Ensure DB tables (incl. users / deposit) exist on startup.
 init_db()
 
+# ============ 可选：由本服务同时托管 H5 前端（同源，省掉跨域与单独静态托管）============
+# 国内容器托管（腾讯云 CloudBase 云托管 / 阿里云 FC / 自建）常用这种单容器形态：
+# 一个进程既提供 /api/*，又提供网页，前端用相对路径请求接口即可。
+# 判定：SERVE_H5 显式打开，或项目根存在 dist-h5（说明前端已构建）。
+H5_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist-h5"))
+_serve_h5_env = os.getenv("SERVE_H5", "").strip().lower()
+SERVE_H5 = (_serve_h5_env in ("1", "true", "yes", "on")) or (
+    _serve_h5_env not in ("0", "false", "no", "off") and os.path.isfile(os.path.join(H5_DIR, "index.html")))
 
-@app.get("/")
-async def root():
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/api")
+async def api_info():
+    """接口自述（H5 由本服务托管时，`/` 让给网页，故把这段信息挪到 /api）。"""
     return {
         "name": "AI Talent Training API",
         "version": "1.0.0",
+        "h5_served_by_backend": SERVE_H5,
         "datasets": ["FineWeb-Edu", "QVAC Genesis", "StudyChat"],
         "endpoints": {
             "knowledge": "/api/knowledge/",
@@ -106,9 +122,27 @@ async def root():
     }
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+if SERVE_H5:
+    # 必须放在所有 /api 路由之后注册：Starlette 按注册顺序匹配，挂在 "/" 上的
+    # 静态目录不会抢走 /api/*、/static/*、/health。
+    app.mount("/", StaticFiles(directory=H5_DIR, html=True), name="h5")
+    logging.info(f"[h5] 由后端同源托管前端产物：{H5_DIR}")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "name": "AI Talent Training API",
+            "version": "1.0.0",
+            "h5_served_by_backend": False,
+            "hint": "前端未构建或 SERVE_H5=false；本地开发时网页在 10087 端口",
+            "endpoints": {
+                "knowledge": "/api/knowledge/",
+                "assessment": "/api/assessment/",
+                "courses": "/api/courses/",
+                "projects": "/api/projects/",
+                "learning_paths": "/api/learning-paths/",
+            },
+        }
 
 
 def _warmup_models():

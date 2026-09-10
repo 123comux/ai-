@@ -86,7 +86,13 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
         pxtransform: {
           enable: true,
           config: {
-            selectorBlackList: ['body'],
+            // 精确匹配、按正则跳过换算的根选择器：
+            // - /^body$/：原生标签 body 不做换算。必须是正则——用字符串 'body' 是子串匹配，
+            //   会把 CSS Modules 生成的 .index-module__body___xxxx 一起命中，
+            //   导致 .body 里的 rpx 原样输出成非法值被浏览器丢弃。
+            // - /^#app$/：网页端外壳容器，桌面兜底用的 375px / 24px 是「原生像素」语义，
+            //   不能按设计稿换算（否则 375px → 10rem，配合锁定的 18px 根字号只剩 180px 宽）。
+            selectorBlackList: [/^body$/, /^#app$/],
             baseFontSize: 37.5,
             unitPrecision: 5,
           },

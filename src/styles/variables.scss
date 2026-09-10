@@ -64,6 +64,17 @@ $transition-base: 0.25s ease;
 $transition-slow: 0.35s ease;
 
 // ============================================
+// 层级（z-index）
+// ============================================
+// ⚠️ 网页端（H5）Taro 渲染的底部 tab 栏是 .weui-tabbar，**z-index: 500**（position:absolute，压在页面之上）。
+// 小程序端 tabbar 属于原生层，不存在这个冲突。因此在 tab 页（home/learn/project/mine）上，
+// 底部弹层/遮罩的 z-index 必须大于 500，否则弹层虽渲染出来、底部按钮却被 tab 栏盖住点不到
+// （实测：个人中心手机号登录面板的「登录」按钮命中最上层元素是 .weui-tabbar__item）。
+$z-index-mask: 1100;
+$z-index-sheet: 1101;
+$z-index-overlay: 99999; // 全屏强遮罩（导语弹窗 / AI 对话浮层）
+
+// ============================================
 // 常用 Mixin
 // ============================================
 // 单行文本省略
@@ -96,6 +107,32 @@ $transition-slow: 0.35s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+// 全面屏底部安全区（iPhone home indicator / 安卓手势条）。
+// 仅 H5 端生效——小程序端样式保持原样，避免影响已上线表现；
+// 前置条件：src/index.html 的 viewport 已带 viewport-fit=cover，否则 env() 恒为 0。
+// 用法：放在已有 padding 声明之后 include，用于覆盖底部值：
+//   padding: $spacing-lg;
+//   @include safe-area-bottom($spacing-lg);
+@mixin safe-area-bottom($base: 0rpx) {
+  /* #ifdef h5 */
+  padding-bottom: calc(#{$base} + env(safe-area-inset-bottom));
+  /* #endif */
+}
+
+// 底部固定元素定位用的安全区偏移（同样仅 H5 生效）
+@mixin safe-area-bottom-offset($base: 0rpx) {
+  /* #ifdef h5 */
+  bottom: calc(#{$base} + env(safe-area-inset-bottom));
+  /* #endif */
+}
+
+// 固定高度元素（底部输入栏等）：高度补足安全区，避免内容区被压缩（需配合 safe-area-bottom 使用）
+@mixin safe-area-height($base) {
+  /* #ifdef h5 */
+  height: calc(#{$base} + env(safe-area-inset-bottom));
+  /* #endif */
 }
 
 // 横向滚动容器（微信小程序兼容）

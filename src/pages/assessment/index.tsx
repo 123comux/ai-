@@ -178,7 +178,7 @@ const AssessmentPage: React.FC = () => {
             />
           </View>
           {error && <Text className={styles.errorInline}>{error}</Text>}
-          <View className={styles.buttonGroup} style={{ marginTop: '40rpx' }}>
+          <View className={styles.buttonGroup}>
             <View className={styles.startButton} onClick={() => !loading && handleSubmit()}>
               <Text className={styles.startButtonText}>
                 {loading ? '分析中...' : '生成测评报告'}

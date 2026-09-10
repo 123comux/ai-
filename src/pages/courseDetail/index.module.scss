@@ -337,6 +337,23 @@
   color: $color-primary;
 }
 
+/* 该章节暂无可用视频（现有素材缺失）：明确标注，不再用别的视频冒充 */
+.chapterVideoPending {
+  padding: 0 $spacing-sm;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: rgba($color-text-tertiary, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chapterVideoPendingText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
 .chapterSummary {
   padding: 0 $spacing-lg $spacing-md $spacing-lg;
 }

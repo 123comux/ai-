@@ -16,12 +16,15 @@ services:
       dockerfile: backend/Dockerfile
     env_file:
       - ../backend/.env
+    environment:
+      # 容器内监听端口固定为 8010（与 expose / nginx.conf 的 proxy_pass 一致）
+      - PORT=8010
     volumes:
       # 持久化数据库与处理数据（避免容器重建丢数据）
       - ai-teach-data:/app/data
     restart: unless-stopped
     expose:
-      - "8000"
+      - "8010"
 
   nginx:
     image: nginx:1.27-alpine

@@ -334,7 +334,8 @@
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  /* 必须高于 H5 tab 栏的 z-index:500，否则网页端弹层按钮被 tab 栏压住点不到 */
+  z-index: $z-index-mask;
 }
 
 .sheet {
@@ -343,7 +344,8 @@
   background: $color-bg-card;
   border-radius: $radius-xl $radius-xl 0 0;
   padding: $spacing-lg;
-  z-index: 101;
+  @include safe-area-bottom($spacing-lg);
+  z-index: $z-index-sheet;
 }
 
 .sheetTitle {

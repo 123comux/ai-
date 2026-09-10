@@ -10,15 +10,20 @@
 ```
                          ┌─────────────────────────────┐
    微信小程序(dist/)  ──▶ │        Nginx (443 HTTPS)     │
-   浏览器(H5 dist-h5) ──▶ │  - /api  → backend:8000      │
-                         │  - /     → H5 静态产物        │
+   浏览器(H5 dist-h5) ──▶ │  - /api    → backend:8010    │
+                         │  - /static → backend:8010    │
+                         │  - /       → H5 静态产物      │
                          └───────────────┬─────────────┘
                                          │
-                                  ┌──────▼──────┐
-                                  │ FastAPI:8000 │
+                                  ┌──────▼───────┐
+                                  │ FastAPI:8010  │
                                   │  SQLite cms.db│
-                                  └──────────────┘
+                                  └───────────────┘
 ```
+
+> 后端默认端口 **8010**（不是 8000）：本机 8000 常被其它服务占用，本项目统一用 8010。
+> 需要再改端口时，四处要同步：`backend/config.py` 的 `PORT`、`deploy/docker-compose.yml` 的 `expose`、
+> `deploy/nginx.conf` 的 `proxy_pass`、前端 `config/dev.ts` 的 `DEV_API_TARGET`。
 
 - **前端**：`src/`（Taro 4 + React + TS），`npm run build:weapp` → `dist/`，`npm run build:h5` → `dist-h5/`。
 - **后端**：`backend/`（FastAPI + SQLite），`uvicorn main:app`。
@@ -39,7 +44,7 @@ cp backend/.env.example backend/.env
 docker build -f backend/Dockerfile -t ai-teach-backend .
 
 # 3) 运行（首次会自动建库+灌种子数据）
-docker run -d -p 8000:8000 \
+docker run -d -p 8010:8010 \
   --name ai-teach-backend \
   --env-file backend/.env \
   -v ai-teach-data:/app/data \
@@ -57,8 +62,12 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-runtime.txt
 cp .env.example .env   # 填好真实值
 python -m database     # 建库 + 灌种子数据（仅首次）
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+uvicorn main:app --host 0.0.0.0 --port 8010 --workers 2
 ```
+
+> ⚠️ 别漏 `--port`：`uvicorn main:app` 不带端口时用的是 uvicorn 自己的默认值 **8000**
+> （本机常被其它服务占用），与 `backend/config.py` 里的 `PORT=8010` 无关。
+> 本地开发直接用 `python main.py` 即可（它会读 `HOST`/`PORT` 并开 reload）。
 
 ### 健康检查
 
@@ -85,14 +94,96 @@ npm run build:h5
 > 构建报错 `Conflicting order ... mini-css-extract-plugin` 已在 `config/index.ts` 的
 > `mini.miniCssExtractPluginOption.ignoreOrder=true` 处理，正常情况下不会再出现。
 
-**前端连接后端地址**：`src/config/env.ts` 中 `API_BASE` 默认 `http://localhost:8000`，用构建时注入覆盖：
+**前端连接后端地址**：`src/config/env.ts` 中 `API_BASE` 由构建时注入的 `TARO_APP_API_BASE` 覆盖：
+
 ```bash
 # 生产构建（微信小程序与 H5 均用已备案 HTTPS 域名）
 TARO_APP_API_BASE=https://your-domain.com npm run build:weapp
 TARO_APP_API_BASE=https://your-domain.com npm run build:h5
 ```
-- 本地开发：不注入即用 localhost。
-- 线上：小程序要求 HTTPS + 已备案域名；H5 同域由 Nginx 托管可保持同源。
+
+- **小程序端**：必须用绝对地址。未注入时回退 `http://localhost:8010`（开发者工具勾选「不校验合法域名」）。
+- **H5 端**：未注入时**留空使用同源相对路径**，请求交给 `/api` 与 `/static` 反向代理
+  （本地 `config/dev.ts` 的 `devServer.proxy`、线上 `deploy/nginx.conf` 都已配置）。
+  这样手机连同一 Wi-Fi 用电脑局域网 IP 打开网页端即可正常访问后端，且不产生跨域。
+  若把 H5 部署在不带反代的纯静态托管上，则**必须**注入 `TARO_APP_API_BASE=https://后端域名`。
+
+### 2.1 网页端（H5）在手机上调试
+
+```bash
+# 终端 1：本项目后端（端口默认 8010，config 里已是 0.0.0.0，直接 python main.py 即可）
+cd backend
+python main.py
+
+# 终端 2：H5 dev server（已绑定 0.0.0.0，端口 10087）
+#   代理目标默认已是 http://localhost:8010，与后端默认端口一致，无需额外配置
+npm run dev:h5
+```
+
+手机与电脑连同一 Wi-Fi 后，用手机浏览器打开 `http://<电脑局域网IP>:10087` 即可。
+
+**找对局域网 IP（重要）**：`ipconfig` 里可能有多个 IPv4（VMware/VirtualBox 虚拟网卡等），
+要用**真实联网那块网卡**的地址，例如：
+
+```powershell
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' }
+# WLAN/以太网 那条才是（如 192.168.2.17）；VMware Network Adapter 的 192.168.x.1 手机到不了
+```
+
+**连不上的排查顺序**：
+1. 手机与电脑是否**同一网段**（对比手机 Wi-Fi 的 IP 前三位）；
+2. Windows 防火墙：确认当前网络类别（`Get-NetConnectionProfile`）下允许 node.exe 入站——
+   首次 `npm run dev:h5` 时若弹窗被点了「取消」，用管理员 PowerShell 补一条：
+   `New-NetFirewallRule -DisplayName "Taro H5 dev 10087" -Direction Inbound -Protocol TCP -LocalPort 10087 -Action Allow -Profile Any`
+3. 后端只在电脑上跑，网页端请求走 dev server 代理，所以**手机不需要直连 8010**；
+   但访问 `http://<电脑IP>:10087/openapi.json` 若能看到本项目后端，说明代理链正常。
+
+> **端口自查**：确认后端在跑本项目，可访问 `http://localhost:8010/openapi.json`，
+> `info.title` 应为 `AI Talent Training API`（本项目后端）。
+> 若 8010 也被占用（本机 8000 已被其它应用占用过），换端口后两端同步改：
+> 后端 `--port 8011` + `DEV_API_TARGET=http://localhost:8011 npm run dev:h5`。
+
+### 2.1.1 微信小程序真机预览（与网页端不同）
+
+小程序端 `API_BASE` 是**绝对地址**（默认 `http://localhost:8010`），真机上的 `localhost` 指向手机自身，
+所以真机预览必须用局域网 IP 重新构建，并在手机上打开调试开关：
+
+```bash
+# 用电脑的局域网 IP 构建（示例 192.168.2.17）
+TARO_APP_API_BASE=http://192.168.2.17:8010 npm run build:weapp
+# 微信开发者工具导入 dist/ → 预览/真机调试 → 手机端打开「不校验合法域名」
+```
+
+小程序**不能**走 dev server 的代理，必须直连 `IP:8010`，因此后端务必监听 `0.0.0.0`。
+正式版要求 HTTPS + 已备案域名（见 §3），`http` 仅开发/体验版可用。
+
+### 2.2 网页端已知差异（与小程序端对齐情况）
+
+| 能力 | 小程序端 | 网页端（H5） |
+| --- | --- | --- |
+| 登录 | `wx.login` 静默登录 | 手机号登录（`/api/auth/h5-login`） |
+| 头像 | `open-type="chooseAvatar"` | `Taro.chooseImage` 选图后上传同一接口 |
+| 押金支付 | 微信支付 JSAPI 面板 | 引导「在微信小程序内完成支付」（不接 H5 支付） |
+| 订阅消息 / 分享 | 支持 | 不支持（无对应能力，已静默跳过） |
+| 视频（B 站） | 内置 web-view + 复制链接 | 页面内嵌 iframe 播放 |
+
+> ⚠️ **上线前必须处理**：`/api/auth/h5-login` 当前**不校验短信验证码**（内测用，等价于知道手机号即可登录）。
+> 二选一改造即可，前端页面无需改动：
+> 1. 该接口补短信验证码（新增发送验证码接口 + 校验）；
+> 2. 换成微信网页授权（公众号 OAuth）后同样签发本站 token。
+> 也可先用 `H5_PHONE_LOGIN=false` 一键关闭网页端登录入口。
+
+### 2.3 网页端适配实现要点（改样式前先读）
+
+- **定宽 375 + 等比缩放**：`src/index.html` 的 viewport 写死 `width=375`（配 `viewport-fit=cover`），
+  并把 `html` 字号锁在 `18px` 以屏蔽 Taro 注入的 flexible 脚本。
+  因此网页端不会重排，而是整页等比缩放到屏幕宽度——改字号/间距请用 `rpx`，不要用 `px`。
+- **行内样式不要写 `rpx`**：浏览器不认识 `rpx` 会整条丢弃（进度条高度曾因此在网页端变 0）。
+  需要动态尺寸时用 `Taro.pxTransform()`（见 `src/components/ProgressBar/index.tsx`）。
+- **`page` 选择器在网页端无效**：H5 的页面容器是 `<div class="taro_page">`，
+  全局样式请写成 `page, .taro_page { ... }`（见 `src/app.scss`）。
+- **底部固定栏**请用 `src/styles/variables.scss` 里的 `safe-area-bottom` 等 mixin 适配全面屏
+  （已按 `#ifdef h5` 隔离，不影响小程序端）。
 
 ---
 
@@ -140,7 +231,7 @@ TARO_APP_API_BASE=https://your-domain.com npm run build:h5
 
 | 变量 | 说明 | 生产建议 |
 |------|------|----------|
-| `HOST` / `PORT` | 监听地址/端口 | `0.0.0.0` / `8000` |
+| `HOST` / `PORT` | 监听地址/端口 | `0.0.0.0` / `8010` |
 | `JWT_SECRET` | Token 签名密钥 | **必换强随机串**（未配置生产启动即报错） |
 | `TOKEN_EXPIRE_DAYS` | Token 有效期 | 30 |
 | `ZHIPU_API_KEY` | 智谱 GLM Key（flash 档主路径） | 必填（AI 主路径） |

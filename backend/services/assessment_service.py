@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from models.schemas import AssessmentQuestion, AssessmentResult
+from fsx import safe_write_json
 
 PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 
@@ -208,13 +209,8 @@ def _persist_ability_report(
     }
 
     # 1) Global demo fallback (used by job-matching when no per-user report exists)
-    #    容错：全局文件可能被占用/权限受限，失败仅告警，绝不阻断测评响应
-    path = PROCESSED_DIR / "ability_report.json"
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(report, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logging.warning("[assessment] 写全局 ability_report.json 失败(已忽略): %s", e)
+    #    容错：Serverless 只读文件系统 / 文件被占用，失败仅告警，绝不阻断测评响应
+    safe_write_json(PROCESSED_DIR / "ability_report.json", report)
 
     # 2) Per-user persistence (multi-tenant isolation)
     if user_id is not None:

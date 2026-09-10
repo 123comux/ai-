@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist-h5",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "includeFiles": "backend/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index/api/:path*" },
+    { "source": "/static/:path*", "destination": "/api/index/static/:path*" },
+    { "source": "/health", "destination": "/api/index/health" },
+    { "source": "/admin", "destination": "/api/index/admin" },
+    { "source": "/admin/:path*", "destination": "/api/index/admin/:path*" }
+  ]
+}

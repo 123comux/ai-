@@ -137,20 +137,27 @@ async def delete_goal(goal_id: int, request: Request):
 def _resolve_favorite(item_type: str, item_id: str) -> dict:
     """Look up title/cover/detail_path from courses or projects table."""
     conn = get_connection()
+    page = ""
     if item_type == "course":
+        page = "/pages/courseDetail/index?id="
         row = conn.execute(
-            "SELECT id, title, cover_img AS coverImg, '/pages/courseDetail/index?id=' || id AS detail_path FROM courses WHERE id=?", (item_id,)
+            "SELECT id, title, cover_img AS coverImg FROM courses WHERE id=?", (item_id,)
         ).fetchone()
     elif item_type == "project":
+        page = "/pages/projectDetail/index?id="
         row = conn.execute(
-            "SELECT id, title, cover_img AS coverImg, '/pages/projectDetail/index?id=' || id AS detail_path FROM projects WHERE id=?", (item_id,)
+            "SELECT id, title, cover_img AS coverImg FROM projects WHERE id=?", (item_id,)
         ).fetchone()
     else:
         row = None
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail=f"{item_type} 不存在")
-    return dict(row)
+    data = dict(row)
+    # 详情路径在 Python 侧拼接：SQLite 的 `||` 在 MySQL 里是逻辑或（不是字符串拼接），
+    # 写成 SQL 会导致 MySQL/PG 上 detail_path 变成 0/1。
+    data["detail_path"] = page + str(data.get("id") or "")
+    return data
 
 
 @router.get("/favorites")

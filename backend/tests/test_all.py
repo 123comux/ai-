@@ -119,6 +119,28 @@ class TestDbDialect(unittest.TestCase):
         out = to_mysql(sql)
         self.assertIn("ON DUPLICATE KEY UPDATE minutes=VALUES(minutes), watched_at=NOW()", out)
 
+    def test_on_conflict_multiline_and_spaced_variants(self):
+        """多行 SQL（SET 后是换行）与 `ON CONFLICT (id)`（括号前有空格）都必须翻译。
+
+        真机事故：数据库跑在 MySQL 上时，多行 upsert 没被翻译，
+        报 1064 near 'CONFLICT(id) DO UPDATE SET ...'。
+        """
+        to_mysql, _ = self._t()
+        multi = ("INSERT INTO learning_paths\n"
+                 "   (id, title, nodes) VALUES (?, ?, ?)\n"
+                 "   ON CONFLICT(id) DO UPDATE SET\n"
+                 "     title=excluded.title, nodes=excluded.nodes\n")
+        out = to_mysql(multi)
+        self.assertNotIn("CONFLICT", out.upper().replace("ON DUPLICATE KEY UPDATE", ""))
+        self.assertIn("ON DUPLICATE KEY UPDATE", out)
+        self.assertIn("title=VALUES(title)", out)
+
+        spaced = ("INSERT INTO t (id, v) VALUES (?, ?) "
+                  "ON CONFLICT (id) DO UPDATE SET v=excluded.v")
+        out2 = to_mysql(spaced)
+        self.assertIn("ON DUPLICATE KEY UPDATE v=VALUES(v)", out2)
+        self.assertNotIn("CONFLICT", out2)
+
     def test_ddl_autoincrement(self):
         _, to_mysql_ddl = self._t()
         out = to_mysql_ddl("CREATE TABLE t (id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR(100) NOT NULL UNIQUE)")
@@ -130,16 +152,212 @@ class TestDbDialect(unittest.TestCase):
         out = to_mysql_ddl("CREATE TABLE t (created_at TEXT NOT NULL DEFAULT (datetime('now')))")
         self.assertIn("DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP", out)
 
-    def test_ddl_text_literal_default_becomes_expression(self):
+    def test_ddl_text_literal_default_is_dropped(self):
+        """非空串默认值的 TEXT 列要去掉默认值：MySQL 8 只认表达式 `DEFAULT ('[]')`，
+        而 TiDB 解析不了表达式默认值（真机报 `(1064) ... near ''\')'`）。"""
         _, to_mysql_ddl = self._t()
-        out = to_mysql_ddl("CREATE TABLE t (description TEXT NOT NULL DEFAULT '')")
-        self.assertIn("DEFAULT ('')", out)
+        out = to_mysql_ddl("CREATE TABLE t (nodes TEXT NOT NULL DEFAULT '[]')")
+        self.assertNotIn("DEFAULT", out)
+        self.assertIn("nodes TEXT NOT NULL", out)
+
+    def test_ddl_text_empty_default_becomes_varchar(self):
+        """短标量默认值的文本列改 VARCHAR(1000) 以**保留默认值**。
+
+        否则 app 里「插入时省略该列」会报 1364 Field doesn't have a default value
+        （真机事故：create_user 不传 users.grade、upsert_deposit 不传 currency）。
+        """
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (grade TEXT NOT NULL DEFAULT '', note TEXT NOT NULL)")
+        self.assertIn("grade VARCHAR(1000) NOT NULL DEFAULT ''", out)
+        self.assertIn("note TEXT NOT NULL", out)          # 无默认值的列保持 TEXT
+        self.assertNotIn("('')", out)
+
+    def test_ddl_scalar_defaults_other_than_empty_are_kept(self):
+        """'CNY' / 'admin' / '中级' 这类短标量默认值同样要保留（真实事故：currency）。"""
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE d (currency TEXT NOT NULL DEFAULT 'CNY', "
+                           "level TEXT NOT NULL DEFAULT '中级', role TEXT NOT NULL DEFAULT 'admin')")
+        self.assertIn("currency VARCHAR(1000) NOT NULL DEFAULT 'CNY'", out)
+        self.assertIn("level VARCHAR(1000) NOT NULL DEFAULT '中级'", out)
+        self.assertIn("role VARCHAR(1000) NOT NULL DEFAULT 'admin'", out)
+
+    def test_ddl_json_container_default_is_stripped_but_type_kept(self):
+        """'[]' / '{}' 默认值底下可能存大 JSON（章节 23KB），必须保持 TEXT 且去掉默认值。"""
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE c (chapters TEXT NOT NULL DEFAULT '[]', "
+                           "quality TEXT NOT NULL DEFAULT '{}')")
+        self.assertIn("chapters TEXT NOT NULL", out)
+        self.assertIn("quality TEXT NOT NULL", out)
+        self.assertNotIn("DEFAULT", out)
+
+    def test_ddl_varchar_default_kept_as_plain_literal(self):
+        """VARCHAR 的默认值保持字面量写法（MySQL 与 TiDB 都接受），不要加括号。"""
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (status VARCHAR(50) NOT NULL DEFAULT 'active')")
+        self.assertIn("status VARCHAR(50) NOT NULL DEFAULT 'active'", out)
+        self.assertNotIn("('active')", out)
+
+    def test_ddl_banners_like_table_has_no_expression_default(self):
+        """回归：TiDB 上第一条建表语句就挂在这里（banners 的 TEXT ... DEFAULT ('')）。"""
+        _, to_mysql_ddl = self._t()
+        ddl = ("CREATE TABLE IF NOT EXISTS banners (\n"
+               "            id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+               "            title TEXT NOT NULL,\n"
+               "            description TEXT NOT NULL DEFAULT '',\n"
+               "            image_url TEXT NOT NULL DEFAULT '',\n"
+               "            link_url TEXT NOT NULL DEFAULT '',\n"
+               "            sort_order INTEGER NOT NULL DEFAULT 0,\n"
+               "            is_active INTEGER NOT NULL DEFAULT 1,\n"
+               "            created_at TEXT NOT NULL DEFAULT (datetime('now')),\n"
+               "            updated_at TEXT NOT NULL DEFAULT (datetime('now'))\n"
+               "        )")
+        out = to_mysql_ddl(ddl)
+        self.assertNotIn("('')", out)           # 表达式默认值 = TiDB 语法错误
+        self.assertIn("description VARCHAR(1000) NOT NULL DEFAULT ''", out)
+        self.assertIn("AUTO_INCREMENT", out)
+        self.assertIn("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP", out)
+        self.assertIn("sort_order INTEGER NOT NULL DEFAULT 0", out)
+
+    def test_ddl_every_project_table_is_tidb_parseable(self):
+        """把项目里全部建表语句过一遍翻译，确保没有残留的表达式默认值。
+
+        TiDB 不支持 `DEFAULT (expr)`，也没有 `TEXT ... DEFAULT 'x'`；这两类一旦残留，
+        线上就是第一条 CREATE TABLE 直接 1064。
+        """
+        import re as _re
+        import database as _db
+        src = open(getattr(_db, '__file__', ''), encoding='utf-8').read() \
+            if getattr(_db, '__file__', None) else ''
+        if not src:
+            self.skipTest('无法读取 database.py 源码')
+        # DDL 都是三引号字符串，且 `"""` 后可能换行
+        stmts = [s for s in _re.findall(r'"""(.*?)"""', src, _re.S) if 'CREATE TABLE' in s.upper()]
+        self.assertGreater(len(stmts), 20, '没抓到建表语句，检查测试自身')
+        _, to_mysql_ddl = self._t()
+        bad = []
+        for st in stmts:
+            out = to_mysql_ddl(st)
+            if _re.search(r"DEFAULT\s*\(", out):
+                bad.append(out.strip().split('\n')[0][:60] + ' → 残留表达式默认值')
+            if _re.search(r"\b(?:TINY|MEDIUM|LONG)?(?:TEXT|BLOB)\b[^,()]*DEFAULT\s+'", out, _re.I):
+                bad.append(out.strip().split('\n')[0][:60] + ' → TEXT 列仍有字面默认值')
+        self.assertEqual([], bad, 'TiDB 解析不了的建表语句：%s' % bad)
 
     def test_text_in_key_stays_varchar(self):
         _, to_mysql_ddl = self._t()
         out = to_mysql_ddl("CREATE TABLE t (id VARCHAR(100) PRIMARY KEY, openid VARCHAR(200) NOT NULL UNIQUE)")
         self.assertNotIn("TEXT PRIMARY KEY", out)
         self.assertIn("VARCHAR(200) NOT NULL UNIQUE", out)
+
+    def test_text_primary_key_becomes_varchar(self):
+        """MySQL 不允许 TEXT 做键（1170），方言层必须自动降级为 VARCHAR(255)。"""
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE admin_sessions (\n"
+                           "            token TEXT PRIMARY KEY,\n"
+                           "            username TEXT NOT NULL,\n"
+                           "            created_at TEXT NOT NULL DEFAULT (datetime('now'))\n"
+                           "        )")
+        self.assertIn("token VARCHAR(255) PRIMARY KEY", out)
+        self.assertNotIn("token TEXT PRIMARY KEY", out)
+        # 普通 TEXT 列不受影响
+        self.assertIn("username TEXT NOT NULL", out)
+
+    def test_text_unique_becomes_varchar(self):
+        _, to_mysql_ddl = self._t()
+        out = to_mysql_ddl("CREATE TABLE t (code TEXT NOT NULL UNIQUE, note TEXT NOT NULL)")
+        self.assertIn("code VARCHAR(255) NOT NULL UNIQUE", out)
+        self.assertIn("note TEXT NOT NULL", out)
+
+    def test_mysql_row_types_match_sqlite(self):
+        """MySQL 驱动返回的 datetime / Decimal 必须归一化成 SQLite 的字符串/数字。
+
+        真机事故：created_at 在 SQLite 是 '2026-08-14 23:30:59'，在 MySQL 是
+        datetime 对象，Pydantic 模型（createdAt: str）直接报 ValidationError。
+        """
+        import datetime
+        from decimal import Decimal
+        from db import _norm_row, _norm_value
+
+        self.assertEqual('2026-08-14 23:30:59', _norm_value(datetime.datetime(2026, 8, 14, 23, 30, 59)))
+        self.assertEqual('2026-08-14', _norm_value(datetime.date(2026, 8, 14)))
+        self.assertEqual(42, _norm_value(Decimal('42')))
+        self.assertEqual(4.5, _norm_value(Decimal('4.5')))
+        self.assertEqual('01:02:03', _norm_value(datetime.timedelta(hours=1, minutes=2, seconds=3)))
+        self.assertEqual('keep', _norm_value('keep'))
+        self.assertEqual({'a': '2026-01-02 03:04:05', 'b': 7},
+                         _norm_row({'a': datetime.datetime(2026, 1, 2, 3, 4, 5), 'b': Decimal('7')}))
+        self.assertIsNone(_norm_row(None))
+
+    def test_no_string_concat_operator_in_business_sql(self):
+        """业务 SQL 里禁止用 `||` 拼接字符串：MySQL/PG 把它当逻辑或。
+
+        历史问题：routers/mine_data.py 用 `'/pages/...' || id AS detail_path`，
+        在 SQLite 上正常，切到 MySQL 后 detail_path 会变成 0/1（或直接报错）。
+        """
+        import io as _io
+        import os as _os
+        import re as _re
+
+        base = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+        offenders = []
+        for root, dirs, files in _os.walk(base):
+            dirs[:] = [d for d in dirs if d not in
+                       ('__pycache__', '.pytest_cache', 'data', 'training', 'tests')]
+            for name in files:
+                if not name.endswith('.py') or name == 'db.py':  # db.py 是方言层，含翻译说明
+                    continue
+                path = _os.path.join(root, name)
+                content = _io.open(path, encoding='utf-8', errors='ignore').read().split('\n')
+                for lineno, line in enumerate(content, 1):
+                    code = line.split('#', 1)[0] if line.lstrip().startswith('#') else line
+                    if '||' in code:
+                        offenders.append('%s:%d: %s' % (
+                            _os.path.relpath(path, base), lineno, line.strip()[:80]))
+        self.assertEqual([], offenders,
+                         'SQL 里出现 `||`（MySQL/PG 不兼容，请在 Python 侧拼接或改用 CONCAT）：%s' % offenders)
+
+
+class TestServerlessFs(unittest.TestCase):
+    """Serverless（Vercel）只读文件系统：写 JSON 必须静默降级，绝不抛异常打断请求。"""
+
+    def setUp(self):
+        import fsx
+        self.fsx = fsx
+        self._saved = fsx._readonly_cache
+        fsx._readonly_cache = True  # 模拟 Vercel 只读环境
+
+    def tearDown(self):
+        self.fsx._readonly_cache = self._saved
+
+    def test_safe_write_json_skips_on_readonly(self):
+        ok = self.fsx.safe_write_json('/definitely/not/writable/x.json', {'a': 1})
+        self.assertFalse(ok)
+
+    def test_progress_writers_do_not_raise_on_readonly(self):
+        """这三个路由以前直接 open(...,'w')，在 Vercel 上会 PermissionError → 500。"""
+        from routers import learning_paths, projects, videos
+
+        learning_paths._save_progress({'u1': ['n1']})
+        projects._save_progress({'p1': 2})
+        videos._save_watched({'v1': {'at': '2026-01-01 00:00:00', 'minutes': 1}})
+        # 没抛异常即通过
+
+    def test_is_readonly_respects_env_override(self):
+        import os
+        saved = os.environ.get('FS_READONLY')
+        try:
+            os.environ['FS_READONLY'] = 'false'
+            self.fsx._readonly_cache = None
+            self.fsx._readonly_cache = False  # 探测结果是本机可写，直接断言覆盖逻辑生效
+            os.environ['FS_READONLY'] = 'true'
+            self.fsx._readonly_cache = None
+            self.assertTrue(self.fsx.is_readonly())
+        finally:
+            if saved is None:
+                os.environ.pop('FS_READONLY', None)
+            else:
+                os.environ['FS_READONLY'] = saved
+            self.fsx._readonly_cache = None
 
 
 class TestAuth(unittest.TestCase):

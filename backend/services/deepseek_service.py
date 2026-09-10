@@ -7,7 +7,7 @@
 
 import requests
 
-from config import DEEPSEEK_API_KEY, DEEPSEEK_API_URL
+from config import DEEPSEEK_API_KEY, DEEPSEEK_API_URL, AI_HTTP_TIMEOUT
 
 
 def chat_deepseek(
@@ -51,7 +51,7 @@ def chat_deepseek(
             "temperature": temperature,
             "stream": False,
         },
-        timeout=120,
+        timeout=AI_HTTP_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()

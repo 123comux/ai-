@@ -80,7 +80,10 @@ app.include_router(pay.router)
 
 # 静态文件（上传的头像等），生产环境应改由云存储/CDN 提供
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
+try:  # Serverless（Vercel）部署目录只读；目录随代码打包，创建失败可忽略
+    os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
+except Exception:
+    pass
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Ensure DB tables (incl. users / deposit) exist on startup.
@@ -127,7 +130,13 @@ def _warmup_models():
 
 @app.on_event("startup")
 async def _startup_warmup():
-    """启动后后台线程预热本地模型，首个 AI 请求不再等待冷加载。"""
+    """启动后后台线程预热本地模型，首个 AI 请求不再等待冷加载。
+
+    Serverless（Vercel）上不用预热：实例随请求起停，线程会被冻结/回收，白耗启动时间。
+    """
+    if os.getenv("VERCEL"):
+        logging.info("[warmup] Serverless 环境，跳过模型预热（线上主路径走智谱/DeepSeek API）")
+        return
     import threading
     threading.Thread(target=_warmup_models, daemon=True).start()
 

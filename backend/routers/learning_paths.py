@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from models.schemas import LearningPathItem, LearningPathNode
 from auth_utils import get_optional_user
+from fsx import safe_write_json
 from database import (
     record_user_path_node,
     get_user_path_progress,
@@ -130,9 +131,8 @@ def _load_progress() -> dict[str, list[str]]:
 
 
 def _save_progress(progress: dict[str, list[str]]) -> None:
-    path = PROCESSED_DIR / "path_progress.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(progress, f, ensure_ascii=False, indent=2)
+    # 只读环境（Vercel）自动跳过：进度真身在 user_path_progress 表
+    safe_write_json(PROCESSED_DIR / "path_progress.json", progress)
 
 
 def _course_chapter_progress(user_id: int | None, course_id: str) -> tuple[int, int]:

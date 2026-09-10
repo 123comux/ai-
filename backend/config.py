@@ -17,8 +17,12 @@ PROCESSED_DIR = BASE_DIR / "data" / "processed"
 KNOWLEDGE_BASE_DIR = BASE_DIR / "data" / "knowledge_base"
 
 # Ensure directories exist
+# 注意：Serverless（Vercel）部署目录只读，这里失败不能让 import 直接崩
 for d in [RAW_DIR, PROCESSED_DIR, KNOWLEDGE_BASE_DIR]:
-    d.mkdir(parents=True, exist_ok=True)
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except Exception:  # 只读文件系统：目录已随代码打包，无需创建
+        pass
 
 # ============ 数据库（SQLite 默认 / MySQL 生产） ============
 # DB_ENGINE=mysql 时使用 MySQL（业务 SQL 运行时做方言翻译），否则 SQLite。
@@ -30,9 +34,20 @@ DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "ai_teach")
 
+# 云数据库 TLS：TiDB Cloud Serverless 等强制 TLS。
+# - DB_SSL_CA：CA 证书（PEM 内容或文件路径），给了就严格校验（推荐 TiDB 下载的 PEM）；
+# - 没给 CA 时：非本机地址默认「只加密不校验」（DB_SSL_REQUIRED=true），
+#   本机（127.0.0.1/localhost）默认不启用，避免本地 MySQL 没开 TLS 时连不上；
+# - DB_SSL_REQUIRED=false 可显式关闭。
+DB_SSL_CA = os.getenv("DB_SSL_CA", "")
+_default_ssl = "false" if DB_HOST in ("127.0.0.1", "localhost", "::1") else "true"
+DB_SSL_REQUIRED = os.getenv("DB_SSL_REQUIRED", _default_ssl).lower() in ("1", "true", "yes", "on")
+
 # Server config
+# 默认端口 8010：本机 8000 常被其它服务占用（本项目早期默认 8000，已发生冲突），
+# 需要换端口时用环境变量 PORT 覆盖；前端 dev 代理用 DEV_API_TARGET 跟随。
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8000"))
+PORT = int(os.getenv("PORT", "8010"))
 
 # Zhipu AI (GLM) API key — loaded from backend/.env (gitignored). Never hardcode.
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
@@ -42,6 +57,12 @@ ZHIPU_API_URL = os.getenv("ZHIPU_API_URL", "https://open.bigmodel.cn/api/paas/v4
 # 无 key 时 model_router 自动回退到智谱，不影响功能。
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
+
+# 调用云端大模型的 HTTP 超时（秒）。
+# Serverless（Vercel）默认 60s 函数上限：key 配错/供应商不可达时会连试多个供应商，
+# 单次超时留 15s，最坏 (智谱+DeepSeek+兜底) 也不会撞上函数上限，
+# 用户看到的是「规则兜底回答」而不是 504。
+AI_HTTP_TIMEOUT = int(os.getenv("AI_HTTP_TIMEOUT", "15" if os.getenv("VERCEL") else "60"))
 
 # ============ 微信订阅消息（模板消息） ============
 # 模板 ID 需在小程序后台「订阅消息」申请后填入 backend/.env，未配置则静默跳过发送。
@@ -80,11 +101,11 @@ CORS_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:57434",
-    "http://localhost:8000",
+    "http://localhost:8010",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:57434",
-    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8010",
     "http://localhost:10087",
     "http://127.0.0.1:10087",
     "https://trae.mobile.volcapp.com",
@@ -110,6 +131,17 @@ DEV_MODE = os.getenv("DEV_MODE", "true").lower() in ("1", "true", "yes", "on")
 # 生产环境（DEV_MODE=false）强制关闭，避免开放任意用户切换接口。
 _impersonate_env = os.getenv("DEV_IMPERSONATE", "false").lower() in ("1", "true", "yes", "on")
 DEV_IMPERSONATE = _impersonate_env and DEV_MODE
+
+# ============ H5（手机浏览器 / 网页端）登录 ============
+# 网页端没有 wx.login，无法走微信 code2session，因此以「手机号」作为身份标识：
+# openid 记为 h5_<手机号>，复用同一张 users 表与同一套 token，
+# 网页端与小程序端共享数据（我的/收藏/目标/押金/测评/社区）。
+# ⚠️ 当前不校验短信验证码，等价于"知道手机号即可登录"，仅适合内测/演示；
+#    上线前必须二选一（前端页面结构无需改动）：
+#      1) 本接口补短信验证码校验（新增发送验证码接口）
+#      2) 换成微信网页授权（公众号 OAuth）后同样签发本站 token
+# 置 false 可一键关闭网页端登录入口。
+H5_PHONE_LOGIN = os.getenv("H5_PHONE_LOGIN", "true").lower() in ("1", "true", "yes", "on")
 
 # ============ Auth Token (HMAC-signed, dependency-free) ============
 # 用于签发登录态 token 的密钥。生产环境必须配置强随机值，否则启动失败（fail-fast）。

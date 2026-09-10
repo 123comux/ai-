@@ -2,7 +2,10 @@
 import json
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from database import query_all, query_one, parse_json_field, record_user_chapter, get_user_completed_chapter_ids
+from database import (
+    query_all, query_one, parse_json_field, record_user_chapter,
+    get_user_completed_chapter_ids, get_user_watched_video_ids,
+)
 from auth_utils import get_optional_user
 from cache import get as cache_get, set as cache_set
 
@@ -138,16 +141,40 @@ async def course_progress(course_id: str, request: Request):
     }
 
 
+def _video_ids_for_bv(bv: str) -> list:
+    """视频库里 url 含该 B 站 BV 的视频 id 列表（课程章节只存 BV，视频表存完整链接）。"""
+    if not bv:
+        return []
+    rows = query_all("videos", {"is_active": 1}) or []
+    return [r["id"] for r in rows if bv in (r.get("url") or "")]
+
+
 @router.post("/{course_id}/chapters/{chapter_id}/complete")
 async def complete_chapter(course_id: str, chapter_id: str, request: Request):
-    """标记某章节学完（学完章节即计入课程进度/押金完课率）。"""
+    """标记某章节学完（学完章节即计入课程进度/押金完课率）。
+
+    完课率是押金「过程锁」的达标依据，不能空点：章节挂了 B 站视频时，
+    必须先看完本章视频（视频库里 url 含该 BV 的条目被标记已看完）才能标记学完，
+    否则等于不听课也能把完课率刷到 100%。
+
+    不设门槛的两种情况（避免卡死流程）：
+    - 纯文字章节（没有 video_bv）；
+    - 视频库里当前查不到该 BV 对应的视频条目（例如上游还没配好真实链接）。
+    """
     row = query_one("courses", course_id)
     if not row:
         raise HTTPException(status_code=404, detail="Course not found")
     chapters = _normalize_chapters(parse_json_field(row.get("chapters", "[]")))
-    if not any(c["id"] == chapter_id for c in chapters):
+    chapter = next((c for c in chapters if c.get("id") == chapter_id), None)
+    if chapter is None:
         raise HTTPException(status_code=404, detail="Chapter not found")
+
     user = await get_optional_user(request)
     if user:
+        video_ids = _video_ids_for_bv((chapter.get("video_bv") or "").strip())
+        if video_ids:
+            watched = set(get_user_watched_video_ids(user["id"]) or [])
+            if not (set(video_ids) & watched):
+                raise HTTPException(status_code=400, detail="请先看完本章视频再标记学完")
         record_user_chapter(user["id"], course_id, chapter_id)
     return {"ok": True, "course_id": course_id, "chapter_id": chapter_id}

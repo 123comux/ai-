@@ -1,0 +1,56 @@
+# ============================================================
+# Vercel 环境变量模板（把 <> 里的值换成你自己的，然后整段粘贴到 Vercel）
+#
+# 怎么用：
+#   1. 在本地把这个文件复制一份，填好值（例如 vercel-env.local，别提交到 git）
+#   2. Vercel 项目 → Settings → Environment Variables
+#      - 新版界面：可以一次性粘贴多行 KEY=VALUE（粘到 Key 输入框会自动拆分）
+#      - 老版界面：一行一行加，对着下面的 Key / Value 抄
+#   3. Type 怎么选：
+#      - Secret（保存后不可查看）：DB_PASSWORD、JWT_SECRET、ZHIPU_API_KEY
+#      - Config（可查看）：其余全部
+#   4. Environments 三个都勾上：Production + Preview + Development
+#      （只勾 Production 的话，以后每次 preview 部署都会连不上数据库）
+#   5. 加完变量必须**重新部署一次**才生效（Deployments → 最新那条 → Redeploy）
+#
+# ⚠️ 最重要的一条：DEV_MODE 的代码默认值是 true，不显式设 false 等于公网开放
+#    「任意 code 即可登录」的开发后门。/api/auth/dev/* 也会一起开放。
+# ============================================================
+
+# ---------- 数据库（TiDB Cloud 控制台 → Connect → Public 里的 5 个值）----------
+DB_ENGINE=mysql
+DB_HOST=<gateway01.xxxxx.prod.aws.tidbcloud.com>
+DB_PORT=4000
+DB_USER=<xxxxxxx.root>            # 注意：不是 root，是带 .root 后缀的那串
+DB_PASSWORD=<Generate Password 生成的那串，只显示一次>
+DB_NAME=test                      # 或你在控制台建的库名
+DB_SSL_REQUIRED=true              # TiDB 强制 TLS
+
+# ---------- 安全（必填）----------
+# 生成命令：py -c "import secrets;print(secrets.token_hex(32))"
+JWT_SECRET=<粘贴生成的 64 位随机串>
+DEV_MODE=false                    # ★ 必须 false，否则有登录后门
+DEV_IMPERSONATE=false
+
+# ---------- 功能开关（可选）----------
+# true = 全部免费（无收费墙）；false = 启用「5 天试用 → 缴押金解锁」
+ACCESS_ALL_FREE=true
+# H5 手机号登录开关（当前实现没有短信验证，公开上线前建议先 false）
+H5_PHONE_LOGIN=true
+
+# ---------- AI（可选，不填也能跑，AI 会返回规则兜底回答）----------
+# 值在本地 backend/.env 里，直接复制过来
+ZHIPU_API_KEY=<sk-xxxxxxxx>
+# DEEPSEEK_API_KEY=              # 有就填，没有就不填
+
+# ---------- 其它（可选）----------
+# 只有「小程序 / 其它域名直连后端」时才需要，H5 同源不用填
+# ALLOWED_CORS_ORIGINS=https://你的域名.vercel.app
+
+# ---------- 不要填的（会自动处理，填了反而可能出问题）----------
+# PORT / HOST               Vercel 是函数调用，没有端口概念
+# DB_PATH                   mysql 引擎用不到 SQLite 路径
+# AI_HTTP_TIMEOUT           Vercel 环境自动取 15 秒（函数上限 60 秒）
+# BLOB_READ_WRITE_TOKEN     在 Storage 里建 Blob Store 后由 Vercel 自动注入
+# FS_READONLY / VERCEL      代码自动识别只读文件系统
+# WXPAY_* / WECHAT_* / WX_SUB_TEMPLATE_*   微信支付与订阅消息，没接就不用配

@@ -6,7 +6,7 @@ Used by the AI tutor as the primary path (with course-RAG context).
 
 import requests
 
-from config import ZHIPU_API_KEY, ZHIPU_API_URL
+from config import ZHIPU_API_KEY, ZHIPU_API_URL, AI_HTTP_TIMEOUT
 
 
 def chat_zhipu(
@@ -52,7 +52,7 @@ def chat_zhipu(
             "max_tokens": max_new_tokens,
             "temperature": temperature,
         },
-        timeout=60,
+        timeout=AI_HTTP_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()

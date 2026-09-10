@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from config import PROCESSED_DIR
+from config import PROCESSED_DIR, AI_HTTP_TIMEOUT
 
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 
@@ -168,7 +168,7 @@ def _chat_zhipu(question, system_prompt, max_new_tokens, temperature) -> dict:
             "max_tokens": max_new_tokens,
             "temperature": temperature,
         },
-        timeout=60,
+        timeout=AI_HTTP_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()

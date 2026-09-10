@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from models.schemas import VideoItem, VideoQuality
 from auth_utils import get_optional_user
+from fsx import safe_write_json
 from database import (
     record_user_video,
     get_user_watched_video_ids,
@@ -74,9 +75,8 @@ def _load_watched(user_id: int | None = None) -> dict[str, dict]:
 
 
 def _save_watched(watched: dict[str, dict]) -> None:
-    path = PROCESSED_DIR / "video_progress.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump({"watched": watched}, f, ensure_ascii=False, indent=2)
+    # 只读环境（Vercel）自动跳过：观看记录真身在 user_video_progress 表
+    safe_write_json(PROCESSED_DIR / "video_progress.json", {"watched": watched})
 
 
 def _mark_completed(videos: list[VideoItem], watched: dict[str, dict]) -> list[VideoItem]:

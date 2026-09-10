@@ -1,0 +1,14 @@
+# Vercel Python 函数的运行时依赖（前端依赖见 package.json，两者互不影响）
+#
+# 与 backend/requirements-runtime.txt 保持一致：只装 API 服务真正需要的包。
+# 不要在这里加 torch / transformers —— Vercel 函数解压后上限 250MB，
+# 而且线上 AI 能力走智谱 GLM / DeepSeek 的云端 API，不需要本地模型权重。
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.0
+httpx==0.27.2
+python-dotenv==1.0.1
+requests==2.32.3
+cryptography==49.0.0
+pymysql>=1.1.0
+python-multipart>=0.0.9

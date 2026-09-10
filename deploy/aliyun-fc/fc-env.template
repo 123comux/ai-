@@ -1,0 +1,45 @@
+# ============================================================
+# 阿里云函数计算 FC 环境变量模板
+#
+# 填法：函数计算控制台 → 函数 → 配置 → 环境变量 → 编辑 → 逐条添加
+#       （键 = 变量名，值 = 你的真实值；Save 后函数会重新部署）
+#
+# 值的来源：和 Vercel 上那套完全一样（TiDB Cloud + 你的 JWT_SECRET + 智谱 Key）。
+# 如果 Vercel 那套还能打开，直接抄过来即可；忘了就按下面说明重新取。
+#
+# 镜像里已经内置、**不要重复设置**的：SERVE_H5=1、AI_WARMUP=false、HOST=0.0.0.0
+# 平台会自动注入、**不要手动设置**的：FC_SERVER_PORT（入口脚本会自动采用它）
+# ============================================================
+
+# ---------- 数据库（TiDB Cloud 控制台 → Connect → Public）----------
+DB_ENGINE=mysql
+DB_HOST=<gateway01.xxxxx.prod.aws.tidbcloud.com>
+DB_PORT=4000
+DB_USER=<xxxxxxx.root>
+DB_PASSWORD=<Generate Password 生成的那串，只显示一次>
+DB_NAME=test
+DB_SSL_REQUIRED=true
+
+# ---------- 安全（必填）----------
+# 生成命令：py -c "import secrets;print(secrets.token_hex(32))"
+# 注意：换了 JWT_SECRET，之前发出去的登录 token 全部失效，需要重新登录
+JWT_SECRET=<64 位随机串>
+DEV_MODE=false
+DEV_IMPERSONATE=false
+
+# ---------- 功能开关 ----------
+ACCESS_ALL_FREE=true
+H5_PHONE_LOGIN=true
+
+# ---------- AI（可选，不填则 AI 相关接口走规则兜底）----------
+ZHIPU_API_KEY=<sk-xxxxxxxx>
+
+# ---------- 可选 ----------
+# TZ=Asia/Shanghai
+# FS_READONLY=1     # 只有当容器日志出现写文件权限报错时才加
+
+# ---------- 不要设置的 ----------
+# PORT        镜像里 PORT=8010，函数计算会在控制台「监听端口」里配置；入口脚本优先用 FC_SERVER_PORT
+# DB_PATH     mysql 引擎用不到 SQLite 路径
+# VERCEL      只有 Vercel 平台才有；FC 上由入口脚本/代码自动判断
+# WXPAY_* / WECHAT_* / WX_SUB_TEMPLATE_*   微信支付与订阅消息，没接就不用配

@@ -1,0 +1,32 @@
+# Docker 构建上下文忽略清单（没有它，上下文会到 3.6GB）
+# 说明：这是给 `docker build` / 云平台云端构建用的，不影响 git 与 .vercelignore。
+node_modules
+dist
+dist-h5
+
+# 本地训练产物（3GB 权重）：线上用云端 API，不需要本地模型
+backend/models/assessment
+backend/models/tutor
+backend/models/recommender
+
+# 原始数据集与本地库
+backend/data/raw
+backend/data/cms.db
+backend/data/*.log
+backend/database.sqlite3
+
+# 本地密钥（用环境变量注入，绝不能进镜像）
+backend/.env
+.env
+.env.local
+
+# 测试与文档
+backend/tests
+backend/training
+docs
+.pai
+*.zip
+*.log
+**/__pycache__
+**/.pytest_cache
+.vercel

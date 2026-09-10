@@ -1,0 +1,78 @@
+# ============================================================
+# 阿里云函数计算 FC 3.0 · Serverless Devs 描述文件（可选，进阶用法）
+#
+# 这是「一条命令部署」的替代方案：控制台点选就够了，不想用 CLI 可以忽略本文件。
+# 用之前请先确认：
+#   1. 镜像已经在 ACR 里（由 GitHub Actions 构建并推送，见仓库 Actions 页）
+#   2. 本机/Cloud Shell 装了 Serverless Devs：npm i -g @serverless-devs/s
+#      （阿里云 Cloud Shell 里已预装 node/npm，且无需 sudo）
+#   3. 配好了密钥：s config add    （需要一对阿里云 AccessKey，注意最小权限）
+#
+# 部署（只部署，不构建镜像 → 本机不需要 Docker）：
+#     s deploy
+# 注意：s deploy 默认会执行 actions.pre-deploy 里的 build；本文件**故意不写**
+#       build 动作，所以不会在本机拉 Docker。如果你想本地构建，再加：
+#       actions: { pre-deploy: [{ component: fc3 build --dockerfile ./Dockerfile }] }
+#
+# 把下面 <...> 占位符和 region 换成你的真实值。
+# ============================================================
+edition: 3.0.0
+name: aishixi-fc
+access: default
+
+vars:
+  region: cn-hangzhou
+  acr: registry.cn-hangzhou.aliyuncs.com/<命名空间>/<镜像仓库>
+
+resources:
+  aishixi:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: aishixi-h5
+      description: 'AI 学习平台：H5 页面 + FastAPI 接口（单容器，同源）'
+      runtime: custom-container
+      # AI 接口最长 60 秒（镜像里 AI_HTTP_TIMEOUT 非 Vercel 环境默认 60），
+      # 函数超时留一倍余量，避免被平台先掐断
+      timeout: 120
+      memorySize: 1024
+      cpu: 0.5
+      diskSize: 512
+      instanceConcurrency: 10
+      # 冷启动敏感的话设成 1（会一直占一个实例，注意计费）；只想省钱就保持 0
+      minInstances: 0
+      environmentVariables:
+        DB_ENGINE: mysql
+        DB_HOST: <gateway01.xxxxx.prod.aws.tidbcloud.com>
+        DB_PORT: '4000'
+        DB_USER: <xxxxxxx.root>
+        DB_PASSWORD: <你的 TiDB 密码>
+        DB_NAME: test
+        DB_SSL_REQUIRED: 'true'
+        JWT_SECRET: <64 位随机串>
+        DEV_MODE: 'false'
+        DEV_IMPERSONATE: 'false'
+        ACCESS_ALL_FREE: 'true'
+        H5_PHONE_LOGIN: 'true'
+        ZHIPU_API_KEY: <sk-xxxxxxxx>
+        TZ: Asia/Shanghai
+      customContainerConfig:
+        image: ${vars.acr}:latest
+        # 监听端口必须和镜像里的 PORT 一致（镜像默认 8010）
+        port: 8010
+      triggers:
+        - triggerName: httpTrigger
+          triggerType: http
+          description: 'H5 + API 公网入口'
+          qualifier: LATEST
+          triggerConfig:
+            # anonymous = 任何人可访问（不要选 function，那样链接需要签名）
+            authType: anonymous
+            disableURLInternet: false
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - HEAD
+              - OPTIONS

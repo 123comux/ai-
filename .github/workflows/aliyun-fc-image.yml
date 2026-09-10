@@ -1,0 +1,116 @@
+name: Build & Push Image (Aliyun FC)
+
+# ============================================================
+# 把仓库里的 Dockerfile 构建成 linux/amd64 镜像，推到阿里云容器镜像服务 ACR，
+# 供「阿里云函数计算 FC（自定义镜像 / Web 函数）」拉取。
+#
+# 为什么用 GitHub Actions 构建：本机不需要装 Docker。
+# 为什么必须这样：阿里云 FC 的自定义镜像函数只能使用**同一账号、同一地域**的 ACR 镜像。
+#
+# 使用前先在仓库配置 5 个 Secret（Settings → Secrets and variables → Actions）：
+#   ACR_REGISTRY    例如 registry.cn-hangzhou.aliyuncs.com
+#   ACR_NAMESPACE   例如 work16c4          （ACR 命名空间，个人版免费）
+#   ACR_REPOSITORY  例如 aishixi           （ACR 镜像仓库名）
+#   ACR_USERNAME    阿里云账号名 / ACR 访问凭证里的用户名
+#   ACR_PASSWORD    ACR 控制台「访问凭证 → 设置固定密码」里设的密码
+#
+# 没配 Secret 时本工作流不会失败，只打一条 notice 并跳过构建。
+# ============================================================
+
+on:
+  workflow_dispatch:          # 手动触发：Actions → 本工作流 → Run workflow
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.npmrc'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - 'config/**'
+      - 'types/**'
+      - 'backend/**'
+      - 'tools/copy-vercel-static.mjs'
+      - '.github/workflows/aliyun-fc-image.yml'
+
+concurrency:
+  group: aliyun-fc-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 先判断 Secret 是否齐全；不齐全就整段跳过，避免仓库上出现莫名的红叉
+      - name: Check ACR secrets
+        id: check
+        env:
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+          ACR_REPOSITORY: ${{ secrets.ACR_REPOSITORY }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          missing=""
+          for k in ACR_REGISTRY ACR_NAMESPACE ACR_REPOSITORY ACR_USERNAME ACR_PASSWORD; do
+            eval "v=\$$k"
+            [ -n "$v" ] || missing="$missing $k"
+          done
+          if [ -n "$missing" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::尚未配置 Secret:$missing —— 已跳过构建。按 deploy/aliyun-fc/README.md 第三节配好 5 个 Secret 后，再手动 Run workflow。"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "镜像将推送到 $ACR_REGISTRY/$ACR_NAMESPACE/$ACR_REPOSITORY"
+          fi
+
+      # 多阶段构建要先装 node 依赖再打 Python 镜像，先腾出磁盘更稳
+      - name: Free disk space
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.ready == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ACR
+        if: steps.check.outputs.ready == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push
+        if: steps.check.outputs.ready == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_REPOSITORY }}:latest
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          {
+            echo "### 镜像已推送 ✅"
+            echo ""
+            echo '```'
+            echo "${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_REPOSITORY }}:latest"
+            echo "${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/${{ secrets.ACR_REPOSITORY }}:${{ github.sha }}"
+            echo '```'
+            echo ""
+            echo "下一步：函数计算控制台 → 创建函数（Web 函数 / 自定义镜像）→ 选择这个镜像 → 监听端口填 8010"
+            echo "如果函数已经建好：函数 → 配置 → 镜像 → 重新选择 :latest → 点击「部署」，否则 FC 仍会跑旧镜像。"
+          } >> "$GITHUB_STEP_SUMMARY"

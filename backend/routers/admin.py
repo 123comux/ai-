@@ -70,6 +70,39 @@ def admin_logout(request: Request):
     return {"ok": True}
 
 
+# ============ 口令管理 ============
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+def change_admin_password(body: ChangePasswordRequest, request: Request):
+    """修改当前管理员口令（需已登录，且校验原口令）。
+
+    ⚠️ 本路由必须定义在文件后面的通用 `POST /{table}` 之前，
+    否则 FastAPI 会按顺序把 "change-password" 当成表名匹配掉（返回 404 Unknown table）。
+    """
+    username = verify_token(request)
+    if len(body.new_password) < 12:
+        raise HTTPException(400, "新口令至少 12 位")
+    if body.new_password == body.old_password:
+        raise HTTPException(400, "新口令不能与原口令相同")
+
+    users = query_all("admin_users", {"username": username})
+    if not users:
+        raise HTTPException(404, "管理员账号不存在")
+    if users[0]["password_hash"] != hashlib.sha256(body.old_password.encode()).hexdigest():
+        raise HTTPException(401, "原口令不正确")
+
+    new_hash = hashlib.sha256(body.new_password.encode()).hexdigest()
+    if not update_row("admin_users", users[0]["id"], {"password_hash": new_hash}):
+        raise HTTPException(500, "口令更新失败")
+    return {"ok": True, "message": "口令已更新，请用新口令重新登录其它设备"}
+
+
 # ============ Generic CRUD Helpers ============
 
 TABLE_CONFIG = {

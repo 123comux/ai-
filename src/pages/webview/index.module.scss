@@ -1,4 +1,4 @@
-﻿@use '@/styles/variables.scss' as *;
+@use '@/styles/variables.scss' as *;
 
 .page {
   position: relative;
@@ -53,6 +53,12 @@
 // 桌面端补丁（≥1024PX）：webview 需要保留返回入口，因此不隐藏导航栏
 // ============================================================
 @media (min-width: 1024PX) {
+  // 与导师页同理：桌面端被套在外壳里，100vh 会高出顶栏+内边距，这里按外壳扣减
+  .page {
+    height: auto;
+    min-height: calc(100dvh - 88PX);
+  }
+
   .webview {
     height: calc(100dvh - 160PX);
     border-radius: 14PX;

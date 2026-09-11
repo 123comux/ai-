@@ -1,157 +1,304 @@
+// 学习页（暗色）：AI 推荐搜索 + 学习路径 + 课程网格
+// 移动端：分类横滑、课程单列；桌面端：返回链接隐藏（侧边栏已导航）、分类改 chip 换行、课程三列
 @use '@/styles/variables.scss' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
+  background-attachment: fixed;
 }
 
+// 返回首页：桌面端由侧边栏承担导航，隐藏（避免重复入口）
 .backHome {
-  padding: $spacing-md $spacing-lg 0;
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  margin-top: $spacing-md;
+  padding: 0 $spacing-sm;
+  border-radius: $radius-round;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
 }
 
 .backHomeText {
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  color: $ink-muted;
 }
 
 .section {
-  padding: $spacing-md $spacing-lg 0;
+  margin-top: $spacing-xl;
 }
 
 .sectionHeader {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
+  gap: $spacing-md;
   margin-bottom: $spacing-md;
 }
 
 .sectionTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  color: $ink;
+  letter-spacing: -0.2rpx;
 }
 
 .sectionMore {
   font-size: $font-size-sm;
-  color: $color-primary;
+  color: $ink-muted;
+  cursor: pointer;
+  transition: color $dur-fast $ease-out;
+
+  &:hover {
+    color: $color-primary-light;
+  }
 }
 
-.categoryScroll {
-  @include scroll-x-container;
-  padding-bottom: $spacing-md;
-}
-
-.categoryItem {
-  display: inline-block;
-  padding: $spacing-sm $spacing-lg;
-  background: $color-bg-card;
-  border-radius: $radius-round;
-  margin-right: $spacing-md;
-  box-shadow: $shadow-card;
-}
-
-.categoryActive {
-  background: $color-primary;
-}
-
-.categoryText {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-}
-
-.categoryTextActive {
-  color: $color-text-white;
-}
-
-.courseList {
-  padding: 0 $spacing-lg $spacing-lg;
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-}
-
-.courseItem {
-  width: calc(50% - #{$spacing-md});
-  box-sizing: border-box;
-}
-
-// AI 课程推荐
+// ---------------- AI 推荐 ----------------
 .recommendBar {
   display: flex;
+  align-items: center;
   gap: $spacing-sm;
-  margin-bottom: $spacing-md;
+  padding: $spacing-sm;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  background: $surface-1;
+  transition: border-color $dur-fast $ease-out;
+
+  &:focus-within {
+    border-color: $accent-line;
+  }
 }
 
 .recommendInput {
   flex: 1;
+  min-width: 0;
   height: 72rpx;
-  background: $color-bg-card;
-  border-radius: $radius-button;
   padding: 0 $spacing-md;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.03);
+  color: $ink;
   font-size: $font-size-md;
-  box-shadow: $shadow-card;
+
+  &::placeholder {
+    color: $ink-faint;
+  }
 }
 
 .recommendBtn {
-  min-width: 120rpx;
-  height: 72rpx;
-  background: $gradient-ai;
-  border-radius: $radius-button;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 72rpx;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-button;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+  cursor: pointer;
+  flex: none;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
 }
 
 .recommendBtnText {
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
-  color: $color-text-white;
+  color: #ffffff;
 }
 
 .recommendResults {
-  margin-bottom: $spacing-md;
+  margin-top: $spacing-md;
 }
 
 .recommendLoading {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
   display: block;
+  padding: $spacing-lg;
   text-align: center;
-  padding: $spacing-md;
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+}
+
+.recommendEmpty {
+  display: block;
+  padding: $spacing-lg;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $ink-subtle;
 }
 
 .recommendList {
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  background: $surface-1;
+  overflow: hidden;
 }
 
 .recommendItem {
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  padding: $spacing-sm $spacing-md;
-  box-shadow: $shadow-card;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+
+  & + & {
+    border-top: 1rpx solid $hairline;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
 }
 
 .recommendItemTitle {
+  flex: 1;
+  min-width: 0;
   font-size: $font-size-md;
-  font-weight: $font-weight-medium;
-  color: $color-text-primary;
-  display: block;
+  color: $ink;
+  @include text-ellipsis;
 }
 
 .recommendItemMeta {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-top: 4rpx;
-  display: block;
+  flex: none;
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  @include tabular;
 }
 
-.recommendEmpty {
+// ---------------- 分类筛选 ----------------
+.categoryScroll {
+  white-space: nowrap;
+  margin: 0 (-$page-padding);
+  padding: 0 $page-padding;
+}
+
+.categoryItem {
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  margin-right: $spacing-sm;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-round;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  vertical-align: top;
+  transition: background-color $dur-fast $ease-out, border-color $dur-fast $ease-out, color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    border-color: $hairline-strong;
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.categoryActive {
+  background: $accent-soft;
+  border-color: $accent-line;
+}
+
+.categoryText {
   font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
-  text-align: center;
-  padding: $spacing-md;
+  color: $ink-muted;
+}
+
+.categoryTextActive {
+  color: $color-primary-light;
+  font-weight: $font-weight-medium;
+}
+
+// ---------------- 课程网格 ----------------
+.courseList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.courseItem {
+  min-width: 0;
+}
+
+// ============================================================
+// 桌面端
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
+
+  .backHome {
+    display: none;
+  }
+
+  .section:first-of-type {
+    margin-top: 0;
+  }
+
+  .sectionTitle {
+    font-size: 17PX;
+  }
+
+  // 分类改静态 chip 行（不再横滑，避免鼠标滚轮无法横向滚动）
+  .categoryScroll {
+    margin: 0;
+    padding: 0;
+    white-space: normal;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10PX;
+  }
+
+  .categoryItem {
+    height: 34PX;
+    padding: 0 16PX;
+    margin-right: 0;
+  }
+
+  .categoryText {
+    font-size: 13PX;
+  }
+
+  .recommendBar {
+    max-width: 640PX;
+    padding: 8PX;
+  }
+
+  .recommendInput {
+    height: 40PX;
+    font-size: 14PX;
+  }
+
+  .recommendBtn {
+    height: 40PX;
+    padding: 0 22PX;
+  }
+
+  .courseList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16PX;
+    margin-top: 20PX;
+  }
+
+  .recommendItem {
+    padding: 16PX 20PX;
+  }
 }

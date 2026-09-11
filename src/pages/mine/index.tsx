@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, ScrollView, Button, Input } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import RadarChart from '@/components/RadarChart';
@@ -190,7 +190,7 @@ const MinePage: React.FC = () => {
               {avatar ? (
                 <Image className={styles.avatar} src={avatar} mode="aspectFill" />
               ) : (
-                <View className={styles.avatarPlaceholder}><Text className={styles.avatarPlaceholderIcon}>👤</Text></View>
+                <View className={styles.avatarPlaceholder} />
               )}
               <View className={styles.wechatBadge}><Text className={styles.wechatBadgeText}>{IS_WEAPP ? '微信' : '网页'}</Text></View>
             </View>
@@ -212,7 +212,7 @@ const MinePage: React.FC = () => {
           </View>
         ) : IS_WEAPP ? (
           <View className={styles.loginEntry} onClick={handleWechatLogin}>
-            <Text className={styles.loginEntryIcon}>💬</Text>
+            
             <View className={styles.loginEntryText}>
               <Text className={styles.loginEntryTitle}>微信快捷登录</Text>
               <Text className={styles.loginEntryDesc}>一键登录，保存你的学习记录与能力档案</Text>
@@ -221,7 +221,7 @@ const MinePage: React.FC = () => {
           </View>
         ) : (
           <View className={styles.loginEntry} onClick={() => setShowPhoneLogin(true)}>
-            <Text className={styles.loginEntryIcon}>📱</Text>
+            
             <View className={styles.loginEntryText}>
               <Text className={styles.loginEntryTitle}>手机号登录</Text>
               <Text className={styles.loginEntryDesc}>登录后同步学习记录、收藏与能力档案</Text>
@@ -344,7 +344,7 @@ const MinePage: React.FC = () => {
                     <Image className={styles.avatarPickerImage} src={editAvatar} mode="aspectFill" />
                   ) : (
                     <View className={styles.avatarPickerPlaceholder}>
-                      <Text className={styles.avatarPickerPlus}>📷</Text>
+                      <Text className={styles.avatarPickerPlus}>选择图片</Text>
                     </View>
                   )}
                 </Button>
@@ -354,7 +354,7 @@ const MinePage: React.FC = () => {
                     <Image className={styles.avatarPickerImage} src={editAvatar} mode="aspectFill" />
                   ) : (
                     <View className={styles.avatarPickerPlaceholder}>
-                      <Text className={styles.avatarPickerPlus}>📷</Text>
+                      <Text className={styles.avatarPickerPlus}>选择图片</Text>
                     </View>
                   )}
                 </View>

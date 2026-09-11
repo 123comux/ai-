@@ -1,451 +1,631 @@
+// 个人中心（暗色）
+// 关键约束：底部弹层的 z-index 必须 > Taro H5 原生 tab 栏的 500，
+// 否则弹层渲染出来但底部按钮被 tab 栏盖住点不到（历史 bug，用 token 保证不回退）。
 @use '@/styles/variables.scss' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
+  background-attachment: fixed;
 }
 
+// ---------------- 头部资料区 ----------------
 .header {
   position: relative;
-  padding: $spacing-lg $spacing-lg $spacing-xl;
-  background: $color-primary !important;
+  margin: 0 (-$page-padding);
+  padding: 40rpx $page-padding $spacing-lg;
+  overflow: hidden;
 }
 
 .headerBg {
-  display: none;
+  position: absolute;
+  inset: -30% -10% auto -10%;
+  height: 150%;
+  pointer-events: none;
+  background: radial-gradient(360rpx 260rpx at 12% 20%, rgba(94, 106, 210, 0.44), transparent 66%),
+    radial-gradient(420rpx 280rpx at 88% 0%, rgba(124, 136, 232, 0.28), transparent 68%);
+  filter: blur(8rpx);
 }
 
 .userInfo {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding-top: $spacing-md;
-}
-
-.avatar {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: $radius-round;
-  border: 4rpx solid $color-bg-card;
-  margin-bottom: $spacing-md;
-}
-
-.nickname {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-white;
-  margin-bottom: $spacing-xs;
-}
-
-.userMeta {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: $spacing-sm;
-}
-
-.directionBadge {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 6rpx 24rpx;
-  border-radius: $radius-round;
-}
-
-.directionText {
-  font-size: $font-size-sm;
-  color: $color-text-white;
+  align-items: flex-start;
+  gap: $spacing-md;
 }
 
 .avatarWrap {
   position: relative;
-  margin-bottom: $spacing-md;
+  cursor: pointer;
+}
+
+.avatar,
+.avatarPlaceholder {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 32rpx;
+  display: block;
 }
 
 .avatar {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: $radius-round;
-  border: 4rpx solid $color-bg-card;
+  object-fit: cover;
+  border: 1rpx solid $hairline-strong;
 }
 
+// 无头像时用强调色渐变方块（不再是 emoji 占位）
 .avatarPlaceholder {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: $radius-round;
-  border: 4rpx solid $color-bg-card;
-  background: rgba(255, 255, 255, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatarPlaceholderIcon {
-  font-size: 60rpx;
+  background: $gradient-ai;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.25), $shadow-accent;
 }
 
 .wechatBadge {
   position: absolute;
-  right: -10rpx;
-  bottom: 8rpx;
-  background: #07c160;
+  right: -8rpx;
+  bottom: -8rpx;
+  display: inline-flex;
+  align-items: center;
+  height: 36rpx;
+  padding: 0 12rpx;
   border-radius: $radius-round;
-  padding: 4rpx 12rpx;
-  border: 3rpx solid $color-bg-card;
+  background: $surface-2;
+  border: 1rpx solid $hairline-strong;
 }
 
 .wechatBadgeText {
-  font-size: 18rpx;
-  color: $color-text-white;
-  font-weight: $font-weight-medium;
+  font-size: 20rpx;
+  color: $ink-muted;
+}
+
+.nickname {
+  font-size: 40rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.6rpx;
+  cursor: pointer;
+}
+
+.editProfileHint {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.editProfileHintText {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+}
+
+.directionBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 44rpx;
+  padding: 0 16rpx;
+  border-radius: $radius-round;
+  background: $accent-soft;
+  border: 1rpx solid $accent-line;
+}
+
+.directionText {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
 }
 
 .logoutBtn {
-  margin-top: $spacing-md;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 8rpx 28rpx;
+  display: inline-flex;
+  align-items: center;
+  height: 56rpx;
+  padding: 0 $spacing-md;
   border-radius: $radius-round;
+  border: 1rpx solid $hairline-strong;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out, border-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: rgba(248, 81, 73, 0.35);
+  }
 }
 
 .logoutText {
   font-size: $font-size-sm;
-  color: $color-text-white;
+  color: $ink-muted;
 }
 
+// ---------------- 未登录入口 ----------------
 .loginEntry {
   display: flex;
   align-items: center;
   gap: $spacing-md;
-  background: rgba(255, 255, 255, 0.18);
-  border: 2rpx solid rgba(255, 255, 255, 0.35);
-  border-radius: $radius-lg;
+  margin-top: $spacing-md;
   padding: $spacing-lg;
-  margin-top: $spacing-sm;
-}
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+  @include focus-ring;
 
-.loginEntryIcon {
-  font-size: 56rpx;
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
+  }
 }
 
 .loginEntryText {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
 }
 
 .loginEntryTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-bold;
-  color: $color-text-white;
-  display: block;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
 }
 
 .loginEntryDesc {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.85);
-  margin-top: 4rpx;
-  display: block;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  line-height: $line-height-normal;
 }
 
 .loginEntryArrow {
-  font-size: $font-size-lg;
-  color: $color-text-white;
+  font-size: $font-size-md;
+  color: $color-primary-light;
+  flex: none;
 }
 
+// ---------------- 学习统计 ----------------
 .statsRow {
   display: flex;
-  align-items: center;
-  background: $color-bg-card;
-  margin: -$spacing-lg $spacing-lg $spacing-md;
-  border-radius: $radius-lg;
-  padding: $spacing-md 0;
-  box-shadow: $shadow-card;
-  position: relative;
-  z-index: 1;
+  align-items: stretch;
+  margin-top: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
 }
 
 .statItem {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  flex: 1;
+  align-items: flex-start;
+  gap: 4rpx;
 }
 
 .statValue {
-  font-size: $font-size-xxl;
-  font-weight: $font-weight-bold;
-  color: $color-primary;
+  font-size: 40rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  line-height: 1.1;
+  letter-spacing: -0.6rpx;
+  @include tabular;
 }
 
 .statLabel {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-top: 4rpx;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
 .statDivider {
-  width: 1px;
-  height: 48rpx;
-  background: $color-divider;
+  width: 1rpx;
+  margin: 0 $spacing-md;
+  background: $hairline;
 }
 
+// ---------------- 功能入口行 ----------------
 .depositEntry {
-  margin: 0 $spacing-lg $spacing-md;
-  background: $gradient-primary;
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-shadow: $shadow-card;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
+  }
 }
 
 .depositEntryLeft {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
 }
 
 .depositEntryTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-white;
-  display: block;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
 }
 
 .depositEntryDesc {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.85);
-  margin-top: 4rpx;
-  display: block;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  line-height: $line-height-normal;
 }
 
 .depositEntryArrow {
-  color: $color-text-white;
-  font-size: $font-size-lg;
-  margin-left: $spacing-md;
+  font-size: $font-size-md;
+  color: $color-primary-light;
+  flex: none;
 }
 
+// ---------------- 能力报告 ----------------
 .section {
-  padding: 0 $spacing-lg $spacing-md;
+  margin-top: $spacing-xl;
 }
 
 .sectionHeader {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
+  gap: $spacing-md;
   margin-bottom: $spacing-md;
 }
 
 .sectionTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  color: $ink;
+  letter-spacing: -0.2rpx;
 }
 
 .sectionMore {
   font-size: $font-size-sm;
-  color: $color-primary;
+  color: $ink-muted;
+  cursor: pointer;
+  transition: color $dur-fast $ease-out;
+
+  &:hover {
+    color: $color-primary-light;
+  }
 }
 
 .reportCard {
-  background: $color-bg-card;
-  border-radius: $radius-lg;
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
   padding: $spacing-lg;
-  box-shadow: $shadow-card;
+  border-radius: 16rpx;
+  border: 1rpx solid $accent-line;
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.14), rgba(94, 106, 210, 0.02) 55%), $surface-1;
 }
 
 .reportInfo {
-  margin-top: $spacing-md;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
 }
 
 .reportRow {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding: $spacing-sm 0;
+  gap: $spacing-md;
 }
 
 .reportLabel {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
 .reportValue {
-  font-size: $font-size-md;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
-  color: $color-text-primary;
+  color: $ink;
+  @include tabular;
 }
 
 .reportValueHighlight {
-  font-size: $font-size-md;
+  font-size: $font-size-sm;
   font-weight: $font-weight-medium;
-  color: $color-ai;
+  color: $color-primary-light;
 }
 
+// ---------------- 菜单列表 ----------------
 .menuSection {
-  margin: 0 $spacing-lg $spacing-lg;
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  margin-top: $spacing-xl;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  background: $surface-1;
   overflow: hidden;
 }
 
 .menuItem {
   display: flex;
   align-items: center;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-divider;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
 
-  &:last-child {
-    border-bottom: none;
+  & + & {
+    border-top: 1rpx solid $hairline;
   }
 
-  &:active {
-    background: $color-bg-hover;
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
   }
 }
 
 .menuIcon {
-  font-size: 36rpx;
-  margin-right: $spacing-md;
+  width: 48rpx;
+  text-align: center;
+  font-size: $font-size-md;
+  line-height: 1;
+  flex: none;
 }
 
 .menuLabel {
   flex: 1;
+  min-width: 0;
   font-size: $font-size-md;
-  color: $color-text-primary;
+  color: $ink;
 }
 
 .menuArrow {
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-}
-
-/* ============ 完善资料（微信头像昵称填写能力） ============ */
-
-.editProfileHint {
-  margin-bottom: $spacing-sm;
-  padding: 6rpx 24rpx;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: $radius-round;
-}
-
-.editProfileHintText {
   font-size: $font-size-sm;
-  color: $color-text-white;
+  color: $ink-faint;
+  flex: none;
 }
 
+// ---------------- 底部弹层（资料 / 手机号登录）----------------
+// z-index 必须高于 Taro H5 tab 栏（500），用 token 常量保证
 .mask {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  /* 必须高于 H5 tab 栏的 z-index:500，否则网页端弹层按钮被 tab 栏压住点不到 */
+  inset: 0;
   z-index: $z-index-mask;
+  background: rgba(8, 9, 10, 0.7);
+  backdrop-filter: blur(8rpx);
+  -webkit-backdrop-filter: blur(8rpx);
 }
 
 .sheet {
   position: fixed;
-  left: 0; right: 0; bottom: 0;
-  background: $color-bg-card;
-  border-radius: $radius-xl $radius-xl 0 0;
-  padding: $spacing-lg;
-  @include safe-area-bottom($spacing-lg);
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: $z-index-sheet;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-xl $spacing-lg;
+  border-radius: 28rpx 28rpx 0 0;
+  border-top: 1rpx solid $hairline-strong;
+  background: rgba(15, 16, 17, 0.98);
+  box-shadow: $shadow-popup;
+  @include safe-area-bottom($spacing-lg);
 }
 
 .sheetTitle {
-  font-size: $font-size-lg;
+  font-size: $font-size-xl;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  text-align: center;
-  display: block;
-  margin-bottom: $spacing-xs;
+  color: $ink;
+  letter-spacing: -0.4rpx;
 }
 
 .sheetDesc {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  text-align: center;
-  display: block;
-  margin-bottom: $spacing-lg;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  line-height: $line-height-normal;
 }
 
 .avatarPickerWrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: $spacing-lg;
+  gap: $spacing-sm;
 }
 
 .avatarPicker {
-  width: 140rpx;
-  height: 140rpx;
-  margin: 0;
-  padding: 0;
-  border-radius: $radius-round;
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 28rpx;
+  border: 1rpx dashed $hairline-strong;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
   overflow: hidden;
-  background: $color-bg-hover;
-  border: none;
-  line-height: 1;
+  transition: border-color $dur-fast $ease-out;
 
-  &::after { border: none; }
+  &:hover {
+    border-color: $accent-line;
+  }
 }
 
 .avatarPickerImage {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: $radius-round;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .avatarPickerPlaceholder {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: $radius-round;
-  background: $color-bg-hover;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .avatarPickerPlus {
-  font-size: 56rpx;
+  font-size: $font-size-xs;
+  color: $ink-muted;
 }
 
 .avatarPickerLabel {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $ink-faint;
 }
 
 .input {
-  height: 80rpx;
-  background: $color-bg-hover;
-  border-radius: $radius-md;
+  width: 100%;
+  height: 88rpx;
   padding: 0 $spacing-md;
+  border-radius: 12rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.03);
+  color: $ink;
   font-size: $font-size-md;
-  margin-bottom: $spacing-lg;
+  transition: border-color $dur-fast $ease-out;
+
+  &:focus {
+    border-color: $accent-line;
+  }
+
+  &::placeholder {
+    color: $ink-faint;
+  }
 }
 
 .sheetActions {
   display: flex;
   gap: $spacing-md;
+  margin-top: $spacing-sm;
+}
+
+.btnCancel,
+.btnSave {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out, background-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
 }
 
 .btnCancel {
-  flex: 1;
-  height: $button-height-sm;
-  background: $color-bg-hover;
-  border-radius: $radius-button;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  color: $ink-muted;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid $hairline-strong;
 
-.btnCancelText { font-size: $font-size-md; color: $color-text-secondary; }
+  &:hover {
+    color: $ink;
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
 
 .btnSave {
-  flex: 1;
-  height: $button-height-sm;
+  color: #ffffff;
   background: $gradient-primary;
-  border-radius: $radius-button;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: $shadow-accent;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
 }
 
-.btnSaveText { font-size: $font-size-md; color: $color-text-white; font-weight: $font-weight-medium; }
+.btnCancelText,
+.btnSaveText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+// ============================================================
+// 桌面端：资料区横排、统计四列、菜单两列、弹层居中成对话框
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
+
+  .header {
+    margin: 0;
+    padding: 32PX 0 28PX;
+    border-bottom: 1PX solid $hairline;
+  }
+
+  .userInfo {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20PX;
+  }
+
+  .avatar,
+  .avatarPlaceholder {
+    width: 72PX;
+    height: 72PX;
+    border-radius: 18PX;
+  }
+
+  .nickname {
+    font-size: 24PX;
+  }
+
+  .logoutBtn {
+    margin-left: auto;
+  }
+
+  .statsRow {
+    margin-top: 24PX;
+    padding: 18PX 24PX;
+  }
+
+  .statValue {
+    font-size: 28PX;
+  }
+
+  .depositEntry {
+    padding: 20PX;
+  }
+
+  .reportCard {
+    padding: 22PX;
+  }
+
+  .menuSection {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .menuItem {
+    padding: 16PX 20PX;
+
+    & + & {
+      border-top: none;
+      border-left: 1PX solid $hairline;
+    }
+  }
+
+  // 底部弹层在桌面端变成居中对话框
+  .sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 520PX;
+    border-radius: 16PX;
+    border: 1PX solid $hairline-strong;
+  }
+}

@@ -1,104 +1,148 @@
+// 学习路径（暗色）：方向切换 + 时间线节点
 @use '@/styles/variables.scss' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
-}
-
-.navBar {
-  padding: 20rpx $spacing-lg;
-}
-
-.navBack {
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  background-attachment: fixed;
 }
 
 .loadingText {
-  text-align: center;
-  padding: 200rpx 0;
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
   display: block;
+  padding: $spacing-xl;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $ink-subtle;
 }
 
+.navBar {
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  margin-top: $spacing-md;
+  padding: 0 $spacing-sm;
+  border-radius: $radius-round;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.navBack {
+  font-size: $font-size-sm;
+  color: $ink-muted;
+}
+
+// ---------------- 头部 ----------------
 .header {
-  background: $color-primary !important;
-  padding: $spacing-lg $spacing-lg;
+  position: relative;
+  margin: $spacing-md (-$page-padding) 0;
+  padding: $spacing-lg $page-padding;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -40% -10% auto -10%;
+    height: 150%;
+    background: radial-gradient(360rpx 240rpx at 14% 20%, rgba(94, 106, 210, 0.4), transparent 66%),
+      radial-gradient(420rpx 260rpx at 90% 0%, rgba(124, 136, 232, 0.24), transparent 68%);
+    filter: blur(8rpx);
+    pointer-events: none;
+  }
 }
 
 .headerInfo {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
 }
 
 .direction {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.8);
-  display: block;
-  margin-bottom: $spacing-xs;
+  font-size: $font-size-xs;
+  letter-spacing: 1.2rpx;
+  color: $color-primary-light;
 }
 
 .title {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-white;
-  display: block;
-  margin-bottom: $spacing-md;
+  font-size: 44rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1.25;
+  letter-spacing: -0.8rpx;
+  color: $ink;
+  text-wrap: balance;
 }
 
 .progressInfo {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: $spacing-sm;
+  margin-top: 4rpx;
 }
 
 .progressText {
   font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.8);
+  color: $ink-muted;
+  @include tabular;
 }
 
+// ---------------- 区段标题 ----------------
 .sectionTitle {
+  display: block;
+  margin: $spacing-xl 0 $spacing-md;
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  padding: $spacing-lg $spacing-lg $spacing-md;
+  color: $ink;
+  letter-spacing: -0.2rpx;
 }
 
-// 方向切换 tab
+// ---------------- 方向切换 ----------------
 .directionTabs {
   display: flex;
   gap: $spacing-sm;
-  padding: 0 $spacing-lg $spacing-md;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: 4rpx;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .directionTab {
-  padding: 10rpx 24rpx;
-  background: $color-bg-card;
-  border: 1px solid $color-border;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  padding: 0 $spacing-lg;
   border-radius: $radius-round;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.02);
   font-size: $font-size-sm;
-  color: $color-text-secondary;
-  white-space: nowrap;
+  color: $ink-muted;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out, border-color $dur-fast $ease-out, color $dur-fast $ease-out;
+  @include focus-ring;
 
-  &:active {
-    opacity: 0.9;
+  &:hover {
+    border-color: $hairline-strong;
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 
 .directionTabActive {
-  background: $gradient-primary;
-  border-color: transparent;
-  color: $color-text-white;
+  background: $accent-soft;
+  border-color: $accent-line;
+  color: $color-primary-light;
   font-weight: $font-weight-medium;
 }
 
+// ---------------- 时间线 ----------------
 .pathList {
-  padding: 0 $spacing-lg;
+  display: flex;
+  flex-direction: column;
 }
 
 .pathItem {
@@ -106,65 +150,119 @@
   gap: $spacing-md;
 }
 
+// 左侧：圆点 + 连接线（最后一项不画线，避免悬空）
 .pathLine {
+  position: relative;
+  flex: none;
+  width: 56rpx;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 48rpx;
+  justify-content: center;
+  padding-top: 4rpx;
 }
 
 .pathDot {
-  width: 48rpx;
-  height: 48rpx;
+  position: relative;
+  z-index: 1;
+  width: 56rpx;
+  height: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
 }
 
 .pathDotIcon {
-  font-size: 28rpx;
+  font-size: $font-size-sm;
+  color: $ink-muted;
 }
 
 .pathConnector {
-  width: 2px;
-  flex: 1;
-  background: $color-border;
+  position: absolute;
+  top: 56rpx;
+  bottom: -$spacing-md;
+  width: 2rpx;
+  background: linear-gradient(180deg, $hairline-strong, $hairline);
+}
+
+.pathItem:last-child .pathConnector {
+  display: none;
 }
 
 .pathContent {
   flex: 1;
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  padding: $spacing-md;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
   margin-bottom: $spacing-md;
-  box-shadow: $shadow-card;
+  padding: $spacing-lg;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+  @include focus-ring;
 
-  &:active {
-    background: $color-bg-hover;
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
   }
 }
 
 .pathTitle {
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: $spacing-xs;
+  color: $ink;
 }
 
 .pathType {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
-.otherPaths {
-  padding: 0 $spacing-lg $spacing-lg;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-}
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
 
-.otherPathItem {
-  width: 100%;
+  .navBar {
+    display: none;
+  }
+
+  .header {
+    margin: 0;
+    padding: 28PX 0 24PX;
+    border-bottom: 1PX solid $hairline;
+  }
+
+  .title {
+    font-size: 30PX;
+    letter-spacing: -0.6PX;
+  }
+
+  .sectionTitle {
+    margin: 36PX 0 16PX;
+    font-size: 17PX;
+  }
+
+  .directionTabs {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .directionTab {
+    height: 34PX;
+    padding: 0 16PX;
+    font-size: 13PX;
+  }
+
+  .pathList {
+    max-width: 820PX;
+  }
+
+  .pathContent {
+    padding: 18PX 20PX;
+  }
 }

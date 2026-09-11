@@ -1,346 +1,416 @@
+// 章节内容（暗色）：章节头 + 视频入口 + 小节折叠 + 上下章导航
 @use '@/styles/variables.scss' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
-  padding-bottom: $spacing-xl;
+  background-attachment: fixed;
 }
 
-// 顶部导航
+.loadingText {
+  display: block;
+  padding: $spacing-xl;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+}
+
 .navBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20rpx $spacing-lg;
+  height: 88rpx;
 }
 
 .navBack {
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  cursor: pointer;
+
+  &:hover {
+    color: $ink;
+  }
 }
 
 .navTitle {
   flex: 1;
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  font-weight: $font-weight-medium;
+  min-width: 0;
   text-align: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
   @include text-ellipsis;
 }
 
 .navRight {
-  width: 96rpx;
+  width: 80rpx;
 }
 
-.loadingText {
-  text-align: center;
-  padding: 200rpx 0;
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-  display: block;
-}
-
-// 章节头部
+// ---------------- 章节头 ----------------
 .header {
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  margin: $spacing-sm $spacing-lg $spacing-lg;
-  padding: $spacing-lg;
-  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: $spacing-lg 0 $spacing-md;
 }
 
 .chapterIndex {
   font-size: $font-size-xs;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
+  letter-spacing: 1.2rpx;
+  color: $color-primary-light;
 }
 
 .chapterTitle {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-  display: block;
-  line-height: $line-height-normal;
-  margin-bottom: $spacing-sm;
+  font-size: 42rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1.25;
+  letter-spacing: -0.8rpx;
+  color: $ink;
+  text-wrap: balance;
 }
 
 .chapterSummary {
   font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
-  margin-bottom: $spacing-md;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .chapterMeta {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  margin-bottom: $spacing-lg;
+  gap: 8rpx;
+  margin-top: 2rpx;
 }
 
 .metaText {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
 }
 
 .metaDot {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-faint;
 }
 
-// 播放按钮
-.playBtn {
+// ---------------- 视频入口 ----------------
+.playBtn,
+.playBtnPending {
   display: flex;
   align-items: center;
   gap: $spacing-md;
-  background: $gradient-primary;
-  border-radius: $radius-md;
-  padding: $spacing-md $spacing-lg;
-  box-shadow: $shadow-card-hover;
+  margin-top: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: 16rpx;
+}
+
+.playBtn {
+  border: 1rpx solid $accent-line;
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.16), rgba(94, 106, 210, 0.03) 60%), $surface-1;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, box-shadow $dur-base $ease-out;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    box-shadow: 0 14rpx 36rpx rgba(0, 0, 0, 0.45);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.995);
+  }
 }
 
 .playIconWrap {
+  flex: none;
   width: 72rpx;
   height: 72rpx;
-  border-radius: $radius-round;
-  background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  border-radius: 18rpx;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
 }
 
 .playIcon {
-  font-size: 28rpx;
-  color: $color-text-white;
+  font-size: $font-size-md;
+  color: #ffffff;
 }
 
 .playBtnText {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
 }
 
 .playBtnTitle {
   font-size: $font-size-md;
-  color: $color-text-white;
-  font-weight: $font-weight-semibold;
-  display: block;
-  margin-bottom: 4rpx;
+  font-weight: $font-weight-medium;
+  color: $ink;
 }
 
 .playBtnDesc {
   font-size: $font-size-xs;
-  color: rgba(255, 255, 255, 0.85);
-  display: block;
+  color: $ink-muted;
 }
 
-/* 本章视频待补充（现有素材缺失）：不要假装有视频 */
+// 待补充：虚线 + 弱化（一眼区分"这章还没视频"）
 .playBtnPending {
-  display: flex;
-  align-items: center;
-  background: $color-bg-hover;
-  border-radius: $radius-md;
-  padding: $spacing-md $spacing-lg;
-  border: 1px dashed $color-border;
+  border: 1rpx dashed $hairline-strong;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .playBtnPendingTitle {
   font-size: $font-size-md;
-  color: $color-text-secondary;
-  font-weight: $font-weight-semibold;
-  display: block;
-  margin-bottom: 4rpx;
+  font-weight: $font-weight-medium;
+  color: $ink-subtle;
 }
 
 .playBtnPendingDesc {
   font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  display: block;
-  line-height: $line-height-normal;
+  color: $ink-faint;
 }
 
-// 小节列表
+// ---------------- 小节 ----------------
 .sectionListTitle {
+  display: block;
+  margin: $spacing-xl 0 $spacing-md;
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  margin: 0 $spacing-lg $spacing-md;
+  color: $ink;
+  letter-spacing: -0.2rpx;
 }
 
 .sectionList {
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  margin: 0 $spacing-lg;
-  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  background: $surface-1;
   overflow: hidden;
 }
 
 .sectionItem {
-  border-bottom: 1px solid $color-divider;
-
-  &:last-child {
-    border-bottom: none;
+  & + & {
+    border-top: 1rpx solid $hairline;
   }
 }
 
 .sectionHeader {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-md $spacing-lg;
+  gap: $spacing-md;
+  padding: $spacing-lg;
   cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
 }
 
 .sectionIndex {
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: $radius-round;
-  background: rgba($color-primary, 0.1);
+  flex: none;
+  width: 48rpx;
+  height: 48rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid $hairline;
 }
 
 .sectionIndexText {
   font-size: $font-size-xs;
-  color: $color-primary;
-  font-weight: $font-weight-semibold;
+  font-weight: $font-weight-medium;
+  color: $ink-muted;
+  @include tabular;
 }
 
 .sectionTitleText {
   flex: 1;
+  min-width: 0;
   font-size: $font-size-md;
-  color: $color-text-primary;
-  font-weight: $font-weight-medium;
+  color: $ink;
+  @include text-ellipsis;
 }
 
 .sectionArrow {
-  font-size: 24rpx;
-  color: $color-text-tertiary;
-  flex-shrink: 0;
+  flex: none;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
 .sectionContent {
-  padding: 0 $spacing-lg $spacing-lg ($spacing-lg + 40rpx + $spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: 0 $spacing-lg $spacing-lg;
 }
 
 .sectionDesc {
   font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
-  margin-bottom: $spacing-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
-// 知识点
-.knowledgeBlock {
-  background: rgba(22, 93, 255, 0.05);
-  border-radius: $radius-sm;
-  padding: $spacing-sm $spacing-md;
-  margin-bottom: $spacing-sm;
+.knowledgeBlock,
+.caseBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .knowledgeLabel {
   font-size: $font-size-xs;
-  color: $color-primary;
   font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
+  color: $color-primary-light;
 }
 
 .knowledgeItem {
   display: flex;
-  align-items: flex-start;
-  gap: $spacing-xs;
-  padding: 4rpx 0;
+  gap: 8rpx;
 }
 
 .knowledgeBullet {
-  font-size: 16rpx;
-  color: $color-primary;
-  line-height: $line-height-tight;
-  flex-shrink: 0;
+  flex: none;
+  font-size: $font-size-sm;
+  color: $ink-faint;
 }
 
 .knowledgeText {
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
   flex: 1;
-}
-
-// 案例
-.caseBlock {
-  background: rgba(0, 180, 42, 0.05);
-  border-radius: $radius-sm;
-  padding: $spacing-sm $spacing-md;
-  border-left: 4rpx solid $color-success;
+  min-width: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .caseLabel {
   font-size: $font-size-xs;
-  color: $color-success;
   font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
+  color: $color-warning;
 }
 
 .caseText {
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .emptyText {
   display: block;
-  padding: $spacing-xl;
+  padding: $spacing-lg;
   text-align: center;
   font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  color: $ink-subtle;
 }
 
-// 上一章 / 下一章
+// ---------------- 上下章 ----------------
 .chapterNav {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $spacing-md;
-  margin: $spacing-lg $spacing-lg 0;
+  margin-top: $spacing-xl;
 }
 
 .navItem {
-  flex: 1;
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  padding: $spacing-md;
-  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: $spacing-lg;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
 }
 
 .navItemActive {
-  &:active {
-    background: $color-bg-hover;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
   }
 }
 
 .navItemLabel {
   font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  display: block;
-  margin-bottom: 4rpx;
+  color: $ink-subtle;
 }
 
 .navItemTitle {
   font-size: $font-size-sm;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  @include text-ellipsis;
+  color: $ink;
+  @include text-ellipsis-multi(2);
 }
 
 .navItemDisabled {
-  color: $color-text-disabled;
+  color: $ink-faint;
+}
+
+// ============================================================
+// 桌面端：正文收成一条 820PX 阅读列
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
+
+  .navBar {
+    display: none;
+  }
+
+  .header {
+    padding: 32PX 0 20PX;
+    border-bottom: 1PX solid $hairline;
+  }
+
+  .chapterTitle {
+    font-size: 30PX;
+    letter-spacing: -0.6PX;
+  }
+
+  .playBtn,
+  .playBtnPending {
+    padding: 20PX 22PX;
+  }
+
+  .sectionListTitle {
+    margin: 36PX 0 16PX;
+    font-size: 17PX;
+  }
+
+  .sectionHeader {
+    padding: 18PX 20PX;
+  }
+
+  .sectionContent {
+    padding: 0 20PX 20PX;
+  }
+
+  .chapterNav {
+    gap: 16PX;
+    margin-top: 36PX;
+  }
+
+  .navItem {
+    padding: 18PX 20PX;
+  }
+
+  // 阅读性：正文列宽限制在 ~75 字符
+  .sectionDesc,
+  .knowledgeText,
+  .caseText,
+  .chapterSummary {
+    max-width: 78ch;
+  }
 }

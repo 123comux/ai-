@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { fetchCourseDetail } from '@/services/api';
@@ -158,7 +158,7 @@ const ChapterDetailPage: React.FC = () => {
 
                   {sec.knowledge_points?.length > 0 && (
                     <View className={styles.knowledgeBlock}>
-                      <Text className={styles.knowledgeLabel}>📌 核心知识点</Text>
+                      <Text className={styles.knowledgeLabel}>核心知识点</Text>
                       {sec.knowledge_points.map((kp: string, kIdx: number) => (
                         <View key={kIdx} className={styles.knowledgeItem}>
                           <Text className={styles.knowledgeBullet}>•</Text>
@@ -170,7 +170,7 @@ const ChapterDetailPage: React.FC = () => {
 
                   {sec.case && (
                     <View className={styles.caseBlock}>
-                      <Text className={styles.caseLabel}>💡 实战案例</Text>
+                      <Text className={styles.caseLabel}>实战案例</Text>
                       <Text className={styles.caseText}>{safeDecode(sec.case)}</Text>
                     </View>
                   )}

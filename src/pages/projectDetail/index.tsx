@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
 import { fetchProjects, advanceProject, addFavorite, removeFavorite, fetchFavorites } from '@/services/api';
-import { getDifficultyLabel, getDifficultyColor } from '@/utils/index';
+import { getDifficultyLabel } from '@/utils/index';
 import type { Project } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -113,7 +113,6 @@ const ProjectDetailPage: React.FC = () => {
           { id: 5, title: '提交与展示', desc: '提交项目，生成作品集', status: 'pending' as const },
         ]);
 
-  const diffColor = getDifficultyColor(project.difficulty);
 
   return (
     <ScrollView className={styles.page} scrollY>
@@ -121,7 +120,7 @@ const ProjectDetailPage: React.FC = () => {
         <Text className={styles.navBack}>← 返回</Text>
       </View>
       <View className={styles.favBtn} onClick={handleFavorite}>
-        <Text className={styles.favBtnText}>{favorited ? '⭐' : '☆'}</Text>
+        <Text className={styles.favBtnText}>{favorited ? '已收藏' : '收藏'}</Text>
       </View>
       <Image className={styles.cover} src={project.coverImg} mode="aspectFill" />
       <View className={styles.body}>
@@ -129,8 +128,8 @@ const ProjectDetailPage: React.FC = () => {
         <Text className={styles.desc}>{project.description}</Text>
 
         <View className={styles.tags}>
-          <View className={styles.tag} style={{ backgroundColor: `${diffColor}18` }}>
-            <Text className={styles.tagText} style={{ color: diffColor }}>
+          <View className={styles.tag}>
+            <Text className={styles.tagText}>
               {getDifficultyLabel(project.difficulty)}
             </Text>
           </View>
@@ -174,7 +173,7 @@ const ProjectDetailPage: React.FC = () => {
           {steps.map((step) => (
             <View key={step.id} className={styles.stepItem}>
               <View className={styles.stepNumber}>
-                {step.status === 'completed' && <Text className={styles.stepCheck}>✅</Text>}
+                {step.status === 'completed' && <Text className={styles.stepCheck}>✓</Text>}
                 {step.status === 'current' && <Text className={styles.stepCurrent}>{step.id}</Text>}
                 {step.status === 'pending' && <Text className={styles.stepPending}>{step.id}</Text>}
               </View>
@@ -183,13 +182,13 @@ const ProjectDetailPage: React.FC = () => {
                 <Text className={styles.stepDesc}>{step.desc}</Text>
                 {step.status !== 'pending' && step.guide && (
                   <View className={styles.stepGuide}>
-                    <Text className={styles.stepGuideLabel}>📋 操作指引</Text>
+                    <Text className={styles.stepGuideLabel}>操作指引</Text>
                     <Text className={styles.stepGuideText}>{cleanGuide(step.guide)}</Text>
                   </View>
                 )}
                 {step.status !== 'pending' && step.acceptance && (
                   <View className={styles.stepAcceptance}>
-                    <Text className={styles.stepAcceptanceLabel}>✅ 验收标准</Text>
+                    <Text className={styles.stepAcceptanceLabel}>验收标准</Text>
                     <Text className={styles.stepAcceptanceText}>{step.acceptance}</Text>
                   </View>
                 )}

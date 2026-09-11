@@ -1,482 +1,557 @@
+// ============================================================
+// 首页（暗色重做）
+// 营销性表面（Hero / 工具 bento）：VARIANCE 8、MOTION 8
+// 产品性区段（推荐 / 路径 / 列表）：Linear 式克制，靠 hairline 与间距分层
+// ============================================================
 @use '@/styles/variables.scss' as *;
 
-.pageContainer {
-  position: relative;
-  min-height: 100vh;
-}
-
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
+  background-attachment: fixed;
 }
 
-.header {
-  padding: $spacing-lg $spacing-lg 0;
+// ---------------- Hero ----------------
+.hero {
+  position: relative;
+  margin: 0 (-$page-padding);
+  padding: 48rpx $page-padding 40rpx;
+  overflow: hidden;
 }
 
-.headerTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+// 极光光斑：两层错位径向渐变（非均匀 45° 线性渐变）
+.heroGlow {
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 140%;
+  pointer-events: none;
+  background: radial-gradient(420rpx 300rpx at 18% 12%, rgba(94, 106, 210, 0.5), transparent 65%),
+    radial-gradient(520rpx 340rpx at 92% 0%, rgba(124, 136, 232, 0.32), transparent 68%),
+    radial-gradient(300rpx 300rpx at 62% 78%, rgba(88, 166, 255, 0.16), transparent 70%);
+  filter: blur(6rpx);
+  opacity: 0.9;
 }
 
-.userInfo {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
+// 细网格 + 径向遮罩（纯 CSS，无需图片）
+.heroGrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.045) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1rpx, transparent 1rpx);
+  background-size: 32rpx 32rpx;
+  -webkit-mask-image: radial-gradient(560rpx 320rpx at 30% 20%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(560rpx 320rpx at 30% 20%, #000 20%, transparent 78%);
 }
 
-.avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: $radius-round;
-  background: $color-bg-hover;
-}
-
-.avatarPlaceholder {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: $radius-round;
-  background: $color-bg-hover;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-size-lg;
-}
-
-.userText {
+.heroInner {
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: $spacing-xl;
 }
 
-.greeting {
-  font-size: $font-size-lg;
+.heroLeft {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.eyebrow {
+  font-size: $font-size-xs;
+  letter-spacing: 1.4rpx;
+  color: $color-primary-light;
+}
+
+.title {
+  font-size: 48rpx;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  line-height: 1.18;
+  letter-spacing: -1rpx;
+  color: $ink;
+  text-wrap: balance;
 }
 
-.direction {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-top: 4rpx;
+.subtitle {
+  font-size: $font-size-md;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+  max-width: 34em;
 }
 
-.notification {
-  width: 64rpx;
-  height: 64rpx;
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.heroStats {
+  display: flex;
+  align-items: stretch;
+  padding: $spacing-md $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+.statDivider {
+  width: 1rpx;
+  background: $hairline;
+  margin: 0 $spacing-lg;
+}
+
+.heroStats .statDivider:first-of-type {
+  margin-left: 0;
+}
+
+// ---------------- 试用提醒 ----------------
+.trialWarn {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.notificationIcon {
-  font-size: 40rpx;
-}
-
-.bannerWrap {
+  gap: $spacing-sm;
+  margin: $spacing-lg 0 0;
   padding: $spacing-md $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid rgba(210, 153, 34, 0.35);
+  background: rgba(210, 153, 34, 0.08);
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+
+  &:hover {
+    background: rgba(210, 153, 34, 0.14);
+  }
+}
+
+.trialWarnText {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-sm;
+  color: $ink;
+}
+
+.trialWarnAction {
+  font-size: $font-size-sm;
+  color: $color-warning;
+  white-space: nowrap;
+}
+
+// ---------------- Banner ----------------
+.bannerWrap {
+  margin-top: $spacing-xl;
 }
 
 .banner {
-  width: 100%;
-  height: 280rpx;
-  border-radius: $radius-lg;
+  height: 300rpx;
+  border-radius: 16rpx;
   overflow: hidden;
 }
 
 .bannerSlide {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: 300rpx;
 }
 
 .bannerImg {
   width: 100%;
   height: 100%;
+  display: block;
 }
 
 .bannerOverlay {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  padding: $spacing-md $spacing-lg;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: $spacing-lg;
+  background: linear-gradient(180deg, rgba(8, 9, 10, 0) 0%, rgba(8, 9, 10, 0.88) 78%);
 }
 
 .bannerTitle {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-white;
-  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: #ffffff;
+  letter-spacing: -0.2rpx;
 }
 
 .bannerDesc {
   font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 4rpx;
-  display: block;
+  color: rgba(255, 255, 255, 0.78);
 }
 
-.statsRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  background: $color-bg-card;
-  margin: 0 $spacing-lg;
-  border-radius: $radius-lg;
-  padding: $spacing-md 0;
-  box-shadow: $shadow-card;
-}
-
-.statItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-
-.statValue {
-  font-size: $font-size-xxl;
-  font-weight: $font-weight-bold;
-  color: $color-primary;
-}
-
-.statLabel {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-top: 4rpx;
-}
-
-.statDivider {
-  width: 1px;
-  height: 48rpx;
-  background: $color-divider;
-}
-
+// ---------------- 通用区段 ----------------
 .section {
-  padding: $spacing-md $spacing-lg 0;
+  margin-top: $spacing-xl;
 }
 
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: $spacing-md;
-}
-
-.sectionTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-}
-
-.sectionMore {
-  font-size: $font-size-sm;
-  color: $color-primary;
-}
-
-.assessmentEntry {
-  background: $gradient-primary;
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
-  display: flex;
-  align-items: center;
+// ---------------- AI 工具 bento ----------------
+.toolGrid {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: $spacing-md;
 }
 
-.assessmentEntryIcon {
-  font-size: 56rpx;
+.toolCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $hairline-strong;
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.995);
+  }
 }
 
-.assessmentEntryText {
-  flex: 1;
+// 只有第一格用强调色表面（颜色锁：全站一个强调色，不做三色渐变卡）
+.toolCardAccent {
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.18), rgba(94, 106, 210, 0.04) 60%), $surface-1;
+  border-color: $accent-line;
 }
 
-.assessmentEntryTitle {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-text-white;
-  display: block;
+.toolHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
 }
 
-.assessmentEntryDesc {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 4rpx;
-  display: block;
-}
-
-.arrow {
+.toolName {
   font-size: $font-size-lg;
-  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.2rpx;
 }
 
+.toolDesc {
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  line-height: $line-height-normal;
+}
+
+// ---------------- 测评入口 ----------------
+.assessmentEntry {
+  overflow: hidden;
+}
+
+.assessmentInner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  padding: $spacing-lg;
+  cursor: pointer;
+}
+
+.assessmentText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.assessmentTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.assessmentDesc {
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  line-height: $line-height-normal;
+}
+
+// ---------------- 学习方向（横向滚动） ----------------
 .directionScroll {
-  @include scroll-x-container;
-  padding-bottom: $spacing-sm;
+  white-space: nowrap;
+  margin: 0 (-$page-padding);
+  padding: 0 $page-padding;
 }
 
 .directionCard {
   display: inline-flex;
   flex-direction: column;
-  width: 260rpx;
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  padding: $spacing-md;
+  gap: 8rpx;
+  width: 320rpx;
   margin-right: $spacing-md;
-  box-shadow: $shadow-card;
-  border-top: 6rpx solid $color-primary;
+  padding: $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  white-space: normal;
+  vertical-align: top;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
+  }
 }
 
 .directionName {
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-xs;
-  @include text-ellipsis;
+  color: $ink;
 }
 
 .directionDesc {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  @include text-ellipsis;
-}
-
-.courseGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-}
-
-.courseItem {
-  width: calc(50% - #{$spacing-md});
-  box-sizing: border-box;
-}
-
-.projectGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-}
-
-.projectItem {
-  width: calc(50% - #{$spacing-md});
-  box-sizing: border-box;
-}
-
-// AI 智能工具
-.aiTools {
-  display: flex;
-  gap: $spacing-md;
-}
-
-.aiToolCard {
-  flex: 1;
-  border-radius: $radius-lg;
-  padding: $spacing-md $spacing-sm;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.aiToolIcon {
-  font-size: 48rpx;
-  margin-bottom: $spacing-xs;
-}
-
-.aiToolName {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-text-white;
-  display: block;
-}
-
-.aiToolDesc {
   font-size: $font-size-xs;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 4rpx;
-  display: block;
-}
-
-.chatOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: $color-bg-card;
-  z-index: 99999;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  @include safe-area-bottom(0rpx);
-}
-
-.chatContainer {
-  display: none;
-}
-
-.chatHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-border;
-}
-
-.chatHeaderTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-}
-
-.chatClose {
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-}
-
-.chatMessages {
-  flex: 1;
-  min-height: 0;
-  padding: $spacing-md $spacing-lg;
-}
-
-.chatMsg {
-  margin-bottom: $spacing-md;
-}
-
-.chatMsgUser {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.chatMsgAi {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.chatBubbleUser {
-  max-width: 80%;
-  background: $gradient-primary;
-  border-radius: $radius-md $radius-md 0 $radius-md;
-  padding: $spacing-sm $spacing-md;
-}
-
-.chatBubbleAi {
-  max-width: 80%;
-  background: $color-bg-hover;
-  border-radius: $radius-md $radius-md $radius-md 0;
-  padding: $spacing-sm $spacing-md;
-}
-
-.chatText {
-  font-size: $font-size-md;
-  color: $color-text-primary;
+  color: $ink-subtle;
   line-height: $line-height-normal;
-  word-break: break-word;
+  @include text-ellipsis-multi(2);
 }
 
-.chatMsgUser .chatText {
-  color: $color-text-white;
+.directionArrow {
+  font-size: $font-size-sm;
+  color: $color-primary-light;
 }
 
-.chatInputBar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-md $spacing-lg;
-  min-height: 120rpx;
-  border-top: 1px solid $color-border;
-  background: $color-bg-card;
-}
-
-.chatInput {
-  flex: 1;
-  height: 72rpx;
-  background: $color-bg-hover;
-  border-radius: $radius-button;
-  padding: 0 $spacing-md;
-  font-size: $font-size-md;
-}
-
-.chatSendBtn {
-  min-width: 120rpx;
-  height: 72rpx;
-  background: $gradient-primary;
-  border-radius: $radius-button;
-  color: $color-text-white;
-  font-size: $font-size-md;
-  font-weight: $font-weight-medium;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  padding: 0;
-  margin: 0;
-  line-height: normal;
-  white-space: nowrap;
-
-  &::after {
-    border: none;
-  }
-}
-
-// AI 推荐课程列表
+// ---------------- AI 推荐课程 ----------------
 .recommendList {
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  background: $surface-1;
+  overflow: hidden;
 }
 
 .recommendItem {
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  padding: $spacing-md;
-  border: 1px solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+
+  & + & {
+    border-top: 1rpx solid $hairline;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
 }
 
 .recommendItemTitle {
+  flex: 1;
+  min-width: 0;
   font-size: $font-size-md;
-  font-weight: $font-weight-medium;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: 4rpx;
+  color: $ink;
+  @include text-ellipsis;
 }
 
 .recommendItemMeta {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
-}
-/* 试用期即将到期提醒横幅 */
-.trialWarn {
-  margin: $spacing-md $page-padding 0;
-  padding: $spacing-md;
-  background: rgba($color-warning, 0.1);
-  border: 1rpx solid rgba($color-warning, 0.4);
-  border-radius: $radius-md;
   display: flex;
   align-items: center;
-  font-size: $font-size-sm;
+  gap: $spacing-sm;
+  flex: none;
 }
 
-.trialWarnIcon {
-  margin-right: $spacing-xs;
+.recommendMetaText {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
-.trialWarnText {
-  flex: 1;
-  color: $color-warning;
-  line-height: $line-height-normal;
+.recommendScore {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary-light;
+  @include tabular;
 }
 
-.trialWarnAction {
-  color: $color-warning;
-  font-weight: $font-weight-medium;
-  margin-left: $spacing-sm;
+// ---------------- 课程 / 项目网格 ----------------
+.courseGrid,
+.projectGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-md;
+}
+
+.courseItem,
+.projectItem {
+  min-width: 0;
+}
+
+// ---------------- 骨架 / 页脚 ----------------
+.skeletonRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-md;
+}
+
+.skeletonBlock {
+  height: 180rpx;
+  @include skeleton(16rpx);
+}
+
+.footerNote {
+  margin-top: $spacing-xl;
+  padding-bottom: $spacing-lg;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $ink-faint;
+  @include safe-area-bottom($spacing-lg);
+}
+
+// ============================================================
+// 桌面端：Hero 左右分栏、工具 bento 三列、课程/项目两列
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
+
+  .hero {
+    margin: 0;
+    padding: 56PX 0 44PX;
+    border-bottom: 1PX solid $hairline;
+  }
+
+  .heroGlow {
+    inset: -40% -10% auto -10%;
+    height: 160%;
+    filter: blur(10PX);
+  }
+
+  .heroGrid {
+    background-size: 44PX 44PX;
+    -webkit-mask-image: radial-gradient(620PX 360PX at 28% 18%, #000 18%, transparent 76%);
+    mask-image: radial-gradient(620PX 360PX at 28% 18%, #000 18%, transparent 76%);
+  }
+
+  .heroInner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 48PX;
+    align-items: center;
+  }
+
+  .title {
+    font-size: 38PX;
+    letter-spacing: -0.9PX;
+  }
+
+  .subtitle {
+    font-size: 14.5PX;
+  }
+
+  .eyebrow {
+    font-size: 12PX;
+    letter-spacing: 1.2PX;
+  }
+
+  // 右栏统计改成纵向 hairline 列表（与左侧文案形成非对称节奏）
+  .heroStats {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 4PX 20PX;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .heroStats > * {
+    padding: 14PX 0;
+  }
+
+  .statDivider {
+    width: auto;
+    height: 1PX;
+    margin: 0;
+    background: $hairline;
+  }
+
+  .heroStats .statDivider:first-of-type {
+    margin-left: 0;
+  }
+
+  .trialWarn {
+    margin-top: 24PX;
+  }
+
+  .bannerWrap {
+    margin-top: 28PX;
+  }
+
+  .banner,
+  .bannerSlide {
+    height: 260PX;
+  }
+
+  .bannerOverlay {
+    padding: 24PX 26PX;
+  }
+
+  .bannerTitle {
+    font-size: 20PX;
+  }
+
+  .section {
+    margin-top: 44PX;
+  }
+
+  .toolGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16PX;
+  }
+
+  .toolName {
+    font-size: 16PX;
+  }
+
+  .toolDesc {
+    font-size: 13PX;
+  }
+
+  .assessmentInner {
+    padding: 22PX 24PX;
+  }
+
+  .assessmentTitle {
+    font-size: 16PX;
+  }
+
+  .directionScroll {
+    margin: 0;
+    padding: 0;
+  }
+
+  .directionCard {
+    width: 260PX;
+    padding: 18PX;
+    margin-right: 14PX;
+  }
+
+  .recommendItem {
+    padding: 16PX 20PX;
+  }
+
+  .courseGrid,
+  .projectGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16PX;
+  }
+
+  .skeletonRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16PX;
+  }
+
+  .skeletonBlock {
+    height: 150PX;
+  }
 }

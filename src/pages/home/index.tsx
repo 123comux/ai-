@@ -6,6 +6,7 @@ import PathCard from '@/components/PathCard';
 import CourseCard from '@/components/CourseCard';
 import ProjectCard from '@/components/ProjectCard';
 import AccessGate from '@/components/AccessGate';
+import { Button, Panel, Stat, SectionHeader, Tag, Reveal } from '@/components/ui';
 import { useLearningStore } from '@/store/useLearningStore';
 import { useUserStore } from '@/store/useUserStore';
 import { useAccessStore, formatTrialRemaining } from '@/store/useAccessStore';
@@ -52,8 +53,15 @@ const TOPIC_CN_MAP: Record<string, string> = {
   'advanced': '高级',
 };
 
+/** AI 工具入口（不再用 emoji 当图标，靠标题层级 + 标签区分） */
+const AI_TOOLS = [
+  { key: 'tutor', name: 'AI 导师', desc: '对话式答疑，按你的进度讲解', tag: '实时问答', url: '/pages/tutor/index' },
+  { key: 'assessment', name: '能力分析', desc: '15 分钟定位你的 AI 水平', tag: '精准评估', url: '/pages/assessment/index' },
+  { key: 'recommend', name: '课程推荐', desc: '按目标方向匹配学习内容', tag: '智能匹配', url: '' }
+];
+
 const HomePage: React.FC = () => {
-  const { nickname, avatar, targetDirection } = useUserStore();
+  const { nickname, avatar, targetDirection, isLoggedIn } = useUserStore();
   // 试用期即将到期提醒横幅（试用到期的全屏锁定由 AccessGate 遮罩接管，此处不重复）
   const accessStatus = useAccessStore((s) => s.status);
   const warnExpiring = accessStatus?.warn_expiring ?? false;
@@ -71,6 +79,7 @@ const HomePage: React.FC = () => {
   const [aiRecommendations, setAiRecommendations] = useState<CourseRecommendation[]>([]);
   const [banners, setBanners] = useState<BannerItem[]>([]);
   const [directions, setDirections] = useState<DirectionItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const firstShow = useRef(true);
 
@@ -120,6 +129,8 @@ const HomePage: React.FC = () => {
       }
     } catch (err) {
       console.error('[Home] load data error:', err);
+    } finally {
+      setLoaded(true);
     }
   };
 
@@ -159,222 +170,246 @@ const HomePage: React.FC = () => {
     Taro.switchTab({ url: '/pages/learn/index' });
   };
 
+  const onToolClick = (key: string, url: string) => {
+    if (key === 'recommend') handleCourseRecommend();
+    else if (url) Taro.navigateTo({ url });
+  };
+
   return (
     <Fragment>
       <ScrollView className={styles.page} scrollY>
-        {/* 顶部用户信息 */}
-        <View className={styles.header}>
-        <View className={styles.headerTop}>
-          <View className={styles.userInfo}>
-            {avatar ? (
-              <Image className={styles.avatar} src={avatar} mode="aspectFill" />
-            ) : (
-              <View className={styles.avatarPlaceholder}><Text>👤</Text></View>
-            )}
-            <View className={styles.userText}>
-              <Text className={styles.greeting}>你好，{nickname}</Text>
-              {targetDirection ? (
-                <Text className={styles.direction}>目标：{targetDirection}</Text>
-              ) : (
-                <Text className={styles.direction}>去设置选择目标方向 →</Text>
-              )}
+        {/* ---------- Hero：左文案 + 右统计（非对称，避免"居中标题 + 三等分卡片"的默认感） ---------- */}
+        <View className={styles.hero}>
+          <View className={styles.heroGlow} aria-hidden />
+          <View className={styles.heroGrid} aria-hidden />
+          <View className={styles.heroInner}>
+            <View className={styles.heroLeft}>
+              <Text className={styles.eyebrow}>
+                {targetDirection ? `目标方向 · ${targetDirection}` : '还未设置目标方向'}
+              </Text>
+              <Text className={styles.title}>
+                {isLoggedIn ? `${nickname || '同学'}，继续你的 AI 学习` : '开始你的 AI 学习'}
+              </Text>
+              <Text className={styles.subtitle}>
+                七个阶段从大模型基础到求职备战，课程、实战项目与 AI 导师都在一条路径上。
+              </Text>
+              <View className={styles.ctaRow}>
+                <Button size="md" onClick={handleStartAssessment}>
+                  {abilityReport ? '重新测评' : '开始能力测评'}
+                </Button>
+                <Button tone="ghost" size="md" onClick={() => Taro.navigateTo({ url: '/pages/tutor/index' })}>
+                  问 AI 导师
+                </Button>
+              </View>
+            </View>
+
+            <View className={styles.heroStats}>
+              <Stat value={stats.learningDays} label="学习天数" />
+              <View className={styles.statDivider} />
+              <Stat value={stats.totalMinutes} label="学习时长 / 分钟" />
+              <View className={styles.statDivider} />
+              <Stat value={stats.completedProjects} label="完成项目" />
             </View>
           </View>
-          <View className={styles.notification}>
-            <Text className={styles.notificationIcon}>🔔</Text>
-          </View>
         </View>
-      </View>
 
-      {/* 试用期即将到期提醒 */}
-      {warnExpiring && accessStatus && (
-        <View className={styles.trialWarn} onClick={goDeposit}>
-          <Text className={styles.trialWarnIcon}>⏳</Text>
-          <Text className={styles.trialWarnText}>
-            试用期还剩 {formatTrialRemaining(accessStatus.trial_remaining_seconds)}，到期未缴押金将暂停使用
-          </Text>
-          <Text className={styles.trialWarnAction}>去缴纳 ›</Text>
-        </View>
-      )}
-
-      {/* Banner 轮播 */}
-      {banners.length > 0 && (
-        <View className={styles.bannerWrap}>
-          <Swiper
-            className={styles.banner}
-            indicatorColor="#e5e6eb"
-            indicatorActiveColor="#165dff"
-            circular
-            autoplay
-            interval={3000}
-          >
-            {banners.map((item) => (
-              <SwiperItem key={item.id}>
-                <View className={styles.bannerSlide}>
-                  <Image className={styles.bannerImg} src={item.image_url} mode="aspectFill" />
-                  <View className={styles.bannerOverlay}>
-                    <Text className={styles.bannerTitle}>{item.title}</Text>
-                    <Text className={styles.bannerDesc}>{item.description}</Text>
-                  </View>
-                </View>
-              </SwiperItem>
-            ))}
-          </Swiper>
-        </View>
-      )}
-
-      {/* 学习统计 */}
-      <View className={styles.statsRow}>
-        <View className={styles.statItem}>
-          <Text className={styles.statValue}>{stats.learningDays}</Text>
-          <Text className={styles.statLabel}>学习天数</Text>
-        </View>
-        <View className={styles.statDivider} />
-        <View className={styles.statItem}>
-          <Text className={styles.statValue}>{stats.totalMinutes}</Text>
-          <Text className={styles.statLabel}>学习时长(min)</Text>
-        </View>
-        <View className={styles.statDivider} />
-        <View className={styles.statItem}>
-          <Text className={styles.statValue}>{stats.completedProjects}</Text>
-          <Text className={styles.statLabel}>完成项目</Text>
-        </View>
-      </View>
-
-      {/* AI 智能工具 */}
-      <View className={styles.section}>
-        <View className={styles.sectionHeader}>
-          <Text className={styles.sectionTitle}>AI 智能工具</Text>
-        </View>
-        <View className={styles.aiTools}>
-          <View className={styles.aiToolCard} style={{ background: 'linear-gradient(135deg, #7c3aed, #a78bfa)' }} onClick={() => Taro.navigateTo({ url: '/pages/tutor/index' })}>
-            <Text className={styles.aiToolIcon}>💬</Text>
-            <Text className={styles.aiToolName}>AI 导师</Text>
-            <Text className={styles.aiToolDesc}>问答学习</Text>
-          </View>
-          <View className={styles.aiToolCard} style={{ background: 'linear-gradient(135deg, #165dff, #4080ff)' }} onClick={handleStartAssessment}>
-            <Text className={styles.aiToolIcon}>🧠</Text>
-            <Text className={styles.aiToolName}>能力分析</Text>
-            <Text className={styles.aiToolDesc}>AI 精准评估</Text>
-          </View>
-          <View className={styles.aiToolCard} style={{ background: 'linear-gradient(135deg, #00b42a, #27c346)' }} onClick={handleCourseRecommend}>
-            <Text className={styles.aiToolIcon}>📚</Text>
-            <Text className={styles.aiToolName}>课程推荐</Text>
-            <Text className={styles.aiToolDesc}>AI 智能匹配</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 能力测评 */}
-      <View className={styles.section}>
-        {abilityReport ? (
-          <AssessmentCard
-            overallScore={abilityReport.overallScore}
-            level={abilityReport.level}
-            direction={abilityReport.recommendedDirection}
-            onClick={handleStartAssessment}
-          />
-        ) : (
-          <View className={styles.assessmentEntry} onClick={handleStartAssessment}>
-            <Text className={styles.assessmentEntryIcon}>🧠</Text>
-            <View className={styles.assessmentEntryText}>
-              <Text className={styles.assessmentEntryTitle}>开始 AI 能力测评</Text>
-              <Text className={styles.assessmentEntryDesc}>15 分钟，精准定位你的 AI 水平</Text>
-            </View>
-            <Text className={styles.arrow}>→</Text>
+        {/* 试用期即将到期提醒 */}
+        {warnExpiring && accessStatus && (
+          <View className={styles.trialWarn} onClick={goDeposit}>
+            <Tag tone="warning">试用提醒</Tag>
+            <Text className={styles.trialWarnText}>
+              还剩 {formatTrialRemaining(accessStatus.trial_remaining_seconds)}，到期未缴押金将暂停使用
+            </Text>
+            <Text className={styles.trialWarnAction}>去缴纳 →</Text>
           </View>
         )}
-      </View>
 
-      {/* 学习方向（点击后过滤课程） */}
-      <View className={styles.section}>
-        <View className={styles.sectionHeader}>
-          <Text className={styles.sectionTitle}>学习方向</Text>
-          <Text className={styles.sectionMore} onClick={() => Taro.switchTab({ url: '/pages/learn/index' })}>查看课程 →</Text>
-        </View>
-        <ScrollView className={styles.directionScroll} scrollX>
-          {directions.map((dir) => (
-            <View
-              key={dir.id}
-              className={styles.directionCard}
-              style={{ borderTopColor: dir.color }}
-              onClick={() => handleSelectDirection(dir.name)}
-            >
-              <Text className={styles.directionName}>{dir.name}</Text>
-              <Text className={styles.directionDesc}>{dir.description}</Text>
+        {/* Banner 轮播 */}
+        {banners.length > 0 && (
+          <Reveal>
+            <View className={styles.bannerWrap}>
+              <Swiper
+                className={styles.banner}
+                indicatorColor="rgba(255,255,255,0.22)"
+                indicatorActiveColor="#7c88e8"
+                circular
+                autoplay
+                interval={3000}
+              >
+                {banners.map((item) => (
+                  <SwiperItem key={item.id}>
+                    <View className={styles.bannerSlide}>
+                      <Image className={styles.bannerImg} src={item.image_url} mode="aspectFill" />
+                      <View className={styles.bannerOverlay}>
+                        <Text className={styles.bannerTitle}>{item.title}</Text>
+                        <Text className={styles.bannerDesc}>{item.description}</Text>
+                      </View>
+                    </View>
+                  </SwiperItem>
+                ))}
+              </Swiper>
             </View>
-          ))}
-        </ScrollView>
-      </View>
+          </Reveal>
+        )}
 
-      {/* 学习路径 */}
-      {currentPath && (
-        <View className={styles.section}>
-          <View className={styles.sectionHeader}>
-            <Text className={styles.sectionTitle}>我的学习路径</Text>
-            <Text className={styles.sectionMore} onClick={handleViewPath}>查看全部 →</Text>
+        {/* ---------- AI 智能工具：bento（3 格，其中 1 格用强调色表面；不再三张彩色渐变） ---------- */}
+        <Reveal>
+          <View className={styles.section}>
+            <SectionHeader title="AI 智能工具" hint="三件事：问、测、配" />
+            <View className={styles.toolGrid}>
+              {AI_TOOLS.map((tool, i) => (
+                <Panel
+                  key={tool.key}
+                  spotlight
+                  className={`${styles.toolCard} ${i === 0 ? styles.toolCardAccent : ''}`}
+                >
+                  <View className={styles.toolHead} onClick={() => onToolClick(tool.key, tool.url)}>
+                    <Text className={styles.toolName}>{tool.name}</Text>
+                    <Tag tone={i === 0 ? 'accent' : 'neutral'}>{tool.tag}</Tag>
+                  </View>
+                  <Text className={styles.toolDesc}>{tool.desc}</Text>
+                </Panel>
+              ))}
+            </View>
           </View>
-          <PathCard path={currentPath} onClick={handleViewPath} />
-        </View>
-      )}
+        </Reveal>
 
-      {/* AI 推荐课程（基于用户目标方向） */}
-      {aiRecommendations.length > 0 && (
-        <View className={styles.section}>
-          <View className={styles.sectionHeader}>
-            <Text className={styles.sectionTitle}>AI 推荐课程</Text>
-            <Text className={styles.sectionMore} onClick={handleCourseRecommend}>更多 →</Text>
+        {/* 能力测评 */}
+        <Reveal>
+          <View className={styles.section}>
+            {abilityReport ? (
+              <AssessmentCard
+                overallScore={abilityReport.overallScore}
+                level={abilityReport.level}
+                direction={abilityReport.recommendedDirection}
+                onClick={handleStartAssessment}
+              />
+            ) : (
+              <Panel spotlight className={styles.assessmentEntry} padded={false}>
+                <View className={styles.assessmentInner} onClick={handleStartAssessment}>
+                  <View className={styles.assessmentText}>
+                    <Text className={styles.assessmentTitle}>还没有能力画像</Text>
+                    <Text className={styles.assessmentDesc}>
+                      15 分钟测评，产出能力雷达与推荐方向，首页与学习路径会据此调整。
+                    </Text>
+                  </View>
+                  <Button size="sm">开始测评</Button>
+                </View>
+              </Panel>
+            )}
           </View>
-          <View className={styles.recommendList}>
-            {aiRecommendations.map((rec, i) => (
-              <View key={i} className={styles.recommendItem} onClick={() => handleViewCourse(rec.id)}>
-                <Text className={styles.recommendItemTitle}>{rec.title}</Text>
-                <Text className={styles.recommendItemMeta}>
-                  {TOPIC_CN_MAP[rec.topic] || rec.topic} · {TOPIC_CN_MAP[rec.difficulty] || rec.difficulty} · 匹配度 {Math.round(rec.score * 100)}%
-                </Text>
+        </Reveal>
+
+        {/* 学习方向（点击后过滤课程） */}
+        {directions.length > 0 && (
+          <Reveal>
+            <View className={styles.section}>
+              <SectionHeader
+                title="学习方向"
+                actionText="查看课程"
+                onAction={() => Taro.switchTab({ url: '/pages/learn/index' })}
+              />
+              <ScrollView className={styles.directionScroll} scrollX>
+                {directions.map((dir) => (
+                  <View
+                    key={dir.id}
+                    className={styles.directionCard}
+                    onClick={() => handleSelectDirection(dir.name)}
+                  >
+                    <Text className={styles.directionName}>{dir.name}</Text>
+                    <Text className={styles.directionDesc}>{dir.description}</Text>
+                    <Text className={styles.directionArrow}>→</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          </Reveal>
+        )}
+
+        {/* 学习路径 */}
+        {currentPath && (
+          <Reveal>
+            <View className={styles.section}>
+              <SectionHeader title="我的学习路径" actionText="查看全部" onAction={handleViewPath} />
+              <PathCard path={currentPath} onClick={handleViewPath} />
+            </View>
+          </Reveal>
+        )}
+
+        {/* AI 推荐课程（基于用户目标方向） */}
+        {aiRecommendations.length > 0 && (
+          <Reveal>
+            <View className={styles.section}>
+              <SectionHeader title="AI 推荐课程" hint="按你的目标方向匹配" actionText="更多" onAction={handleCourseRecommend} />
+              <View className={styles.recommendList}>
+                {aiRecommendations.map((rec, i) => (
+                  <View key={i} className={styles.recommendItem} onClick={() => handleViewCourse(rec.id)}>
+                    <Text className={styles.recommendItemTitle}>{rec.title}</Text>
+                    <View className={styles.recommendItemMeta}>
+                      <Text className={styles.recommendMetaText}>
+                        {TOPIC_CN_MAP[rec.topic] || rec.topic} · {TOPIC_CN_MAP[rec.difficulty] || rec.difficulty}
+                      </Text>
+                      <Text className={styles.recommendScore}>{Math.round(rec.score * 100)}%</Text>
+                    </View>
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
+          </Reveal>
+        )}
+
+        {/* 推荐课程 */}
+        {courses.length > 0 && (
+          <Reveal>
+            <View className={styles.section}>
+              <SectionHeader title="推荐课程" actionText="更多" onAction={() => handleViewAll('course')} />
+              <View className={styles.courseGrid}>
+                {courses.map((course) => (
+                  <View key={course.id} className={styles.courseItem}>
+                    <CourseCard course={course} onClick={() => handleViewCourse(course.id)} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Reveal>
+        )}
+
+        {/* 推荐项目 */}
+        {projects.length > 0 && (
+          <Reveal>
+            <View className={styles.section}>
+              <SectionHeader title="推荐项目" actionText="更多" onAction={() => handleViewAll('project')} />
+              <View className={styles.projectGrid}>
+                {projects.map((project) => (
+                  <View key={project.id} className={styles.projectItem}>
+                    <ProjectCard project={project} onClick={() => handleViewProject(project.id)} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Reveal>
+        )}
+
+        {/* 首屏骨架：数据未回来时给结构一致的占位，而不是空白 */}
+        {!loaded && (
+          <View className={styles.section}>
+            <View className={styles.skeletonRow}>
+              <View className={styles.skeletonBlock} />
+              <View className={styles.skeletonBlock} />
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* 推荐课程 */}
-      <View className={styles.section}>
-        <View className={styles.sectionHeader}>
-          <Text className={styles.sectionTitle}>推荐课程</Text>
-          <Text className={styles.sectionMore} onClick={() => handleViewAll('course')}>更多 →</Text>
+        <View className={styles.footerNote}>
+          <Text>智学 AI · 课程 {courses.length} 门 / 项目 {projects.length} 个</Text>
         </View>
-        <View className={styles.courseGrid}>
-          {courses.map((course) => (
-            <View key={course.id} className={styles.courseItem}>
-              <CourseCard course={course} onClick={() => handleViewCourse(course.id)} />
-            </View>
-          ))}
-        </View>
-      </View>
+      </ScrollView>
 
-      {/* 推荐项目 */}
-      <View className={styles.section}>
-        <View className={styles.sectionHeader}>
-          <Text className={styles.sectionTitle}>推荐项目</Text>
-          <Text className={styles.sectionMore} onClick={() => handleViewAll('project')}>更多 →</Text>
-        </View>
-        <View className={styles.projectGrid}>
-          {projects.map((project) => (
-            <View key={project.id} className={styles.projectItem}>
-              <ProjectCard project={project} onClick={() => handleViewProject(project.id)} />
-            </View>
-          ))}
-        </View>
-      </View>
-
-    </ScrollView>
-
-    {/* 导语弹窗 + 锁定遮罩（不放 ScrollView 内：微信端 scroll-view 内的 fixed 元素
-        会被滚动容器裁剪/失效，导致弹窗不可见；须作为页面的兄弟节点渲染） */}
-    <AccessGate />
-  </Fragment>
-);
+      {/* 导语弹窗 + 锁定遮罩（不放 ScrollView 内：微信端 scroll-view 内的 fixed 元素
+          会被滚动容器裁剪/失效，导致弹窗不可见；须作为页面的兄弟节点渲染） */}
+      <AccessGate />
+    </Fragment>
+  );
 };
 
 export default HomePage;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image, Button } from '@tarojs/components';
 import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import ProgressBar from '@/components/ProgressBar';
@@ -274,7 +274,7 @@ const CourseDetailPage: React.FC = () => {
         <Text className={styles.navBack}>← 返回</Text>
       </View>
       <View className={styles.favBtn} onClick={handleFavorite}>
-        <Text className={styles.favBtnText}>{favorited ? '⭐' : '☆'}</Text>
+        <Text className={styles.favBtnText}>{favorited ? '已收藏' : '收藏'}</Text>
       </View>
       <Image className={styles.cover} src={course.coverImg || course.cover_img || ''} mode="aspectFill" />
       <View className={styles.body}>
@@ -296,7 +296,7 @@ const CourseDetailPage: React.FC = () => {
         <View className={`${styles.unlockCard} ${unlocked ? styles.unlockCardDone : ''}`}>
           {unlocked ? (
             <>
-              <Text className={styles.unlockBadge}>🔓 已解锁进阶实操</Text>
+              <Text className={styles.unlockBadge}>已解锁进阶实操</Text>
               {advancedContent.length === 0 ? (
                 <Text className={styles.unlockEmpty}>本课暂无额外进阶内容</Text>
               ) : advancedContent.map((item, idx) => (
@@ -444,7 +444,7 @@ const CourseDetailPage: React.FC = () => {
 
                           {sec.knowledge_points?.length > 0 && (
                             <View className={styles.knowledgeBlock}>
-                              <Text className={styles.knowledgeLabel}>📌 核心知识点</Text>
+                              <Text className={styles.knowledgeLabel}>核心知识点</Text>
                               {sec.knowledge_points.map((kp: string, idx: number) => (
                                 <View key={idx} className={styles.knowledgeItem}>
                                   <Text className={styles.knowledgeBullet}>•</Text>
@@ -456,7 +456,7 @@ const CourseDetailPage: React.FC = () => {
 
                           {sec.case && (
                             <View className={styles.caseBlock}>
-                              <Text className={styles.caseLabel}>💡 实战案例</Text>
+                              <Text className={styles.caseLabel}>实战案例</Text>
                               <Text className={styles.caseText}>{sec.case}</Text>
                             </View>
                           )}

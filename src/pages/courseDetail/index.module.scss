@@ -1,610 +1,715 @@
+// 课程详情（暗色）
+// 桌面端把封面抽成左侧 sticky 栏、正文在右（页面本身是 ScrollView，用 grid 直接分栏，无需改 JSX）
 @use '@/styles/variables.scss' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
+  background-attachment: fixed;
 }
 
+.loadingText {
+  display: block;
+  padding: $spacing-xl;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+}
+
+// ---------------- 顶部返回 + 收藏 ----------------
 .navBar {
-  padding: 20rpx $spacing-lg;
+  display: inline-flex;
+  align-items: center;
+  height: 64rpx;
+  margin-top: $spacing-md;
+  padding: 0 $spacing-sm;
+  border-radius: $radius-round;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
 }
 
 .navBack {
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  color: $ink-muted;
 }
 
 .favBtn {
   position: absolute;
-  top: 16rpx;
-  right: $spacing-lg;
-  z-index: 10;
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: $radius-round;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: $shadow-card;
-  display: flex;
+  right: $page-padding;
+  top: $spacing-md;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  height: 64rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  border: 1rpx solid $hairline-strong;
+  background: rgba(15, 16, 17, 0.6);
+  cursor: pointer;
+  transition: border-color $dur-fast $ease-out, color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    border-color: $accent-line;
+  }
 }
 
 .favBtnText {
-  font-size: 36rpx;
-  line-height: 1;
+  font-size: $font-size-xs;
+  color: $ink-muted;
 }
 
-.loadingText {
-  text-align: center;
-  padding: 200rpx 0;
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-  display: block;
-}
-
+// ---------------- 封面与正文 ----------------
 .cover {
   width: 100%;
-  height: 400rpx;
+  height: 360rpx;
   display: block;
+  margin-top: $spacing-md;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-2;
 }
 
 .body {
-  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-top: $spacing-lg;
 }
 
 .title {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: $spacing-sm;
+  font-size: 44rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1.25;
+  letter-spacing: -0.8rpx;
+  color: $ink;
+  text-wrap: balance;
 }
 
 .desc {
   font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  line-height: $line-height-loose;
-  display: block;
-  margin-bottom: $spacing-md;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .meta {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+  gap: 8rpx;
 }
 
 .metaText {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
 .metaDot {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-faint;
 }
 
 .proText {
-  font-size: $font-size-sm;
-  color: $color-primary;
+  font-size: $font-size-xs;
   font-weight: $font-weight-medium;
+  color: $color-primary-light;
 }
 
-.progressSection {
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  padding: $spacing-md $spacing-lg;
-  margin-bottom: $spacing-lg;
-  box-shadow: $shadow-card;
-}
-
-.progressHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: $spacing-sm;
-}
-
-.progressLabel {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-}
-
-.progressValue {
-  font-size: $font-size-sm;
-  color: $color-primary;
-  font-weight: $font-weight-semibold;
-}
-
-.completeBtn {
-  margin-top: $spacing-md;
-  width: 100%;
-  height: $button-height-md;
-  background: $gradient-primary;
-  border-radius: $radius-button;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:active {
-    opacity: 0.9;
-    transform: scale(0.98);
-  }
-}
-
-.completeBtnText {
-  font-size: $font-size-md;
-  font-weight: $font-weight-medium;
-  color: $color-text-white;
-}
-
-.completeBtnDone {
-  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
-  color: $color-text-tertiary;
-  pointer-events: none;
-}
-
-.sectionTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: $spacing-md;
-}
-
-.chapterList {
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  box-shadow: $shadow-card;
-  overflow: hidden;
-}
-
-.chapterItem {
-  display: block;
-  padding: 0;
-  border-bottom: 1px solid $color-divider;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.chapterStatus {
-  width: 40rpx;
-  height: 40rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.statusIcon {
-  font-size: 28rpx;
-}
-
-.chapterInfo {
-  flex: 1;
-}
-
-.chapterTitle {
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: 4rpx;
-}
-
-.chapterDuration {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
-}
-
-// 相关视频
-.videoList {
-  background: $color-bg-card;
-  border-radius: $radius-md;
-  box-shadow: $shadow-card;
-  overflow: hidden;
-  margin-bottom: $spacing-lg;
-}
-
-.videoItem {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-divider;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:active {
-    background: $color-bg-hover;
-  }
-}
-
-.videoCover {
-  width: 200rpx;
-  height: 120rpx;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  background: $color-bg-hover;
-}
-
-.videoItemInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.videoItemTitle {
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: 4rpx;
-  @include text-ellipsis;
-}
-
-.videoItemDuration {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
-}
-
-.videoItemArrow {
-  font-size: 28rpx;
-  color: $color-text-tertiary;
-  flex-shrink: 0;
-}
-
-// ============ Rich chapter content ============
-
-.chapterHeader {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  padding: $spacing-md $spacing-lg;
-  cursor: pointer;
-}
-
-.chapterActions {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  flex-shrink: 0;
-}
-
-.chapterDetailBtn {
-  padding: 8rpx 20rpx;
-  border-radius: $radius-button;
-  border: 1px solid rgba($color-primary, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chapterDetailText {
-  font-size: $font-size-xs;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-}
-
-/* 章节"标记学完"（五阶段课程按章节计进度） */
-.chapterDoneBtn {
-  padding: 8rpx 20rpx;
-  border-radius: $radius-button;
-  background: rgba($color-primary, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chapterDoneText {
-  font-size: $font-size-xs;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-}
-
-.chapterDoneBtnGhost {
-  padding: 8rpx 20rpx;
-  border-radius: $radius-button;
-  border: 1px dashed rgba($color-primary, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chapterDoneGhostText {
-  font-size: $font-size-xs;
-  color: rgba($color-primary, 0.8);
-}
-
-.chapterVideoBtn {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: $radius-round;
-  background: rgba($color-primary, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.chapterVideoIcon {
-  font-size: 24rpx;
-  color: $color-primary;
-}
-
-/* 该章节暂无可用视频（现有素材缺失）：明确标注，不再用别的视频冒充 */
-.chapterVideoPending {
-  padding: 0 $spacing-sm;
-  height: 56rpx;
-  border-radius: $radius-round;
-  background: rgba($color-text-tertiary, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.chapterVideoPendingText {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-}
-
-.chapterSummary {
-  padding: 0 $spacing-lg $spacing-md $spacing-lg;
-}
-
-.chapterSummaryText {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
-}
-
-// 章节子视频列表
-.chapterVideos {
-  padding: 0 $spacing-lg $spacing-md;
-}
-
-.chapterVideoItem {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm 0;
-  border-bottom: 1px solid $color-divider;
-
-  &:active {
-    opacity: 0.7;
-  }
-}
-
-.chapterVideoItemIcon {
-  font-size: 24rpx;
-  min-width: 40rpx;
-  text-align: center;
-}
-
-.chapterVideoItemInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.chapterVideoItemTitle {
-  font-size: $font-size-sm;
-  color: $color-text-primary;
-  display: block;
-}
-
-.chapterVideoItemMeta {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  margin-top: 2rpx;
-  display: block;
-}
-
-.chapterVideoNotice {
-  margin-top: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  background: $color-ai-bg;
-  border-radius: $radius-md;
-  border: 1px solid rgba(124, 58, 237, 0.2);
-}
-
-.chapterVideoNoticeText {
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-  display: block;
-}
-
-.chapterVideoBiliLink {
-  font-size: $font-size-xs;
-  color: $color-primary;
-  margin-top: 4rpx;
-  display: block;
-}
-
-// Section (subsection)
-.sectionItem {
-  padding: $spacing-sm $spacing-lg;
-  background: $color-bg-hover;
-  border-top: 1px solid $color-divider;
-}
-
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm 0;
-  cursor: pointer;
-}
-
-.sectionArrow {
-  font-size: 20rpx;
-  color: $color-text-tertiary;
-  width: 32rpx;
-  text-align: center;
-}
-
-.sectionTitle {
-  font-size: $font-size-sm;
-  color: $color-text-primary;
-  font-weight: $font-weight-medium;
-  flex: 1;
-}
-
-.sectionContent {
-  padding: $spacing-sm 0 $spacing-md $spacing-md;
-}
-
-.sectionDesc {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
-  margin-bottom: $spacing-sm;
-}
-
-// Knowledge points block
-.knowledgeBlock {
-  background: rgba(22, 93, 255, 0.05);
-  border-radius: $radius-sm;
-  padding: $spacing-sm $spacing-md;
-  margin-bottom: $spacing-sm;
-}
-
-.knowledgeLabel {
-  font-size: $font-size-xs;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
-}
-
-.knowledgeItem {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-xs;
-  padding: 4rpx 0;
-}
-
-.knowledgeBullet {
-  font-size: 16rpx;
-  color: $color-primary;
-  line-height: $line-height-tight;
-  flex-shrink: 0;
-}
-
-.knowledgeText {
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  flex: 1;
-}
-
-// Case block
-.caseBlock {
-  background: rgba(0, 180, 42, 0.05);
-  border-radius: $radius-sm;
-  padding: $spacing-sm $spacing-md;
-  border-left: 4rpx solid $color-success;
-}
-
-.caseLabel {
-  font-size: $font-size-xs;
-  color: $color-success;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
-}
-
-.caseText {
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
-}
-
-/* 分享解锁 */
+// ---------------- 分享解锁 ----------------
 .unlockCard {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(22, 93, 255, 0.08) 100%);
-  border: 1px solid rgba(124, 58, 237, 0.2);
-  border-radius: $radius-md;
-  padding: $spacing-md $spacing-lg;
-  margin-bottom: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $accent-line;
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.14), rgba(94, 106, 210, 0.02) 60%), $surface-1;
 }
 
 .unlockCardDone {
-  background: $color-bg-card;
-  border-color: rgba(0, 180, 42, 0.3);
-  box-shadow: $shadow-card;
+  border-color: rgba(63, 185, 80, 0.32);
+  background: linear-gradient(180deg, rgba(63, 185, 80, 0.12), rgba(63, 185, 80, 0.02) 60%), $surface-1;
 }
 
 .unlockBadge {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-success;
-  display: block;
-  margin-bottom: $spacing-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-primary-light;
+  letter-spacing: 0.4rpx;
+}
+
+.unlockEmpty {
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+}
+
+.unlockItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid $hairline;
+}
+
+.unlockItemTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $ink;
+}
+
+.unlockItemText {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .unlockGuide {
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-md;
+  font-size: $font-size-sm;
+  color: $ink-muted;
 }
 
 .unlockActions {
   display: flex;
   align-items: center;
   gap: $spacing-md;
+  flex-wrap: wrap;
 }
 
 .unlockBtn {
-  margin: 0;
-  padding: 0 32rpx;
-  height: $button-height-sm;
-  line-height: $button-height-sm;
-  font-size: $font-size-md;
-  color: $color-text-white;
-  background: $gradient-primary;
-  border: none;
-  border-radius: $radius-button;
+  flex: none;
 }
-
-.unlockBtn::after { border: none; }
 
 .unlockManual {
   font-size: $font-size-sm;
-  color: $color-primary;
+  color: $color-primary-light;
+  cursor: pointer;
   text-decoration: underline;
+  text-decoration-color: $accent-line;
+  text-underline-offset: 4rpx;
 }
 
-.unlockEmpty {
+// ---------------- 学习进度 ----------------
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+}
+
+.progressHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.progressLabel {
   font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  color: $ink-muted;
 }
 
-.unlockItem {
-  margin-bottom: $spacing-sm;
-}
-
-.unlockItemTitle {
-  font-size: $font-size-sm;
+.progressValue {
+  font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: 4rpx;
+  color: $color-primary-light;
+  @include tabular;
 }
 
-.unlockItemText {
+.completeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
+}
+
+.completeBtnDone {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid $hairline-strong;
+  box-shadow: none;
+  cursor: default;
+
+  &:hover {
+    filter: none;
+  }
+}
+
+.completeBtnText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: #ffffff;
+}
+
+// ---------------- 课程目录 ----------------
+.sectionTitle {
+  margin-top: $spacing-md;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.2rpx;
+}
+
+.chapterList {
+  display: flex;
+  flex-direction: column;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  background: $surface-1;
+  overflow: hidden;
+}
+
+.chapterItem {
+  & + & {
+    border-top: 1rpx solid $hairline;
+  }
+}
+
+.chapterHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.chapterStatus {
+  flex: none;
+  width: 32rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.statusIcon {
   font-size: $font-size-xs;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
+  color: $ink-subtle;
+}
+
+.chapterInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.chapterTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
+  @include text-ellipsis;
+}
+
+.chapterDuration {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+}
+
+.chapterActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: none;
+}
+
+.chapterDoneBtn,
+.chapterDoneBtnGhost,
+.chapterDetailBtn,
+.chapterVideoBtn,
+.chapterVideoPending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  cursor: pointer;
+  transition: background-color $dur-fast $ease-out, border-color $dur-fast $ease-out;
+  @include focus-ring;
+}
+
+.chapterDoneBtn {
+  background: rgba(63, 185, 80, 0.12);
+  border: 1rpx solid rgba(63, 185, 80, 0.32);
+}
+
+.chapterDoneText {
+  font-size: $font-size-xs;
+  color: $color-success;
+}
+
+.chapterDoneBtnGhost {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid $hairline-strong;
+}
+
+.chapterDoneGhostText {
+  font-size: $font-size-xs;
+  color: $ink-muted;
+}
+
+.chapterDetailBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid $hairline-strong;
+
+  &:hover {
+    border-color: $accent-line;
+  }
+}
+
+.chapterDetailText {
+  font-size: $font-size-xs;
+  color: $ink-muted;
+}
+
+.chapterVideoBtn {
+  background: $accent-soft;
+  border: 1rpx solid $accent-line;
+}
+
+.chapterVideoIcon {
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+}
+
+.chapterVideoPending {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1rpx dashed $hairline-strong;
+  cursor: default;
+}
+
+.chapterVideoPendingText {
+  font-size: $font-size-xs;
+  color: $ink-faint;
+}
+
+.chapterSummary {
+  padding: 0 $spacing-lg $spacing-md;
+}
+
+.chapterSummaryText {
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+}
+
+// 章节内视频列表（本次交付的核心：逐章映射）
+.chapterVideos {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.chapterVideoItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  transition: border-color $dur-fast $ease-out, transform $dur-base $ease-out;
+
+  &:hover {
+    border-color: $accent-line;
+    transform: translateX(3rpx);
+  }
+}
+
+.chapterVideoItemIcon {
+  flex: none;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  background: $accent-soft;
+  color: $color-primary-light;
+  font-size: $font-size-sm;
+}
+
+.chapterVideoItemInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.chapterVideoItemTitle {
+  font-size: $font-size-sm;
+  color: $ink;
+  @include text-ellipsis;
+}
+
+.chapterVideoItemMeta {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
+}
+
+.chapterVideoNotice {
+  margin: 0 $spacing-lg $spacing-lg;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(210, 153, 34, 0.3);
+  background: rgba(210, 153, 34, 0.08);
+}
+
+.chapterVideoNoticeText {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+}
+
+.chapterVideoBiliLink {
+  display: inline-block;
+  margin: 0 $spacing-lg $spacing-lg;
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+}
+
+// ---------------- 小节 ----------------
+.sectionItem {
+  border-top: 1rpx solid $hairline;
+  padding: 0 $spacing-lg;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md 0;
+  cursor: pointer;
+}
+
+.sectionArrow {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  flex: none;
+}
+
+.sectionContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-bottom: $spacing-lg;
+}
+
+.sectionDesc {
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+}
+
+.knowledgeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1rpx solid $hairline;
+}
+
+.knowledgeLabel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-primary-light;
+}
+
+.knowledgeItem {
+  display: flex;
+  gap: 8rpx;
+}
+
+.knowledgeBullet {
+  font-size: $font-size-sm;
+  color: $ink-faint;
+  flex: none;
+}
+
+.knowledgeText {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+}
+
+.caseBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1rpx solid $hairline;
+}
+
+.caseLabel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-warning;
+}
+
+.caseText {
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+}
+
+// ---------------- 相关视频 ----------------
+.videoList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.videoItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
+  }
+}
+
+.videoCover {
+  width: 160rpx;
+  height: 96rpx;
+  border-radius: 10rpx;
+  flex: none;
+  background: $surface-2;
+}
+
+.videoItemInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.videoItemTitle {
+  font-size: $font-size-sm;
+  color: $ink;
+  @include text-ellipsis-multi(2);
+}
+
+.videoItemDuration {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
+}
+
+.videoItemArrow {
+  flex: none;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-round;
+  background: $accent-soft;
+  color: $color-primary-light;
+  font-size: $font-size-xs;
+}
+
+// ============================================================
+// 桌面端：封面左侧 sticky + 正文右侧（页面 grid 分栏，不改 JSX）
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    display: grid;
+    grid-template-columns: 340PX minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 36PX;
+    padding: 0;
+  }
+
+  .navBar,
+  .favBtn {
+    display: none;
+  }
+
+  .cover {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    position: sticky;
+    top: 84PX;
+    height: 220PX;
+    margin-top: 0;
+    border-radius: 14PX;
+  }
+
+  .body {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    padding-top: 0;
+    gap: 18PX;
+  }
+
+  .title {
+    font-size: 30PX;
+    letter-spacing: -0.6PX;
+  }
+
+  .chapterHeader {
+    padding: 18PX 20PX;
+  }
+
+  .chapterActions {
+    gap: 8PX;
+  }
+
+  .videoList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16PX;
+  }
+
+  .sectionItem {
+    padding: 0 20PX;
+  }
 }

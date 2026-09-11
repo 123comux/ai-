@@ -1,4 +1,4 @@
-@use '@/styles/variables.scss' as *;
+﻿@use '@/styles/variables.scss' as *;
 
 .page {
   min-height: 100vh;
@@ -137,7 +137,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(8, 9, 10, 0.72);
   z-index: $z-index-mask;
 }
 
@@ -223,4 +223,55 @@
   font-size: $font-size-md;
   color: $color-text-white;
   font-weight: $font-weight-medium;
+}
+
+// ============================================================
+// 桌面端补丁（≥1024PX）：外壳已提供导航与宽度，这里只做多列与留白
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
+
+  .navBar {
+    display: none;
+  }
+
+  .loadingText,
+  .empty {
+    padding: 48PX 0;
+  }
+  .list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14PX;
+  }
+
+  .item {
+    padding: 18PX 20PX;
+  }
+
+  .addBtn {
+    position: static;
+    width: 200PX;
+    margin: 24PX 0 0;
+  }
+
+  // 底部弹层改为居中对话框
+  .sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 520PX;
+    border-radius: 16PX;
+    border: 1PX solid $hairline-strong;
+  }
+
+  .input,
+  .textarea,
+  .dateInput {
+    font-size: 14PX;
+  }
 }

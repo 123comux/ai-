@@ -1,4 +1,4 @@
-@use '@/styles/variables.scss' as *;
+﻿@use '@/styles/variables.scss' as *;
 
 .page {
   min-height: 100vh;
@@ -98,12 +98,12 @@
 }
 
 .statusDone {
-  background: rgba(0, 180, 42, 0.12);
+  background: rgba(63, 185, 80, 0.12);
   color: $color-success;
 }
 
 .statusDoing {
-  background: rgba(255, 125, 0, 0.12);
+  background: rgba(210, 153, 34, 0.12);
   color: $color-warning;
 }
 
@@ -136,4 +136,40 @@
 .progressInfo {
   font-size: $font-size-sm;
   color: $color-text-tertiary;
+}
+
+// ============================================================
+// 桌面端补丁（≥1024PX）：外壳已提供导航与宽度，这里只做多列与留白
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+  }
+
+  .navBar {
+    display: none;
+  }
+
+  .loadingText,
+  .empty {
+    padding: 48PX 0;
+  }
+  .list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16PX;
+  }
+
+  .card {
+    padding: 20PX;
+  }
+
+  .title {
+    font-size: 17PX;
+  }
+
+  .desc,
+  .progressInfo {
+    max-width: 70ch;
+  }
 }

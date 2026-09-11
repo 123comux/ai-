@@ -5,14 +5,20 @@
     2. 兼容 Vercel 两种 rewrite 行为（见下），保证路由一定能命中；
     3. 补一个 Serverless 友好的默认环境变量。
 
-关于路径兼容（踩坑点，已按「两种行为都能跑」实现）：
-    vercel.json 里把 `/api/:path*` 之类 rewrite 到本函数，Vercel 传给 ASGI 的
-    `scope["path"]` 可能是「原始路径」也可能是「rewrite 目标路径」。
-    因此 vercel.json 的目标统一写成 `/api/index/<原始路径>`，
-    这里再把前缀 `/api/index` 剥掉：
-        /api/courses                  → 原样使用（已经是原始路径）
-        /api/index/api/courses        → 剥前缀 → /api/courses
-    两种情况都能正确命中 FastAPI 路由，不依赖 Vercel 的未文档化细节。
+关于路径兼容（踩坑点，实测结论）：
+    实测发现 Vercel 只把「精确的 /api」路由到本函数，`/api/courses` 这类子路径
+    会直接被边缘节点 404（响应头里没有 hkg1，说明函数根本没执行），
+    rewrite `/api/:path*` → `/api/index/api/:path*` 并不能把子路径送进来。
+    与其猜 Vercel 的 rewrite 语义，不如让调用方把真实路径显式传进来：
+
+        x-original-path:  /api/courses        ← 反向代理（如 Cloudflare Pages Function）写入
+        x-original-query: limit=10&page=2     ← 不含问号
+
+    本中间件看到该头就把 ASGI 的 path / query_string 还原成真实请求，
+    于是函数停在固定入口 `/api/index`，业务路由却完全正常。
+
+    兼容保留：若没有该头，仍按老逻辑剥掉 `/api/index` 前缀，
+    这样直接从 Vercel 访问 `/api/index/xxx` 的旧行为不变。
 """
 
 import os
@@ -29,24 +35,51 @@ from main import app as _app  # noqa: E402
 
 _FUNCTION_PREFIX = "/api/index"
 
+# 反向代理用来告知真实路径的请求头（见模块 docstring）
+_H_PATH = b"x-original-path"
+_H_QUERY = b"x-original-query"
+
 
 class _PathCompat:
-    """ASGI 中间件：剥掉 Vercel 函数路径前缀，还原真实请求路径。"""
+    """ASGI 中间件：还原真实请求路径。
+
+    1) 有 x-original-path（Cloudflare 等反代写入）→ 直接采用，最可靠；
+    2) 否则剥掉 Vercel 函数路径前缀 /api/index（兼容直连 Vercel 的老行为）。
+    """
 
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            path = scope.get("path") or "/"
-            if path.startswith(_FUNCTION_PREFIX):
-                real = path[len(_FUNCTION_PREFIX):] or "/"
+            headers = scope.get("headers") or []
+            incoming = dict(headers)
+            override = incoming.get(_H_PATH)
+
+            real = None
+            query = None
+            if override:
+                real = override.decode("utf-8", "replace") or "/"
                 if not real.startswith("/"):
                     real = "/" + real
+                query = incoming.get(_H_QUERY) or b""
+            else:
+                path = scope.get("path") or "/"
+                if path.startswith(_FUNCTION_PREFIX):
+                    real = path[len(_FUNCTION_PREFIX):] or "/"
+                    if not real.startswith("/"):
+                        real = "/" + real
+
+            if real is not None:
                 scope = dict(scope)
                 scope["path"] = real
-                if scope.get("raw_path"):
-                    scope["raw_path"] = real.encode("utf-8")
+                scope["raw_path"] = real.encode("utf-8")
+                if query is not None:
+                    scope["query_string"] = query
+                if override:
+                    # 内部约定头不外传给业务代码
+                    scope["headers"] = [(k, v) for k, v in headers if k not in (_H_PATH, _H_QUERY)]
+
         await self.app(scope, receive, send)
 
 

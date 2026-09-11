@@ -22,7 +22,6 @@ export async function onRequest(context) {
   const url = new URL(request.url);
 
   const origin = String(env.API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/+$/, '');
-  const target = origin + url.pathname + url.search;
 
   const headers = new Headers(request.headers);
   // Host 必须交给 fetch 按目标地址生成，否则后端会按 pages.dev 处理
@@ -34,6 +33,20 @@ export async function onRequest(context) {
     headers.delete(h);
   }
   headers.set('x-forwarded-proto', 'https');
+
+  // Vercel 的 Serverless 路由只认精确的 /api/index（实测：/api/courses 这类子路径
+  // 会被边缘节点直接 404，函数根本没执行）。所以对 Vercel 目标，我们固定打到
+  // 函数入口，再用请求头把真实路径交给 api/index.py 还原。
+  // 目标不是 Vercel（例如以后换成阿里云函数计算/自建后端）时，按原样透传路径即可。
+  const isVercel = /\.vercel\.app$/i.test(new URL(origin).hostname);
+  let target;
+  if (isVercel) {
+    target = origin + '/api/index';
+    headers.set('x-original-path', url.pathname);
+    headers.set('x-original-query', url.search.startsWith('?') ? url.search.slice(1) : '');
+  } else {
+    target = origin + url.pathname + url.search;
+  }
 
   const init = {
     method: request.method,

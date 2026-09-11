@@ -59,10 +59,14 @@ def _code2session(code: str) -> dict:
 def _resolve_user(code: str, nickname: str, avatar: str) -> dict:
     """Resolve (create or fetch) the user for a login code.
 
-    In DEV_MODE (or when AppID/Secret are not configured) any code is accepted
-    and mapped to a deterministic dev openid, so the app is fully usable locally.
+    DEV_MODE=true（本地开发）：任意 code 都接受，映射成确定的 dev_<code> 账号，
+    这样本地不需要真微信凭据也能跑通全流程。
+
+    DEV_MODE=false（线上）：必须真正调用 jscode2session 换取 openid；
+    **未配置 AppID/Secret 时直接拒绝**——绝不允许「任意 code 换 token」，
+    否则等于在公网上开了一个免密开户/白拿 token 的口子（2026-09 实测发现并修复）。
     """
-    if DEV_MODE or not WECHAT_APPID or not WECHAT_SECRET:
+    if DEV_MODE:
         openid = f"dev_{code}"
         user = get_user_by_openid(openid)
         if user is None:
@@ -72,6 +76,12 @@ def _resolve_user(code: str, nickname: str, avatar: str) -> dict:
                 avatar=avatar or "",
             )
         return user
+
+    if not WECHAT_APPID or not WECHAT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="微信登录未配置（缺少 WECHAT_APPID / WECHAT_SECRET），请使用手机号登录",
+        )
 
     # Real WeChat login
     wx = _code2session(code)

@@ -11,14 +11,38 @@
  * 目标后端通过环境变量 API_ORIGIN 配置（Pages 项目 → Settings → Environment variables）：
  *   API_ORIGIN = https://你的后端域名        # 默认值为下面这个 Vercel 生产地址
  *
+ * 边缘缓存（2026-09 新增）：
+ *   回源实测 4.8–14.3 秒（Vercel hkg1 冷启动 + 新加坡 TiDB），因此对**匿名只读接口**做边缘缓存。
+ *   实现要点（踩过的坑）：
+ *     1) 本代理把所有请求收敛到出站 URL `/api/index`，真实路径放在请求头里 →
+ *        依赖默认缓存键（出站 URL）会把所有接口撞成同一条缓存，
+ *        `/api/videos` 会拿到 `/api/content/banners` 的数据。
+ *     2) `init.cf.cacheKey` 在 Pages Functions 上不可靠，因此改为**显式 Cache API**
+ *        （caches.default + 以"客户端请求 URL"为键），行为确定、可验证。
+ *     3) 带 Authorization 的请求一律不缓存（可能含个人进度数据，避免串号）。
+ *
  * 部署位置（仓库根目录，Pages 会自动识别）：
  *   functions/api/[[path]].js
  */
 
 const DEFAULT_API_ORIGIN = 'https://ai-nine-inky.vercel.app';
 
+/** 匿名只读接口白名单：命中才进边缘缓存 */
+const CACHEABLE = [
+  /^\/api$/,
+  /^\/api\/courses(\/|$)/,
+  /^\/api\/videos(\/|$)/,
+  /^\/api\/projects(\/|$)/,
+  /^\/api\/learning-paths(\/|$)/,
+  /^\/api\/content\//,
+  /^\/api\/ai\/models$/,
+  /^\/api\/assessment\/questions$/
+];
+
+const CACHE_SECONDS = 60;
+
 export async function onRequest(context) {
-  const { request, env } = context;
+  const { request, env, waitUntil } = context;
   const url = new URL(request.url);
 
   const origin = String(env.API_ORIGIN || DEFAULT_API_ORIGIN).replace(/\/+$/, '');
@@ -33,6 +57,22 @@ export async function onRequest(context) {
     headers.delete(h);
   }
   headers.set('x-forwarded-proto', 'https');
+
+  // ---- 边缘缓存：只缓存匿名 GET 白名单 ----
+  const anonymous = !headers.get('authorization');
+  const cacheable = request.method === 'GET' && anonymous && CACHEABLE.some((re) => re.test(url.pathname));
+  // 缓存键 = 客户端看到的完整 URL（含 query），因此每个接口、每种查询各自一条缓存
+  const cacheKey = cacheable ? new Request(url.toString(), { method: 'GET' }) : null;
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+
+  if (cacheKey && cache) {
+    const hit = await cache.match(cacheKey);
+    if (hit) {
+      const hitHeaders = new Headers(hit.headers);
+      hitHeaders.set('x-edge-cache', 'HIT');
+      return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers: hitHeaders });
+    }
+  }
 
   // Vercel 的 Serverless 路由只认精确的 /api/index（实测：/api/courses 这类子路径
   // 会被边缘节点直接 404，函数根本没执行）。所以对 Vercel 目标，我们固定打到
@@ -74,6 +114,21 @@ export async function onRequest(context) {
     outHeaders.delete(h);
   }
   outHeaders.set('x-proxied-to', origin);
+
+  if (cacheKey && cache && res.ok) {
+    outHeaders.set('cache-control', `public, max-age=30, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=300`);
+    outHeaders.set('x-edge-cache', 'MISS');
+    const payload = new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: outHeaders,
+    });
+    // 写缓存不阻塞响应（Pages Functions 提供 waitUntil）
+    const put = cache.put(cacheKey, payload.clone());
+    if (typeof waitUntil === 'function') waitUntil(put);
+    else await put;
+    return payload;
+  }
 
   return new Response(res.body, {
     status: res.status,

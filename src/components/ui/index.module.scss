@@ -1,0 +1,346 @@
+// ============================================================
+// 通用 UI 原语样式（token 驱动；换主题只需改 src/styles/theme.scss）
+// 形状锁：面板/卡片 16rpx(桌面 14PX)，按钮与标签全圆角。
+// ============================================================
+@use '@/styles/variables.scss' as *;
+
+// ---------------- Button ----------------
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  height: $button-height-md;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-button;
+  border: 1rpx solid transparent;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out, background-color $dur-fast $ease-out,
+    border-color $dur-fast $ease-out, box-shadow $dur-fast $ease-out;
+  user-select: none;
+  @include focus-ring;
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
+}
+
+.btnLabel {
+  line-height: 1;
+}
+
+.btn_sm {
+  height: 64rpx;
+  padding: 0 $spacing-md;
+  font-size: $font-size-sm;
+}
+
+.btn_lg {
+  height: 96rpx;
+  padding: 0 $spacing-xl;
+  font-size: $font-size-lg;
+}
+
+.btn_primary {
+  color: #ffffff;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+}
+
+.btn_ghost {
+  color: $ink;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: $hairline-strong;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+.btn_subtle {
+  color: $ink-muted;
+  background: transparent;
+  border-color: transparent;
+  padding: 0 $spacing-sm;
+
+  &:hover {
+    color: $ink;
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.btn_danger {
+  color: #ffffff;
+  background: linear-gradient(135deg, #b62324 0%, $color-error 100%);
+}
+
+.btnBlock {
+  display: flex;
+  width: 100%;
+}
+
+.btnDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.btnSpinner {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  border: 3rpx solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: ui-spin 0.7s linear infinite;
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ---------------- Panel ----------------
+.panel {
+  position: relative;
+  background: $surface-1;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+.panelPadded {
+  padding: $spacing-lg;
+}
+
+.panelSpotlight {
+  @include spotlight(16rpx);
+}
+
+// ---------------- Tag ----------------
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 $spacing-sm;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  letter-spacing: 0.3rpx;
+  border: 1rpx solid transparent;
+}
+
+.tag_neutral {
+  color: $ink-muted;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: $hairline;
+}
+
+.tag_accent {
+  color: $color-primary-light;
+  background: $accent-soft;
+  border-color: $accent-line;
+}
+
+.tag_success {
+  color: $color-success;
+  background: rgba(63, 185, 80, 0.12);
+  border-color: rgba(63, 185, 80, 0.32);
+}
+
+.tag_warning {
+  color: $color-warning;
+  background: rgba(210, 153, 34, 0.12);
+  border-color: rgba(210, 153, 34, 0.32);
+}
+
+// ---------------- SectionHeader ----------------
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin: $spacing-xl 0 $spacing-md;
+}
+
+.sectionTitleWrap {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.2rpx;
+}
+
+.sectionHint {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+}
+
+.sectionAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  cursor: pointer;
+  transition: color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    color: $color-primary-light;
+  }
+}
+
+.sectionActionArrow {
+  transition: transform $dur-fast $ease-out;
+
+  .sectionAction:hover & {
+    transform: translateX(3rpx);
+  }
+}
+
+// ---------------- Stat ----------------
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 44rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  line-height: 1.1;
+  letter-spacing: -0.6rpx;
+  @include tabular;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+}
+
+.statHint {
+  font-size: $font-size-xs;
+  color: $ink-faint;
+}
+
+// ---------------- Skeleton ----------------
+.skeleton {
+  width: 100%;
+  @include skeleton(12rpx);
+}
+
+// ---------------- EmptyState ----------------
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+}
+
+.emptyGlyph {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  border: 2rpx dashed $hairline-strong;
+  background: radial-gradient(circle at 50% 30%, rgba(124, 136, 232, 0.18), transparent 70%);
+}
+
+.emptyError .emptyGlyph {
+  border-color: rgba(248, 81, 73, 0.45);
+  background: radial-gradient(circle at 50% 30%, rgba(248, 81, 73, 0.18), transparent 70%);
+}
+
+.emptyTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
+}
+
+.emptyDesc {
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+  max-width: 30em;
+  line-height: $line-height-normal;
+}
+
+// ---------------- Reveal ----------------
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 20rpx, 0);
+  transition: opacity $dur-slow $ease-out, transform $dur-slow $ease-out;
+  will-change: opacity, transform;
+}
+
+.revealIn {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .revealIn {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+// ---------------- 桌面端微调 ----------------
+@media (min-width: 1024PX) {
+  .btn {
+    height: 38PX;
+    padding: 0 18PX;
+    font-size: 13.5PX;
+    gap: 8PX;
+  }
+
+  .btn_sm {
+    height: 30PX;
+    padding: 0 12PX;
+    font-size: 12.5PX;
+  }
+
+  .btn_lg {
+    height: 44PX;
+    padding: 0 26PX;
+    font-size: 15PX;
+  }
+
+  .panel {
+    border-radius: 14PX;
+  }
+
+  .panelPadded {
+    padding: 20PX;
+  }
+
+  .sectionTitle {
+    font-size: 17PX;
+  }
+
+  .statValue {
+    font-size: 30PX;
+  }
+
+  .reveal {
+    transform: translate3d(0, 14PX, 0);
+  }
+}

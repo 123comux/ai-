@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useUserStore } from '@/store/useUserStore';
+import { Button } from '@/components/ui';
 import styles from './index.module.scss';
 
 
@@ -252,15 +253,12 @@ export default function AppShell({ children }: { children?: React.ReactNode }) {
         <View className={styles.topbar}>
           <Text className={styles.topbarTitle}>{title}</Text>
           <View className={styles.topbarActions}>
-            <View className={styles.ghostBtn} onClick={() => go(SECONDARY[0])}>
-              <View className={styles.navIcon}>
-                <Icon name="spark" />
-              </View>
-              <Text>问 AI 导师</Text>
-            </View>
-            <View className={styles.primaryBtn} onClick={() => go(SECONDARY[1])}>
-              <Text>开始能力测评</Text>
-            </View>
+            <Button tone="ghost" size="sm" onClick={() => go(SECONDARY[0])}>
+              问 AI 导师
+            </Button>
+            <Button size="sm" onClick={() => go(SECONDARY[1])}>
+              开始能力测评
+            </Button>
           </View>
         </View>
         <View className={styles.content}>{children}</View>

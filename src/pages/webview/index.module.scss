@@ -1,10 +1,10 @@
-@use '@/styles/variables.scss' as *;
+﻿@use '@/styles/variables.scss' as *;
 
 .page {
   position: relative;
   width: 100%;
   height: 100vh;
-  background: #fff;
+  background: $canvas;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -47,4 +47,16 @@
   text-align: center;
   font-size: $font-size-md;
   color: $color-text-tertiary;
+}
+
+// ============================================================
+// 桌面端补丁（≥1024PX）：webview 需要保留返回入口，因此不隐藏导航栏
+// ============================================================
+@media (min-width: 1024PX) {
+  .webview {
+    height: calc(100dvh - 160PX);
+    border-radius: 14PX;
+    border: 1PX solid $hairline;
+    overflow: hidden;
+  }
 }

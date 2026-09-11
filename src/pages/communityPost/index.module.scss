@@ -143,3 +143,36 @@
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
 }
+
+// ============================================================
+// 桌面端补丁（≥1024PX）
+// ============================================================
+@media (min-width: 1024PX) {
+  .navBar {
+    display: none;
+  }  .page {
+    padding: 0;
+    max-width: 820PX;
+  }
+
+  .card {
+    padding: 24PX;
+  }
+
+  .title {
+    font-size: 24PX;
+  }
+
+  .content {
+    font-size: 15PX;
+    max-width: 78ch;
+  }
+
+  .replyItem {
+    padding: 16PX 0;
+  }
+
+  .replyInput {
+    font-size: 14PX;
+  }
+}

@@ -212,3 +212,33 @@
   font-size: $font-size-sm;
   color: $color-text-secondary;
 }
+// ============================================================
+// 桌面端补丁（≥1024PX）
+// ============================================================
+@media (min-width: 1024PX) {
+  .navBar {
+    display: none;
+  }  .page {
+    padding: 0;
+    max-width: 860PX;
+  }
+
+  .inputBox {
+    min-height: 120PX;
+  }
+
+  .skillList,
+  .gapList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10PX;
+  }
+
+  .recommendChips {
+    flex-wrap: wrap;
+  }
+
+  .matchScoreValue {
+    font-size: 40PX;
+  }
+}

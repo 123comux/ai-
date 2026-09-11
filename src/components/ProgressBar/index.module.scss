@@ -1,14 +1,25 @@
+// ProgressBar（暗色）：轨道用极低对比的白，填充用强调色渐变 + 平滑过渡
 @use '@/styles/variables.scss' as *;
 
 .progressBar {
-  width: 100%;
-  background-color: $color-bg-hover;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 10rpx;
   border-radius: $radius-round;
+  background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
 .fill {
+  height: 100%;
   border-radius: $radius-round;
-  transition: width $transition-base;
-  background-color: $color-primary;
+  background: $gradient-primary;
+  transition: width $dur-slow $ease-out;
+}
+
+@media (min-width: 1024PX) {
+  .progressBar {
+    height: 8PX;
+  }
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import classnames from 'classnames';
 import ProgressBar from '@/components/ProgressBar';
-import { getDifficultyLabel, getDifficultyColor } from '@/utils/index';
+import { getDifficultyLabel } from '@/utils/index';
 import type { Project } from '@/types/index';
 import styles from './index.module.scss';
 
@@ -12,8 +12,6 @@ interface ProjectCardProps {
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
-  const diffColor = getDifficultyColor(project.difficulty);
-
   return (
     <View
       className={classnames(styles.card, project.status === 'locked' && styles.locked)}
@@ -23,7 +21,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
         <Image className={styles.cover} src={project.coverImg} mode="aspectFill" />
         {project.status === 'locked' && (
           <View className={styles.lockOverlay}>
-            <Text className={styles.lockIcon}>🔒</Text>
+            <Text className={styles.lockIcon}>完成前置项目后解锁</Text>
           </View>
         )}
       </View>
@@ -31,8 +29,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
         <Text className={styles.title}>{project.title}</Text>
         <Text className={styles.desc}>{project.description}</Text>
         <View className={styles.tags}>
-          <View className={styles.tag} style={{ backgroundColor: `${diffColor}18` }}>
-            <Text className={styles.tagText} style={{ color: diffColor }}>
+          <View className={styles.tag}>
+            <Text className={styles.tagText}>
               {getDifficultyLabel(project.difficulty)}
             </Text>
           </View>

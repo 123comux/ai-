@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components';
+﻿import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useAccessStore, formatTrialRemaining } from '@/store/useAccessStore';
 import type { AccessConfig } from '@/types/index';
@@ -58,7 +58,7 @@ export default function AccessGate() {
     return (
       <View className={styles.lockMask}>
         <View className={styles.lockCard}>
-          <View className={styles.lockIcon}>🔒</View>
+          <View className={styles.lockIcon}>已锁定</View>
           <Text className={styles.lockTitle}>试用期已结束</Text>
           <Text className={styles.lockDesc}>
             为了保障学习效果，试用期结束后需缴纳押金 {amount} 才能继续使用全部功能。完成七阶段学习与考核达标后，押金将全额原路退还，请放心。
@@ -131,10 +131,10 @@ export default function AccessGate() {
 
           <View className={styles.sectionTitle}>押金与退还政策</View>
           <View className={styles.policyCard}>
-            <View className={styles.policyRow}><Text className={styles.policyLabel}>💰 押金金额</Text><Text className={styles.policyText}>{amount} / 一次缴纳</Text></View>
-            <View className={styles.policyRow}><Text className={styles.policyLabel}>✅ 达标退还</Text><Text className={styles.policyText}>{cfg.refund_rules.amount}，{cfg.refund_rules.timing}</Text></View>
-            <View className={styles.policyRow}><Text className={styles.policyLabel}>🎯 未达标</Text><Text className={styles.policyText}>{cfg.refund_rules.failed}</Text></View>
-            <View className={styles.policyRow}><Text className={styles.policyLabel}>🛡️ 诚信保障</Text><Text className={styles.policyText}>{cfg.refund_rules.anti_fraud}</Text></View>
+            <View className={styles.policyRow}><Text className={styles.policyLabel}>押金金额</Text><Text className={styles.policyText}>{amount} / 一次缴纳</Text></View>
+            <View className={styles.policyRow}><Text className={styles.policyLabel}>达标退还</Text><Text className={styles.policyText}>{cfg.refund_rules.amount}，{cfg.refund_rules.timing}</Text></View>
+            <View className={styles.policyRow}><Text className={styles.policyLabel}>未达标处理</Text><Text className={styles.policyText}>{cfg.refund_rules.failed}</Text></View>
+            <View className={styles.policyRow}><Text className={styles.policyLabel}>诚信保障</Text><Text className={styles.policyText}>{cfg.refund_rules.anti_fraud}</Text></View>
           </View>
         </View>
 

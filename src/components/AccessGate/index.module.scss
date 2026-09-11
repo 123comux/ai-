@@ -1,246 +1,326 @@
+// AccessGate（暗色）：首启说明弹窗 + 试用到期锁定遮罩
+// 弹窗是"浮层"，用玻璃材质（backdrop-filter + 内高光），不靠纯黑阴影
 @use '@/styles/variables.scss' as *;
 
-/* 通用蒙层（导语弹窗 + 锁定遮罩共用）
-   微信端：用四向 0 铺满视口（不用 vw/vh——小程序 vh 不可靠，会导致遮罩/卡片尺寸异常）；
-   极高 z-index 盖过页面层 */
-.mask {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-lg;
-  box-sizing: border-box;
-}
-
-/* —— 导语弹窗 —— */
-.card {
-  width: 100%;
-  max-width: 640rpx;
-  /* 不用 vh：用百分比相对遮罩(视口)高度，微信端才可靠；配合 body 滚动，footer 固定可见 */
-  max-height: 88%;
-  background: $color-bg-card;
-  border-radius: $radius-xl;
-  box-shadow: $shadow-popup;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.header {
-  padding: $spacing-lg $spacing-lg $spacing-sm;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border-bottom: 1rpx solid $color-border;
-  flex-shrink: 0;
-}
-
-.brand {
-  font-size: $font-size-xxl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-}
-
-.subtitle {
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-  margin-top: $spacing-xs;
-}
-
-/* 状态章 */
-.statusChip {
-  margin: $spacing-md $spacing-lg 0;
-  padding: $spacing-sm $spacing-md;
-  border-radius: $radius-sm;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.statusDot {
-  margin-right: $spacing-xs;
-  font-size: $font-size-xs;
-}
-
-.statusOk   { background: rgba($color-success, 0.1); color: $color-success; }
-.statusWarn { background: rgba($color-warning, 0.12); color: $color-warning; }
-.statusLocked { background: rgba($color-error, 0.1); color: $color-error; }
-
-.body {
-  flex: 1;
-  min-height: 0;
-  padding: $spacing-lg;
-  box-sizing: border-box;
-  /* 卡片超高时内部滚动，保证 footer 按钮固定在底部可见 */
-  overflow-y: auto;
-}
-
-.usageIntro {
-  font-size: $font-size-md;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  display: block;
-}
-
-.sectionTitle {
-  margin: $spacing-lg 0 $spacing-md;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-}
-
-/* 功能图文 2 列网格 */
-.grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-
-.gridItem {
-  width: 48%;
-  background: $color-bg-hover;
-  border-radius: $radius-md;
-  padding: $spacing-md;
-  margin-bottom: $spacing-md;
-  box-sizing: border-box;
-}
-
-.gridIcon {
-  font-size: $font-size-xl;
-  display: block;
-}
-
-.gridTitle {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  margin-top: $spacing-xs;
-}
-
-.gridDesc {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  line-height: $line-height-normal;
-  display: block;
-  margin-top: $spacing-xs;
-}
-
-/* 押金与退还政策卡片 */
-.policyCard {
-  background: $color-bg-hover;
-  border-radius: $radius-md;
-  padding: $spacing-md;
-}
-
-.policyRow {
-  display: flex;
-  padding: $spacing-sm 0;
-}
-
-.policyLabel {
-  width: 160rpx;
-  flex-shrink: 0;
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  font-weight: $font-weight-medium;
-}
-
-.policyText {
-  flex: 1;
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  line-height: $line-height-normal;
-}
-
-.footer {
-  padding: $spacing-lg;
-  border-top: 1rpx solid $color-border;
-  flex-shrink: 0;
-}
-
-.primaryBtn {
-  height: $button-height-lg;
-  border-radius: $radius-button;
-  background: $gradient-primary;
-  color: $color-text-white;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.secondaryBtn {
-  height: $button-height-md;
-  margin-top: $spacing-md;
-  border-radius: $radius-button;
-  background: $color-bg-hover;
-  color: $color-text-secondary;
-  font-size: $font-size-md;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* —— 锁定全屏遮罩 —— */
+// ---------------- 锁定遮罩 ----------------
 .lockMask {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: $color-bg-page;
-  z-index: 99999;
+  inset: 0;
+  z-index: $z-index-overlay;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: $spacing-lg;
+  background: rgba(8, 9, 10, 0.86);
+  backdrop-filter: blur(14rpx);
+  -webkit-backdrop-filter: blur(14rpx);
 }
 
 .lockCard {
-  width: 100%;
-  max-width: 560rpx;
-  background: $color-bg-card;
-  border-radius: $radius-xl;
-  box-shadow: $shadow-card;
-  padding: $spacing-xl $spacing-lg;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 560rpx;
+  padding: $spacing-xl $spacing-lg;
   text-align: center;
+  background: $surface-1;
+  border: 1rpx solid $hairline;
+  border-radius: 20rpx;
+  box-shadow: $shadow-popup;
 }
 
 .lockIcon {
-  font-size: 88rpx;
-  margin-bottom: $spacing-md;
+  padding: 8rpx 20rpx;
+  border-radius: $radius-round;
+  border: 1rpx solid $hairline-strong;
+  font-size: $font-size-xs;
+  color: $ink-muted;
 }
 
 .lockTitle {
   font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-md;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.4rpx;
 }
 
 .lockDesc {
-  font-size: $font-size-md;
-  color: $color-text-secondary;
-  line-height: $line-height-loose;
-  margin-bottom: $spacing-lg;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .lockBtn {
-  height: $button-height-lg;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  height: $button-height-md;
+  margin-top: $spacing-sm;
   border-radius: $radius-button;
   background: $gradient-primary;
-  color: $color-text-white;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
+  color: #ffffff;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  box-shadow: $shadow-accent;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
+}
+
+// ---------------- 首启说明弹窗 ----------------
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: $z-index-overlay;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: $spacing-lg;
+  background: rgba(8, 9, 10, 0.72);
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640rpx;
+  max-height: 84vh;
+  overflow: hidden;
+  background: rgba(15, 16, 17, 0.96);
+  border: 1rpx solid $hairline-strong;
+  border-radius: 24rpx;
+  box-shadow: $shadow-popup;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-lg $spacing-md;
+  border-bottom: 1rpx solid $hairline;
+}
+
+.brand {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.2rpx;
+}
+
+.subtitle {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: $spacing-lg;
+}
+
+// 状态条：chip + 圆点（圆点在此处表示真实状态，属于允许的语义用法）
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  height: 44rpx;
+  padding: 0 16rpx;
+  margin: 0 10rpx 10rpx 0;
+  border-radius: $radius-round;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.statusDot {
+  font-size: 16rpx;
+  line-height: 1;
+}
+
+.statusOk {
+  border-color: rgba(63, 185, 80, 0.32);
+  background: rgba(63, 185, 80, 0.1);
+
+  .statusDot {
+    color: $color-success;
+  }
+}
+
+.statusWarn {
+  border-color: rgba(210, 153, 34, 0.32);
+  background: rgba(210, 153, 34, 0.1);
+
+  .statusDot {
+    color: $color-warning;
+  }
+}
+
+.statusLocked {
+  border-color: rgba(248, 81, 73, 0.32);
+  background: rgba(248, 81, 73, 0.1);
+
+  .statusDot {
+    color: $color-error;
+  }
+}
+
+.usageIntro {
+  display: block;
+  margin: $spacing-md 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
+}
+
+.sectionTitle {
+  margin: $spacing-lg 0 $spacing-md;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: $spacing-md;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.gridIcon {
+  font-size: $font-size-lg;
+  line-height: 1;
+}
+
+.gridTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $ink;
+}
+
+.gridDesc {
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $ink-subtle;
+}
+
+.policyCard {
+  display: flex;
+  flex-direction: column;
+  border: 1rpx solid $hairline;
+  border-radius: 14rpx;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.policyRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+
+  & + & {
+    border-top: 1rpx solid $hairline;
+  }
+}
+
+.policyLabel {
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  flex: none;
+}
+
+.policyText {
+  font-size: $font-size-sm;
+  color: $ink;
+  text-align: right;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+  border-top: 1rpx solid $hairline;
+  @include safe-area-bottom($spacing-lg);
+}
+
+.primaryBtn,
+.secondaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out, background-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
+}
+
+.primaryBtn {
+  color: #ffffff;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+}
+
+.secondaryBtn {
+  color: $ink-muted;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid $hairline-strong;
+
+  &:hover {
+    color: $ink;
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+@media (min-width: 1024PX) {
+  .card {
+    max-width: 720PX;
+    max-height: 86vh;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .header,
+  .body,
+  .footer {
+    padding: 20PX 24PX;
+  }
 }

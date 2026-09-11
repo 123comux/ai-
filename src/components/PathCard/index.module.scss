@@ -1,36 +1,57 @@
+// PathCard（暗色）：方向徽标 + 标题 + 进度条，密集但不拥挤
 @use '@/styles/variables.scss' as *;
 
 .card {
-  background: $color-bg-card;
-  border-radius: $radius-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
   padding: $spacing-lg;
-  box-shadow: $shadow-card;
+  background: $surface-1;
+  border: 1rpx solid $hairline;
+  border-radius: 16rpx;
+  cursor: pointer;
+  transition: transform $dur-base $ease-out, border-color $dur-base $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    transform: translateY(-3rpx);
+    border-color: $accent-line;
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.995);
+  }
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: $spacing-sm;
+  gap: $spacing-sm;
 }
 
 .directionBadge {
-  background: $color-ai-bg;
-  padding: 4rpx 16rpx;
+  display: inline-flex;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 16rpx;
   border-radius: $radius-round;
+  background: $accent-soft;
+  border: 1rpx solid $accent-line;
 }
 
 .directionText {
-  font-size: $font-size-sm;
-  color: $color-ai;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-primary-light;
 }
 
 .title {
-  display: block;
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-md;
+  line-height: 1.35;
+  letter-spacing: -0.2rpx;
+  color: $ink;
 }
 
 .progressWrap {
@@ -40,7 +61,19 @@
 }
 
 .progressText {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  white-space: nowrap;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  flex: none;
+  @include tabular;
+}
+
+@media (min-width: 1024PX) {
+  .card {
+    padding: 20PX;
+    border-radius: 14PX;
+  }
+
+  .title {
+    font-size: 16PX;
+  }
 }

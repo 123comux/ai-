@@ -5,7 +5,7 @@
 | 项 | 值 |
 | --- | --- |
 | 正式地址 | <https://ai-h5.pages.dev> |
-| 本次生产部署 ID | `498f281b`（本次部署预览地址 https://498f281b.ai-h5.pages.dev） |
+| 本次生产部署 ID | 最新 `05b9f06a`（含桌面隐藏 tab 栏修复）；首版 `498f281b` |
 | 部署方式 | `npx wrangler pages deploy dist-h5 --project-name ai-h5 --branch main`（Direct Upload，非 Git 集成） |
 | 构建 | `npm run build:vercel`（= `taro build --type h5` + 拷 `backend/static` → `dist-h5/static`，40 个文件） |
 | 线上验收 | `powershell -File tools/check-live-curl.ps1 -Base https://ai-h5.pages.dev` → **24/24 通过** |

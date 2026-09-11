@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from database import (
     query_all, query_one, insert_row, update_row, delete_row, parse_json_field, get_connection,
-    save_admin_session, get_admin_session, delete_admin_session,
+    save_admin_session, get_admin_session, delete_admin_session, set_admin_password,
 )
 from cache import clear as cache_clear
 
@@ -98,7 +98,7 @@ def change_admin_password(body: ChangePasswordRequest, request: Request):
         raise HTTPException(401, "原口令不正确")
 
     new_hash = hashlib.sha256(body.new_password.encode()).hexdigest()
-    if not update_row("admin_users", users[0]["id"], {"password_hash": new_hash}):
+    if not set_admin_password(username, new_hash):
         raise HTTPException(500, "口令更新失败")
     return {"ok": True, "message": "口令已更新，请用新口令重新登录其它设备"}
 

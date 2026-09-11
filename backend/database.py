@@ -598,9 +598,15 @@ def insert_row(table: str, data: dict) -> int:
     return last_id
 
 
-def update_row(table: str, id_value: Any, data: dict) -> bool:
-    """Update a row by id."""
-    data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def update_row(table: str, id_value: Any, data: dict, touch_updated_at: bool = True) -> bool:
+    """Update a row by id.
+
+    touch_updated_at=False 用于**没有 updated_at 列**的表（如 admin_users），
+    否则会自动往 SET 里塞 updated_at，报 "no such column: updated_at"。
+    """
+    data = dict(data)
+    if touch_updated_at:
+        data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sets = ", ".join(f"{k}=?" for k in data)
     conn = get_connection()
     cur = conn.execute(
@@ -624,6 +630,22 @@ def delete_row(table: str, id_value: Any) -> bool:
 
 
 # ============ 后台管理员会话（token 持久化） ============
+
+def set_admin_password(username: str, password_hash: str) -> bool:
+    """按用户名更新管理员口令哈希。
+
+    不走 update_row()：admin_users 表没有 updated_at 列，
+    而 update_row 会无条件写入该列（no such column: updated_at）。
+    """
+    conn = get_connection()
+    cur = conn.execute(
+        "UPDATE admin_users SET password_hash=? WHERE username=?",
+        (password_hash, username),
+    )
+    conn.commit()
+    affected = cur.rowcount > 0
+    conn.close()
+    return affected
 
 def save_admin_session(token: str, username: str, role: str, expires_at: str) -> None:
     """写一条管理员会话（token 存库，后端重启不失效）。"""

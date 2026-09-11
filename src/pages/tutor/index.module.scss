@@ -1,167 +1,254 @@
+// AI 导师对话页（暗色）
+// 结构：navBar + 可滚动消息区 + 底部固定输入栏
+// 移动端：整屏高度，消息区自己滚；桌面端：消息区与输入栏居中（max 820PX），导航栏隐藏
 @use '@/styles/variables.scss' as *;
 
-// ====== 整页：不用 flex column，避免 Taro H5 的高度挤压问题 ======
 .page {
-  position: relative;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   background: $gradient-page;
-  overflow: hidden;
-  box-sizing: border-box;
+  background-attachment: fixed;
 }
 
-// ====== 顶部导航（固定高度 110rpx） ======
+@supports (height: 100dvh) {
+  .page {
+    height: 100dvh;
+  }
+}
+
+// ---------------- 顶栏 ----------------
 .navBar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 110rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 $spacing-lg;
-  background: $color-bg-card;
-  border-bottom: 1px solid $color-border;
-  box-sizing: border-box;
-  z-index: 10;
+  flex: none;
+  height: 88rpx;
+  padding: 0 $page-padding;
+  border-bottom: 1rpx solid $hairline;
+  background: rgba(15, 16, 17, 0.72);
+  backdrop-filter: blur(16rpx);
+  -webkit-backdrop-filter: blur(16rpx);
 }
 
 .navBack {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 140rpx;
-  height: 110rpx;
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-  white-space: nowrap;
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  cursor: pointer;
+
+  &:hover {
+    color: $ink;
+  }
 }
 
 .navTitle {
-  flex: 1;
-  text-align: center;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
 }
 
 .navRight {
-  min-width: 140rpx;
-  height: 110rpx;
+  width: 80rpx;
 }
 
-// ====== 消息区：高度 = 整屏高 - 顶部(110) - 底部(150)，精确计算 ======
+// ---------------- 消息区 ----------------
 .messages {
-  position: absolute;
-  top: 110rpx;
-  left: 0;
-  right: 0;
-  bottom: 150rpx;
-  padding: $spacing-md $spacing-lg;
-  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  padding: $spacing-lg $page-padding;
   overflow-y: auto;
-  z-index: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
 
 .msg {
-  width: 100%;
-  margin-bottom: $spacing-md;
   display: flex;
-  box-sizing: border-box;
+  margin-bottom: $spacing-md;
+  animation: bubble-in $dur-base $ease-out;
 }
 
-.msgUser {
-  justify-content: flex-end;
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .msgAi {
   justify-content: flex-start;
 }
 
-.bubbleUser {
-  max-width: 80%;
-  background: $gradient-primary;
-  border-radius: $radius-md $radius-md 0 $radius-md;
-  padding: $spacing-sm $spacing-md;
-  box-sizing: border-box;
+.msgUser {
+  justify-content: flex-end;
 }
 
+.bubbleAi,
+.bubbleUser {
+  max-width: 78%;
+  padding: $spacing-md $spacing-lg;
+  border-radius: 18rpx;
+  font-size: $font-size-md;
+  line-height: 1.7;
+}
+
+// AI：表面色 + hairline，左上角收紧（会话气泡的"来源方向"）
 .bubbleAi {
-  max-width: 80%;
-  background: $color-bg-card;
-  border-radius: $radius-md $radius-md $radius-md 0;
-  padding: $spacing-sm $spacing-md;
-  box-shadow: $shadow-card;
-  box-sizing: border-box;
+  background: $surface-1;
+  border: 1rpx solid $hairline;
+  border-top-left-radius: 6rpx;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+// 用户：强调色渐变，右上角收紧
+.bubbleUser {
+  background: $gradient-primary;
+  border-top-right-radius: 6rpx;
+  box-shadow: $shadow-accent;
 }
 
 .bubbleText {
   font-size: $font-size-md;
-  color: $color-text-primary;
-  line-height: $line-height-normal;
+  line-height: 1.7;
+  color: $ink;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 
-.msgUser .bubbleText {
-  color: $color-text-white;
+.bubbleUser .bubbleText {
+  color: #ffffff;
 }
 
-// ====== 底部输入栏（固定高度 150rpx） ======
+// ---------------- 输入栏 ----------------
 .inputBar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 150rpx;
-  @include safe-area-height(150rpx);
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-md $spacing-lg;
+  flex: none;
+  padding: $spacing-md $page-padding;
+  border-top: 1rpx solid $hairline;
+  background: rgba(15, 16, 17, 0.86);
+  backdrop-filter: blur(16rpx);
+  -webkit-backdrop-filter: blur(16rpx);
   @include safe-area-bottom($spacing-md);
-  border-top: 1px solid $color-border;
-  background: $color-bg-card;
-  box-sizing: border-box;
-  z-index: 10;
 }
 
 .input {
   flex: 1;
-  height: 84rpx;
-  min-height: 84rpx;
-  background: $color-bg-hover;
-  border-radius: $radius-button;
-  padding: 0 $spacing-md;
+  min-width: 0;
+  height: 80rpx;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-round;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.04);
+  color: $ink;
   font-size: $font-size-md;
-  box-sizing: border-box;
-  display: block;
+  transition: border-color $dur-fast $ease-out;
+
+  &:focus {
+    border-color: $accent-line;
+  }
+
+  &::placeholder {
+    color: $ink-faint;
+  }
 }
 
 .sendBtn {
-  min-width: 140rpx;
-  height: 84rpx;
-  min-height: 84rpx;
-  background: $gradient-primary;
-  border-radius: $radius-button;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
-  padding: 0 $spacing-lg;
+  flex: none;
+  height: 80rpx;
+  padding: 0 $spacing-xl;
+  border-radius: $radius-round;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
 }
 
 .sendBtnDisabled {
-  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
+  opacity: 0.45;
+  pointer-events: none;
+  box-shadow: none;
 }
 
 .sendBtnText {
-  color: $color-text-white;
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
-  white-space: nowrap;
+  color: #ffffff;
+}
+
+// ============================================================
+// 桌面端：整页收成一条 820PX 的对话列，导航栏交给外壳顶栏
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    min-height: 0;
+  }
+
+  .navBar {
+    display: none;
+  }
+
+  .messages {
+    width: 100%;
+    max-width: 820PX;
+    margin: 0 auto;
+    padding: 28PX 0;
+  }
+
+  .msg {
+    margin-bottom: 16PX;
+  }
+
+  .bubbleAi,
+  .bubbleUser {
+    max-width: 72%;
+    padding: 14PX 18PX;
+    border-radius: 14PX;
+  }
+
+  .bubbleAi {
+    border-top-left-radius: 6PX;
+  }
+
+  .bubbleUser {
+    border-top-right-radius: 6PX;
+  }
+
+  .inputBar {
+    width: 100%;
+    max-width: 820PX;
+    margin: 0 auto;
+    padding: 14PX 0 18PX;
+    border-top: 1PX solid $hairline;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .input {
+    height: 44PX;
+    padding: 0 18PX;
+    font-size: 14PX;
+  }
+
+  .sendBtn {
+    height: 44PX;
+    padding: 0 26PX;
+  }
 }

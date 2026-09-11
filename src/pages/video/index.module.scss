@@ -1,497 +1,529 @@
+// 视频播放页（暗色）
+// 桌面端：播放器 + 信息在左，播放列表在右（页面是普通 View，直接用 grid 分栏，不改 JSX）
 @use '@/styles/variables.scss' as *;
 
 .page {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
-  box-sizing: border-box;
+  background-attachment: fixed;
 }
 
+.loadingText {
+  display: block;
+  padding: $spacing-xl;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+}
+
+// ---------------- 顶栏 ----------------
 .navBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20rpx $spacing-lg;
-  background: $color-bg-card;
-  border-bottom: 1px solid $color-border;
-  box-sizing: border-box;
+  height: 88rpx;
 }
 
 .navBack {
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  cursor: pointer;
+
+  &:hover {
+    color: $ink;
+  }
 }
 
 .navTitle {
-  flex: 1;
-  text-align: center;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink;
 }
 
 .navRight {
-  min-width: 140rpx;
+  width: 80rpx;
 }
 
-.loadingText {
-  text-align: center;
-  padding: 200rpx 0;
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-  display: block;
-}
-
-// 视频播放器
+// ---------------- 播放器 ----------------
 .playerWrapper {
+  position: relative;
   width: 100%;
-  background: #000;
+  border-radius: 16rpx;
   overflow: hidden;
+  border: 1rpx solid $hairline;
+  background: #000;
+}
+
+.biliWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.bilibiliPlayer {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
 }
 
 .videoPlayer {
   width: 100%;
-  height: 440rpx;
+  aspect-ratio: 16 / 9;
   display: block;
-}
-
-// B站嵌入播放器外层包装
-.biliWrapper {
-  width: 100%;
   background: #000;
 }
 
-// B站嵌入播放器
-.bilibiliPlayer {
-  width: 100%;
-  height: 440rpx;
-  display: block;
+.biliTroubleBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(8, 9, 10, 0.9);
+  border-top: 1rpx solid $hairline;
 }
 
-// 小程序端：B站视频卡片（不内嵌播放，引导去B站观看）
+.biliTroubleHint {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+}
+
+.biliTroubleBtn,
+.biliTroubleBtnAlt {
+  flex: none;
+  font-size: $font-size-xs;
+  color: $color-primary-light;
+  cursor: pointer;
+}
+
+// 小程序端：B 站外链卡片（原生 video 无法内嵌 B 站，给一个明确的下一步）
 .weappBiliCard {
-  padding: $spacing-xl;
-  background: $color-bg-card;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-xl $spacing-lg;
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.14), rgba(94, 106, 210, 0.02) 60%), $surface-1;
   text-align: center;
 }
 
 .weappBiliCardIcon {
-  font-size: 80rpx;
-  margin-bottom: $spacing-md;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+  border: 1rpx solid $accent-line;
+  background: $accent-soft;
+  font-size: 20rpx;
+  letter-spacing: 1.2rpx;
+  color: $color-primary-light;
 }
 
 .weappBiliCardTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: $spacing-md;
-  line-height: $line-height-loose;
+  color: $ink;
+  line-height: 1.35;
 }
 
 .weappBiliCardDesc {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  line-height: $line-height-loose;
-  display: block;
-  margin-bottom: $spacing-lg;
+  font-size: $font-size-xs;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .weappBiliCardBtn {
-  width: 100%;
-  height: $button-height-md;
-  background: $gradient-primary;
-  border-radius: $radius-button;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  &:active {
-    opacity: 0.9;
-  }
+  height: $button-height-md;
+  padding: 0 $spacing-xl;
+  border-radius: $radius-button;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+  cursor: pointer;
 }
 
 .weappBiliCardBtnText {
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
-  color: $color-text-white;
+  color: #ffffff;
 }
 
 .weappBiliCardBtnSecondary {
-  width: 100%;
-  height: $button-height-md;
-  border: 1rpx solid rgba(255, 255, 255, 0.35);
-  border-radius: $radius-button;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 16rpx;
-
-  &:active {
-    opacity: 0.8;
-  }
+  height: 64rpx;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-round;
+  border: 1rpx solid $hairline-strong;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
 }
 
 .weappBiliCardBtnSecondaryText {
-  font-size: $font-size-md;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: $font-size-xs;
+  color: $ink-muted;
 }
 
-// B站加载失败提示条
-.biliTroubleBar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12rpx;
-  padding: 10rpx 20rpx;
-  background: rgba(255, 255, 255, 0.04);
-  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
-}
-
-.biliTroubleHint {
-  flex: 1;
-  font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.biliTroubleBtn {
-  font-size: 20rpx;
-  color: #fb7299;
-  padding: 6rpx 16rpx;
-  border: 1rpx solid rgba(251, 114, 153, 0.4);
-  border-radius: $radius-round;
-}
-
-.biliTroubleBtnAlt {
-  font-size: 20rpx;
-  color: #00aeec;
-  padding: 6rpx 16rpx;
-  border: 1rpx solid rgba(0, 174, 236, 0.4);
-  border-radius: $radius-round;
-}
-
-// B站播放器加载失败时的降级显示
+// H5 内嵌失败兜底
 .biliFallback {
-  width: 100%;
-  min-height: 500rpx;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  gap: 16rpx;
-  padding: 32rpx;
-  box-sizing: border-box;
+  gap: 8rpx;
+  padding: $spacing-lg;
+  text-align: center;
+  background: $surface-1;
 }
 
 .biliFallbackIcon {
-  font-size: 64rpx;
-  color: #fb7299;
-  width: 100rpx;
-  height: 100rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(251, 114, 153, 0.15);
-  border-radius: 50%;
-  margin-bottom: 8rpx;
+  font-size: $font-size-lg;
+  color: $color-primary-light;
 }
 
 .biliFallbackText {
   font-size: $font-size-md;
-  color: rgba(255, 255, 255, 0.85);
-  text-align: center;
-  display: block;
   font-weight: $font-weight-medium;
+  color: $ink;
 }
 
 .biliFallbackDesc {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.5);
-  text-align: center;
-  display: block;
-  padding: 0 32rpx;
+  font-size: $font-size-xs;
   line-height: $line-height-normal;
+  color: $ink-subtle;
 }
 
 .biliFallbackBtns {
   display: flex;
-  gap: 20rpx;
   align-items: center;
-  margin-top: 16rpx;
-  flex-wrap: wrap;
-  justify-content: center;
+  gap: $spacing-lg;
+  margin-top: $spacing-sm;
 }
 
-.biliFallbackLink {
-  font-size: $font-size-md;
-  color: #fff;
-  font-weight: $font-weight-medium;
-  display: block;
-  padding: 14rpx 36rpx;
-  background: linear-gradient(90deg, #fb7299 0%, #ff85ad 100%);
-  border-radius: 40rpx;
+.biliFallbackLink,
+.biliFallbackRetry {
+  font-size: $font-size-sm;
+  color: $color-primary-light;
+  cursor: pointer;
 }
 
 .biliFallbackRetry {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 14rpx 32rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.2);
-  border-radius: 40rpx;
+  color: $ink-muted;
+
+  &:hover {
+    color: $ink;
+  }
 }
 
-// 当前视频信息
+// ---------------- 视频信息 ----------------
 .videoInfo {
-  padding: $spacing-md $spacing-lg;
-  background: $color-bg-card;
-  border-bottom: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-top: $spacing-lg;
 }
 
 .videoTitle {
-  font-size: $font-size-lg;
+  font-size: 40rpx;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  display: block;
-  margin-bottom: $spacing-xs;
+  line-height: 1.3;
+  letter-spacing: -0.6rpx;
+  color: $ink;
+  text-wrap: balance;
 }
 
 .videoSubtitle {
   font-size: $font-size-sm;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-sm;
+  color: $color-primary-light;
 }
 
 .videoDesc {
   font-size: $font-size-sm;
-  color: $color-text-secondary;
   line-height: $line-height-normal;
-  display: block;
-  margin-bottom: $spacing-sm;
+  color: $ink-muted;
 }
 
 .videoMetaLine {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: $spacing-md;
-  padding-bottom: $spacing-sm;
-  border-bottom: 1rpx dashed $color-border;
-  margin-bottom: $spacing-md;
 }
 
 .videoDuration {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
 }
 
 .videoQuality {
   font-size: $font-size-xs;
-  color: $color-warning;
-  font-weight: $font-weight-medium;
+  color: $ink-muted;
+  @include tabular;
 }
 
-// 核心信息块
-.metaBlock {
-  background: rgba(22, 93, 255, 0.05);
-  border-radius: $radius-sm;
-  padding: $spacing-sm $spacing-md;
-  margin-bottom: $spacing-sm;
+.metaBlock,
+.metaBlockAlt {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: $spacing-lg;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .metaLabel {
   font-size: $font-size-xs;
-  color: $color-primary;
   font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
-}
-
-.metaItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 8rpx;
-  margin-bottom: 6rpx;
-}
-
-.metaBullet {
-  color: $color-primary;
-  font-size: $font-size-sm;
-  line-height: $line-height-tight;
-  flex-shrink: 0;
-  padding-top: 2rpx;
-}
-
-.metaText {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-height-normal;
-  flex: 1;
-}
-
-// 叙事结构/视觉呈现块（交替底色）
-.metaBlockAlt {
-  background: rgba(255, 125, 0, 0.05);
-  border-radius: $radius-sm;
-  padding: $spacing-sm $spacing-md;
-  margin-bottom: $spacing-sm;
-  border-left: 4rpx solid $color-warning;
+  color: $color-primary-light;
 }
 
 .metaLabelAlt {
   font-size: $font-size-xs;
-  color: $color-warning;
   font-weight: $font-weight-medium;
-  display: block;
-  margin-bottom: $spacing-xs;
+  color: $ink-muted;
+}
+
+.metaItem {
+  display: flex;
+  gap: 8rpx;
+}
+
+.metaBullet {
+  font-size: $font-size-sm;
+  color: $ink-faint;
+  flex: none;
+}
+
+.metaText {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .metaTextAlt {
   font-size: $font-size-sm;
-  color: $color-text-secondary;
   line-height: $line-height-normal;
-  display: block;
+  color: $ink-muted;
 }
 
-// 质量标准标签条
 .qualityBar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12rpx;
-  margin-top: $spacing-sm;
+  gap: 10rpx;
 }
 
 .qualityTag {
-  font-size: 20rpx;
-  color: $color-success;
-  padding: 6rpx 16rpx;
-  background: rgba(0, 180, 42, 0.08);
-  border: 1rpx solid rgba(0, 180, 42, 0.3);
+  display: inline-flex;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 16rpx;
   border-radius: $radius-round;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: $font-size-xs;
+  color: $ink-muted;
 }
 
-// 已看完按钮
 .watchedBtn {
-  margin-top: $spacing-md;
-  width: 100%;
-  height: $button-height-md;
-  background: $gradient-primary;
-  border-radius: $radius-button;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
 
   &:active {
-    opacity: 0.9;
-    transform: scale(0.98);
+    transform: translateY(1rpx) scale(0.985);
   }
 }
 
 .watchedBtnDone {
-  background: linear-gradient(135deg, #c9cdd4 0%, #e5e6eb 100%);
-  pointer-events: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid $hairline-strong;
+  box-shadow: none;
+  cursor: default;
+
+  &:hover {
+    filter: none;
+  }
 }
 
 .watchedBtnText {
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
-  color: $color-text-white;
+  color: #ffffff;
 }
 
-// 视频列表标题
+// ---------------- 播放列表 ----------------
 .listHeader {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-border;
-  background: $color-bg-card;
+  gap: $spacing-md;
+  margin: $spacing-xl 0 $spacing-md;
 }
 
 .listTitle {
-  font-size: $font-size-md;
+  font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+  color: $ink;
 }
 
 .listCount {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
 }
 
-// 视频列表（随页面自然滚动，不再绝对定位，避免被挤出视口）
 .videoList {
-  background: $color-bg-card;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  max-height: 900rpx;
 }
 
 .videoItem {
   display: flex;
   align-items: center;
   gap: $spacing-md;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-divider;
-  position: relative;
-  transition: background $transition-fast;
+  padding: $spacing-md;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  cursor: pointer;
+  transition: border-color $dur-fast $ease-out, background-color $dur-fast $ease-out;
+  @include focus-ring;
 
-  &:active {
-    background: $color-bg-hover;
+  &:hover {
+    border-color: $accent-line;
   }
 }
 
 .videoItemActive {
-  background: $color-bg-hover;
+  border-color: $accent-line;
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.16), rgba(94, 106, 210, 0.03) 70%), $surface-1;
 }
 
 .videoCover {
-  width: 200rpx;
-  height: 120rpx;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  background: $color-bg-hover;
+  width: 168rpx;
+  height: 100rpx;
+  border-radius: 10rpx;
+  flex: none;
+  background: $surface-2;
 }
 
 .videoItemInfo {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
 }
 
 .videoItemTitle {
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  font-weight: $font-weight-medium;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: $line-height-tight;
-  margin-bottom: 4rpx;
+  font-size: $font-size-sm;
+  color: $ink;
+  @include text-ellipsis-multi(2);
 }
 
 .videoItemDuration {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
 }
 
 .playingBadge {
-  position: absolute;
-  top: $spacing-md;
-  right: $spacing-lg;
-  background: $color-primary;
-  border-radius: $radius-xs;
-  padding: 2rpx 10rpx;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 36rpx;
+  padding: 0 12rpx;
+  border-radius: $radius-round;
+  background: $accent-soft;
+  border: 1rpx solid $accent-line;
 }
 
 .playingBadgeText {
   font-size: 20rpx;
-  color: $color-text-white;
+  color: $color-primary-light;
+}
+
+// ============================================================
+// 桌面端：播放器左、播放列表右
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320PX;
+    grid-template-rows: auto auto 1fr;
+    column-gap: 28PX;
+    padding: 0;
+  }
+
+  .navBar {
+    grid-column: 1 / -1;
+    height: 56PX;
+  }
+
+  .navBack {
+    display: none;
+  }
+
+  .navTitle {
+    font-size: 15PX;
+  }
+
+  .playerWrapper {
+    grid-column: 1;
+    grid-row: 2;
+    border-radius: 14PX;
+  }
+
+  .videoInfo {
+    grid-column: 1;
+    grid-row: 3;
+    padding-top: 24PX;
+  }
+
+  .videoTitle {
+    font-size: 26PX;
+  }
+
+  .listHeader {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    margin: 0 0 12PX;
+  }
+
+  .videoList {
+    grid-column: 2;
+    grid-row: 3;
+    max-height: calc(100dvh - 260PX);
+    position: sticky;
+    top: 84PX;
+  }
+
+  .videoCover {
+    width: 120PX;
+    height: 68PX;
+  }
 }

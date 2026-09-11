@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Image, Video } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { fetchVideos, fetchCourseDetail, completeVideo } from '@/services/api';
@@ -277,7 +277,7 @@ const VideoPage: React.FC = () => {
       <View className={styles.playerWrapper}>
         {isBilibili && IS_WEAPP ? (
           <View className={styles.weappBiliCard}>
-            <View className={styles.weappBiliCardIcon}>🎬</View>
+            <View className={styles.weappBiliCardIcon}>BILIBILI</View>
             <Text className={styles.weappBiliCardTitle}>{currentVideo.title}</Text>
             <Text className={styles.weappBiliCardDesc}>
               该视频来自 Bilibili，小程序内无法直接内嵌播放。请点击下方按钮前往 B 站观看，观看完成后回来标记已完成。
@@ -359,7 +359,7 @@ const VideoPage: React.FC = () => {
           <Text className={styles.videoDuration}>时长：{formatDuration(currentVideo.duration)}</Text>
           {currentVideo.quality && (
             <Text className={styles.videoQuality}>
-              🎬 {currentVideo.quality.resolution} · {currentVideo.quality.fps}fps
+              清晰度 {currentVideo.quality.resolution} · {currentVideo.quality.fps}fps
             </Text>
           )}
         </View>
@@ -367,7 +367,7 @@ const VideoPage: React.FC = () => {
         {/* 核心知识点 */}
         {currentVideo.coreInfo && currentVideo.coreInfo.length > 0 && (
           <View className={styles.metaBlock}>
-            <Text className={styles.metaLabel}>📌 核心信息</Text>
+            <Text className={styles.metaLabel}>核心信息</Text>
             {currentVideo.coreInfo.map((kp, i) => (
               <View key={i} className={styles.metaItem}>
                 <Text className={styles.metaBullet}>•</Text>
@@ -380,7 +380,7 @@ const VideoPage: React.FC = () => {
         {/* 叙事结构 */}
         {currentVideo.narrative && (
           <View className={styles.metaBlockAlt}>
-            <Text className={styles.metaLabelAlt}>🧭 叙事结构</Text>
+            <Text className={styles.metaLabelAlt}>叙事结构</Text>
             <Text className={styles.metaTextAlt}>{currentVideo.narrative}</Text>
           </View>
         )}
@@ -388,7 +388,7 @@ const VideoPage: React.FC = () => {
         {/* 视觉呈现 */}
         {currentVideo.visual && (
           <View className={styles.metaBlockAlt}>
-            <Text className={styles.metaLabelAlt}>🎨 视觉呈现</Text>
+            <Text className={styles.metaLabelAlt}>视觉呈现</Text>
             <Text className={styles.metaTextAlt}>{currentVideo.visual}</Text>
           </View>
         )}

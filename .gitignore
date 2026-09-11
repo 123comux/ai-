@@ -58,6 +58,9 @@ Thumbs.db
 # Frontend H5 build output (regenerable via npm run build:h5)
 dist-h5/
 
+# 本地私有文档（合同/协议/证件等个人材料，绝不进公开仓库）
+docs/private/
+
 # User scripts / binary docs (per project agreement, not committed)
 scripts/
 *.docx

@@ -1,4 +1,4 @@
-@use '@/styles/variables.scss' as *;
+﻿@use '@/styles/variables.scss' as *;
 
 .page {
   min-height: 100vh;
@@ -192,12 +192,12 @@
 }
 
 .resultOk {
-  background: rgba(0, 180, 42, 0.1);
+  background: rgba(63, 185, 80, 0.12);
   color: $color-success;
 }
 
 .resultErr {
-  background: rgba(255, 77, 79, 0.1);
+  background: rgba(248, 81, 73, 0.12);
   color: $color-error;
 }
 
@@ -205,14 +205,14 @@
 .devBar {
   margin: $spacing-md $spacing-lg;
   padding: $spacing-md;
-  background: #fff7e6;
-  border: 1px dashed #ffb74d;
+  background: rgba(210, 153, 34, 0.08);
+  border: 1rpx dashed rgba(210, 153, 34, 0.42);
   border-radius: $radius-lg;
 }
 
 .devTitle {
   font-size: $font-size-sm;
-  color: #b26a00;
+  color: $color-warning;
   margin-bottom: $spacing-sm;
   display: block;
 }
@@ -221,7 +221,7 @@
   display: inline-block;
   margin: 0 $spacing-sm $spacing-sm 0;
   padding: 12rpx 24rpx;
-  background: #ffb74d;
+  background: $color-warning;
   color: #fff;
   font-size: $font-size-sm;
   border-radius: $radius-md;
@@ -312,8 +312,8 @@
 .hwFeedback {
   display: block;
   font-size: $font-size-xs;
-  color: #b26a00;
-  background: #fff7e6;
+  color: $color-warning;
+  background: rgba(210, 153, 34, 0.08);
   border-radius: $radius-md;
   padding: $spacing-xs $spacing-sm;
   margin-top: $spacing-xs;
@@ -364,4 +364,37 @@
 .hwGoText {
   font-size: $font-size-sm;
   color: $color-primary;
+}
+
+// ============================================================
+// 桌面端补丁（≥1024PX）
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+    max-width: 860PX;
+  }
+
+  .navBar {
+    display: none;
+  }  .hero {
+    padding: 36PX 0 28PX;
+  }
+
+  .heroAmount {
+    font-size: 44PX;
+  }
+
+  .card {
+    padding: 22PX;
+  }
+
+  .bigBtn {
+    height: 44PX;
+    max-width: 320PX;
+  }
+
+  .hwTextarea {
+    min-height: 160PX;
+  }
 }

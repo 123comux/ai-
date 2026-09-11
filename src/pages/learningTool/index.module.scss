@@ -228,3 +228,47 @@
   color: $color-text-tertiary;
   font-size: $font-size-md;
 }
+
+// ============================================================
+// 桌面端补丁（≥1024PX）
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+    max-width: 860PX;
+  }
+
+  .navBar {
+    display: none;
+  }  .tabs,
+  .catTabs {
+    flex-wrap: wrap;
+  }
+
+  .tab,
+  .catTab {
+    height: 34PX;
+    padding: 0 16PX;
+    font-size: 13PX;
+  }
+
+  // 模板库在桌面端两列
+  .templateList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16PX;
+  }
+
+  .templateItem {
+    padding: 18PX 20PX;
+  }
+
+  .practiceInput {
+    min-height: 140PX;
+    font-size: 14PX;
+  }
+
+  .sectionTitle {
+    font-size: 17PX;
+  }
+}

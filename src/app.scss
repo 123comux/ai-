@@ -8,7 +8,7 @@
 page,
 .taro_page {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB',
-    sans-serif;
+    'Microsoft YaHei', sans-serif;
   font-size: $font-size-md;
   line-height: $line-height-normal;
   color: $color-text-primary;
@@ -36,8 +36,7 @@ page,
   min-height: 0;
 }
 
-// 关闭 Android / 微信内置浏览器的"字体自动放大"(font boosting)：
-// 否则系统会按自己的算法重算字号，破坏固定 375 布局的排布。
+// 关闭 Android / 微信内置浏览器的"字体自动放大"(font boosting)
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -49,21 +48,110 @@ body {
   background-color: $color-bg-page;
 }
 
-// 大屏兜底（PC / 平板）：桌面浏览器会忽略 viewport meta，
-// 若不约束宽度，所有 width:100% 的块会被拉伸到整个窗口宽度，字小框大完全变形。
-// 这里把 App 收敛成居中的 375 定宽列，视觉上等同手机页面。
-// 注意：position:fixed 的弹层/底部栏仍相对窗口定位（本产品以手机为主，桌面仅兜底）。
-@media (min-width: 600px) {
+// 桌面端（≥1024PX）：交给 AppShell 的网格外壳（侧边栏 + 顶栏 + 居中内容列）。
+// 这里只做两件事：
+//   1) 解开 375 定宽兜底，让 #app 铺满窗口；
+//   2) 把 rpx→rem 的基准（被 index.html 锁死在 18px）用 CSS !important 提到 21PX，
+//      于是所有页面的字号/间距/圆角等比放大 1.17 倍，接近桌面可读尺寸
+//      （CSS 的 !important 能覆盖 JS 写入的行内样式；行内脚本只拦截 JS 侧的修改）。
+@media (min-width: 1024PX) {
+  html {
+    font-size: 21PX !important;
+  }
+
   body {
-    background-color: #eef0f3;
+    background-color: $canvas;
   }
 
   #app {
-    width: 375px;
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    margin: 0;
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+
+// 中屏兜底（平板 / 窄窗口 600–1023PX）：仍按手机版式，但收敛成居中一列，
+// 避免 width:100% 的块被拉伸到整个窗口宽度、字小框大。
+@media (min-width: 600PX) and (max-width: 1023.98PX) {
+  body {
+    background-color: #0b0c0d;
+  }
+
+  #app {
+    width: 420px;
     margin: 0 auto;
     min-height: 100vh;
     background-color: $color-bg-page;
-    box-shadow: 0 0 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 0 1px $hairline, 0 0 40px rgba(0, 0, 0, 0.5);
   }
+}
+
+// ---- Taro H5 原生底部 tab 栏的暗色改造（app.config.ts 只管颜色，图标是 PNG，需要滤镜提亮）----
+.weui-tabbar {
+  background-color: $surface-1 !important;
+  border-top: 1px solid $hairline;
+
+  &::before {
+    display: none;
+  }
+}
+
+.weui-tabbar__label {
+  color: $ink-subtle;
+}
+
+.weui-tabbar__item.weui-bar__item_on .weui-tabbar__label {
+  color: $color-primary-light;
+}
+
+// 未选中图标是灰色 PNG，暗底上偏暗：统一提亮一档（选中态靠 app.config.ts 的 selectedIconPath）
+.weui-tabbar__icon img {
+  filter: brightness(1.75) saturate(0.85);
+}
+
+// ---- 桌面端细节：滚动条 / 文本选中 / 键盘焦点 / 平滑滚动 ----
+@media (min-width: 1024PX) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10PX;
+    height: 10PX;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999PX;
+    border: 2PX solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.26);
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: $accent-soft;
+  color: $ink;
+}
+
+:focus-visible {
+  outline: 2rpx solid $color-primary-light;
+  outline-offset: 2rpx;
 }
 /* #endif */

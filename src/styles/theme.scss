@@ -1,41 +1,192 @@
-// ============================================
-// 主题配色变量（第二阶段模型可修改此文件）
-// ============================================
+// ============================================================
+// 设计 token（重做后的单一来源）
+//
+// 设计语言：Linear 式暗色精密产品界面 + 单一克制强调色。
+// 移动端尺寸用 rpx（750 基准）；桌面端覆盖样式必须用大写 PX（pxtransform 不换算大写单位）。
+//
+// 三条锁（改版时不得违反）：
+//   1. 颜色锁：全站只有一个强调色（$color-primary / $accent），不再出现第二个彩色。
+//   2. 形状锁：卡片/面板 12–16rpx（桌面 12–16PX），按钮与输入框一律全圆角（$radius-button）。
+//   3. 主题锁：全站暗色，不允许某个区块突然变亮色（如需对比度，用 $surface-2 / $surface-3 递进）。
+// ============================================================
 
-// 品牌主题色：根据产品品牌定位修改
-$color-primary: #165dff;
-$color-primary-light: #4080ff;
-$color-primary-dark: #0e42d2;
+// ---------- 画布与表面（off-black，不用纯黑 #000）----------
+$canvas: #08090a;
+$surface-1: #0f1011;
+$surface-2: #141516;
+$surface-3: #1a1b1e;
 
-// AI 相关色
-$color-ai: #7c3aed;
-$color-ai-light: #a78bfa;
-$color-ai-bg: #f5f3ff;
+// ---------- 分隔线（暗色靠 hairline 而不是阴影来分块）----------
+$hairline: rgba(255, 255, 255, 0.08);
+$hairline-strong: rgba(255, 255, 255, 0.14);
 
-// 渐变背景
-$gradient-primary: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-$gradient-ai: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-$gradient-success: linear-gradient(135deg, #00b42a 0%, #27c346 100%);
-$gradient-page: linear-gradient(180deg, #f0f5ff 0%, #f5f6f7 100%);
+// ---------- 文字层级 ----------
+$ink: #f7f8f8;
+$ink-muted: #8a8f98;
+$ink-subtle: #62666d;
+$ink-faint: #4a4d53;
 
-// 功能色
-$color-success: #00b42a;
-$color-warning: #ff7d00;
-$color-error: #f53f3f;
-$color-info: #165dff;
+// ---------- 品牌主题色（唯一强调色：克制的靛蓝，饱和度 < 80%）----------
+$color-primary: #5e6ad2;
+$color-primary-light: #7c88e8;
+$color-primary-dark: #4a55b8;
+$accent: $color-primary;
+$accent-soft: rgba(94, 106, 210, 0.16);
+$accent-line: rgba(94, 106, 210, 0.42);
 
-// 背景色
-$color-bg-page: #f5f6f7;
-$color-bg-card: #ffffff;
-$color-bg-hover: #f2f3f5;
+// AI 相关色：与强调色同族（不引入第二个色相），仅用于 AI 功能的表面与描边
+$color-ai: #6e79dd;
+$color-ai-light: #98a2ee;
+$color-ai-bg: rgba(94, 106, 210, 0.12);
 
-// 文本色
-$color-text-primary: #1d2129;
-$color-text-secondary: #4e5969;
-$color-text-tertiary: #86909c;
-$color-text-disabled: #c9cdd4;
+// ---------- 渐变（break 均匀 45° 线性：用径向光斑 + 噪声替代）----------
+$gradient-primary: linear-gradient(135deg, #5e6ad2 0%, #7c88e8 100%);
+$gradient-ai: linear-gradient(135deg, #4a55b8 0%, #7c88e8 60%, #98a2ee 100%);
+$gradient-success: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+$gradient-page: radial-gradient(1200px 600px at 50% -10%, rgba(94, 106, 210, 0.18), transparent 60%),
+  radial-gradient(900px 500px at 100% 0%, rgba(124, 136, 232, 0.1), transparent 55%), $canvas;
+$gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
+
+// ---------- 功能色（降饱和，避免在暗底上刺眼）----------
+$color-success: #3fb950;
+$color-warning: #d29922;
+$color-error: #f85149;
+$color-info: #58a6ff;
+
+// ---------- 背景色（沿用旧变量名，页面无需改动即可继承新主题）----------
+$color-bg-page: $canvas;
+$color-bg-card: $surface-1;
+$color-bg-hover: $surface-2;
+
+// ---------- 文本色（沿用旧变量名）----------
+$color-text-primary: $ink;
+$color-text-secondary: $ink-muted;
+$color-text-tertiary: $ink-subtle;
+$color-text-disabled: $ink-faint;
 $color-text-white: #ffffff;
 
-// 边框色
-$color-border: #e5e6eb;
-$color-divider: #f2f3f5;
+// ---------- 边框色（沿用旧变量名）----------
+$color-border: $hairline;
+$color-divider: $hairline;
+
+// ---------- 阴影（暗色下靠描边+柔和黑投影，投影不做纯黑硬边）----------
+$shadow-xs: 0 1rpx 2rpx rgba(0, 0, 0, 0.4);
+$shadow-card: 0 1rpx 0 rgba(255, 255, 255, 0.04) inset, 0 8rpx 24rpx rgba(0, 0, 0, 0.45);
+$shadow-card-hover: 0 1rpx 0 rgba(255, 255, 255, 0.07) inset, 0 16rpx 40rpx rgba(0, 0, 0, 0.55);
+$shadow-float: 0 12rpx 32rpx rgba(0, 0, 0, 0.5);
+$shadow-popup: 0 24rpx 64rpx rgba(0, 0, 0, 0.6);
+// 强调色辉光（仅用于主 CTA / 焦点态，克制使用）
+$shadow-accent: 0 8rpx 28rpx rgba(94, 106, 210, 0.35);
+
+// ---------- 动效 token ----------
+$ease-out: cubic-bezier(0.16, 1, 0.3, 1); // 出场：快起慢收（有重量感）
+$ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+$ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); // 轻微回弹
+$dur-instant: 0.12s;
+$dur-fast: 0.2s;
+$dur-base: 0.32s;
+$dur-slow: 0.6s;
+
+// ============================================================
+// Mixin
+// ============================================================
+
+// 面板：暗色产品界面的基本块。靠 1px 内高光 + hairline 表现边缘折射，不靠纯阴影。
+@mixin panel($surface: $surface-1, $radius: 16rpx) {
+  background: $surface;
+  border: 1rpx solid $hairline;
+  border-radius: $radius;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+// 玻璃面板（Aceternity/React Bits 风格的克制版）：仅用于浮层、顶栏、底部操作条
+@mixin glass($radius: 16rpx) {
+  background: rgba(15, 16, 17, 0.72);
+  border: 1rpx solid $hairline;
+  border-radius: $radius;
+  backdrop-filter: blur(20rpx) saturate(160%);
+  -webkit-backdrop-filter: blur(20rpx) saturate(160%);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.06);
+}
+
+// 光标跟随的聚光描边：容器读取 --mx/--my（由 H5 侧监听 pointermove 写入）
+@mixin spotlight($radius: 16rpx, $hue: $color-primary) {
+  position: relative;
+  border-radius: $radius;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1rpx;
+    background: radial-gradient(
+      240px circle at var(--mx, 50%) var(--my, 0%),
+      rgba(124, 136, 232, 0.55),
+      transparent 60%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity $dur-base $ease-out;
+    pointer-events: none;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+// 键盘可达的焦点环（无障碍要求，不可省略）
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2rpx solid $color-primary-light;
+    outline-offset: 2rpx;
+  }
+}
+
+// 数字等宽（数据/统计场景）
+@mixin tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+// 进场：上浮淡入（配合 stagger 用 delay 变量）
+@mixin rise-in($distance: 16rpx) {
+  opacity: 0;
+  transform: translate3d(0, $distance, 0);
+  animation: rise-in $dur-slow $ease-out forwards;
+}
+
+@keyframes rise-in {
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+// 骨架屏流光（替代转圈 loading）
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@mixin skeleton($radius: 12rpx) {
+  border-radius: $radius;
+  background: linear-gradient(90deg, $surface-2 25%, $surface-3 37%, $surface-2 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+// 尊重系统「减少动态效果」
+@mixin reduce-motion {
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
+    transition: none !important;
+  }
+}

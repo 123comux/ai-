@@ -23,15 +23,17 @@ export default defineAppConfig({
     'pages/learningTool/index'
   ],
   window: {
-    backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#fff',
+    backgroundTextStyle: 'dark',
+    navigationBarBackgroundColor: '#08090a',
     navigationBarTitleText: '智学 AI',
-    navigationBarTextStyle: 'black'
+    navigationBarTextStyle: 'white'
   },
+  // 暗色 tab 栏：颜色与 src/styles/theme.scss 的 $surface-1 / $ink-subtle / $color-primary-light 对齐。
+  // 图标仍是 assets/tabbar/*.png（H5 侧用 CSS 滤镜提亮，见 src/app.scss）。
   tabBar: {
-    color: '#86909c',
-    selectedColor: '#165dff',
-    backgroundColor: '#ffffff',
+    color: '#62666d',
+    selectedColor: '#7c88e8',
+    backgroundColor: '#0f1011',
     borderStyle: 'black',
     list: [
       {

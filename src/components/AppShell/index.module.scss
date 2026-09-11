@@ -1,0 +1,295 @@
+// ============================================================
+// AppShell 外壳
+// 移动端：外壳完全不参与布局（display: contents），页面结构与改造前一致，底部 tab 保留。
+// 桌面端（≥ 1024PX）：左侧栏 + 顶栏 + 居中内容列，隐藏 .weui-tabbar。
+// 注意：本文件只被 H5 渲染路径使用；桌面数值一律用大写 PX（pxtransform 不换算大写单位）。
+// ============================================================
+@use '@/styles/variables.scss' as *;
+
+// ---------- 移动端：外壳透明化 ----------
+.shell,
+.main,
+.content {
+  display: contents;
+}
+
+.aside,
+.topbar {
+  display: none;
+}
+
+// ---------- 桌面端 ----------
+@media (min-width: 1024PX) {
+  .shell {
+    display: grid;
+    grid-template-columns: 248PX minmax(0, 1fr);
+    min-height: 100dvh;
+    background: $canvas;
+  }
+
+  .aside {
+    display: flex;
+    flex-direction: column;
+    gap: 6PX;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    padding: 18PX 12PX 12PX;
+    border-right: 1PX solid $hairline;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 38%), $canvas;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9PX;
+    height: 40PX;
+    padding: 0 10PX 10PX;
+    margin-bottom: 6PX;
+    cursor: pointer;
+    @include focus-ring;
+  }
+
+  .brandMark {
+    width: 18PX;
+    height: 18PX;
+    border-radius: 5PX;
+    background: $gradient-primary;
+    box-shadow: 0 0 0 1PX rgba(255, 255, 255, 0.12) inset, $shadow-accent;
+    flex: none;
+  }
+
+  .brandText {
+    font-size: 15PX;
+    font-weight: 600;
+    letter-spacing: 0.2PX;
+    color: $ink;
+  }
+
+  .navGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 2PX;
+  }
+
+  .navItem {
+    display: flex;
+    align-items: center;
+    gap: 10PX;
+    height: 36PX;
+    padding: 0 10PX;
+    border-radius: 8PX;
+    color: $ink-muted;
+    font-size: 13.5PX;
+    cursor: pointer;
+    transition: background-color $dur-fast $ease-out, color $dur-fast $ease-out,
+      transform $dur-fast $ease-out;
+    @include focus-ring;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $ink;
+    }
+
+    &:active {
+      transform: scale(0.985);
+    }
+  }
+
+  .navItemActive {
+    background: rgba(255, 255, 255, 0.06);
+    color: $ink;
+
+    // 选中态用左侧 2PX 强调色短条，而不是整块高亮
+    box-shadow: inset 2PX 0 0 $color-primary-light;
+  }
+
+  .navIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20PX;
+    height: 20PX;
+    flex: none;
+    opacity: 0.95;
+  }
+
+  .navLabel {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .navDivider {
+    height: 1PX;
+    margin: 8PX 10PX;
+    background: $hairline;
+  }
+
+  .asideFoot {
+    margin-top: auto;
+    padding-top: 10PX;
+    border-top: 1PX solid $hairline;
+  }
+
+  .userChip {
+    display: flex;
+    align-items: center;
+    gap: 10PX;
+    padding: 8PX 10PX;
+    border-radius: 10PX;
+    cursor: pointer;
+    transition: background-color $dur-fast $ease-out;
+    @include focus-ring;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  .avatar,
+  .avatarFallback {
+    width: 30PX;
+    height: 30PX;
+    border-radius: 8PX;
+    flex: none;
+    object-fit: cover;
+  }
+
+  .avatarFallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $accent-soft;
+    color: $color-primary-light;
+    font-size: 13PX;
+    font-weight: 600;
+  }
+
+  .userMeta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .userName {
+    font-size: 13PX;
+    color: $ink;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .userHint {
+    font-size: 11.5PX;
+    color: $ink-subtle;
+    margin-top: 1PX;
+  }
+
+  // ---------- 主区 ----------
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100dvh;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16PX;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: 60PX;
+    padding: 0 28PX;
+    border-bottom: 1PX solid $hairline;
+    @include glass(0);
+  }
+
+  .topbarTitle {
+    font-size: 15PX;
+    font-weight: 600;
+    color: $ink;
+    letter-spacing: 0.2PX;
+  }
+
+  .topbarActions {
+    display: flex;
+    align-items: center;
+    gap: 10PX;
+  }
+
+  .ghostBtn,
+  .primaryBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7PX;
+    height: 34PX;
+    padding: 0 14PX;
+    border-radius: 8PX;
+    font-size: 13PX;
+    cursor: pointer;
+    transition: transform $dur-fast $ease-out, background-color $dur-fast $ease-out,
+      border-color $dur-fast $ease-out;
+    @include focus-ring;
+
+    &:active {
+      transform: translateY(1PX) scale(0.985);
+    }
+  }
+
+  .ghostBtn {
+    color: $ink-muted;
+    border: 1PX solid $hairline-strong;
+    background: rgba(255, 255, 255, 0.02);
+
+    &:hover {
+      color: $ink;
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  .primaryBtn {
+    color: #ffffff;
+    background: $gradient-primary;
+    box-shadow: $shadow-accent;
+
+    &:hover {
+      filter: brightness(1.06);
+    }
+  }
+
+  .content {
+    display: block;
+    width: 100%;
+    max-width: 1180PX;
+    margin: 0 auto;
+    padding: 28PX 28PX 64PX;
+  }
+}
+
+// 桌面端隐藏 Taro 原生底部 tab，并解除 tabbar 面板对页面高度的裁剪
+/* #ifdef h5 */
+@media (min-width: 1024PX) {
+  .weui-tabbar,
+  .taro-tabbar__tabbar {
+    display: none !important;
+  }
+
+  .taro-tabbar__container,
+  .taro-tabbar__panel {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .taro-tabbar__panel .app-root,
+  .taro-tabbar__panel .taro_page {
+    height: auto;
+    min-height: 0;
+  }
+}
+/* #endif */

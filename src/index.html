@@ -2,17 +2,29 @@
 <html>
   <head>
     <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
-    <!-- 定宽 375 布局 + 由浏览器等比缩放到屏宽；viewport-fit=cover 让 iOS 全面屏可用 env(safe-area-inset-*)。
-         不再写 user-scalable=no：保留双指放大能力（无障碍），新版 iOS/Android 本就忽略该限制。 -->
-    <meta name="viewport" content="width=375,viewport-fit=cover" />
+    <!-- 响应式 viewport：桌面端按真实窗口宽度排版（配合 src/styles/shell.scss 的 @media (min-width: 1024PX) 外壳），
+         移动端按真实设备宽度渲染（rpx 经 pxtransform 换算后仍收敛在 #app 的 375px 兜底宽度内）。
+         viewport-fit=cover 让 iOS 全面屏可用 env(safe-area-inset-*)；不写 user-scalable=no 保留双指放大（无障碍）。 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-touch-fullscreen" content="yes" />
     <meta name="format-detection" content="telephone=no,address=no" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="white" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-    <title>taro_template</title>
+    <meta name="theme-color" content="#08090a" />
+    <meta name="description" content="AI 学习平台：课程、实战项目、AI 导师与能力测评，一个账号打通三端。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AI 学习平台" />
+    <meta property="og:description" content="课程、实战项目、AI 导师与能力测评，一个账号打通三端。" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2308090a'/%3E%3Cpath d='M9 22.5 16 9l7 13.5h-3.6L16 15.6l-3.4 6.9z' fill='%235e6ad2'/%3E%3C/svg%3E"
+    />
+    <title>AI 学习平台</title>
     <script>
-      // 固定 html fontSize，防止 flexible 脚本动态修改
+      // 固定 html fontSize，防止 flexible 脚本动态修改。
+      // 说明：这个值决定 rpx→rem 的实际渲染宽度（750rpx ≈ 20rem ≈ 360px），
+      // 是移动端 375 设计稿的基准；桌面端布局改用大写 PX，不受它影响。
       (function() {
         var html = document.documentElement;
         html.style.fontSize = '18px';

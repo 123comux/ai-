@@ -2,6 +2,7 @@ import { useLaunch, useDidShow, useDidHide } from '@tarojs/taro';
 import { View } from '@tarojs/components';
 import { useUserStore } from '@/store/useUserStore';
 import { useAccessStore } from '@/store/useAccessStore';
+import AppShell from '@/components/AppShell';
 // 全局样式
 import './app.scss';
 
@@ -45,7 +46,7 @@ function App(props) {
   // 是所有页面之下的容器，position:fixed 元素被页面层盖住无法显示，故改由首页渲染。
   return (
     <View className="app-root">
-      {props.children}
+      <AppShell>{props.children}</AppShell>
     </View>
   );
 }

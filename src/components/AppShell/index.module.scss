@@ -272,24 +272,6 @@
   }
 }
 
-// 桌面端隐藏 Taro 原生底部 tab，并解除 tabbar 面板对页面高度的裁剪
-/* #ifdef h5 */
-@media (min-width: 1024PX) {
-  .weui-tabbar,
-  .taro-tabbar__tabbar {
-    display: none !important;
-  }
-
-  .taro-tabbar__container,
-  .taro-tabbar__panel {
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .taro-tabbar__panel .app-root,
-  .taro-tabbar__panel .taro_page {
-    height: auto;
-    min-height: 0;
-  }
-}
-/* #endif */
+// 桌面端隐藏 Taro 原生底部 tab、并解除 tabbar 面板高度裁剪的规则，
+// 必须放在**全局样式** src/app.scss 里（这里是 CSS Modules，.weui-tabbar 会被哈希成
+// .index-module__weui-tabbar___xxxx 而失效——实测桌面端底部仍显示 tab 栏就是这个原因）。

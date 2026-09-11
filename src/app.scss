@@ -98,7 +98,6 @@ body {
     display: none;
   }
 }
-
 .weui-tabbar__label {
   color: $ink-subtle;
 }
@@ -153,5 +152,29 @@ html {
 :focus-visible {
   outline: 2rpx solid $color-primary-light;
   outline-offset: 2rpx;
+}
+
+// ---- 桌面端：隐藏 Taro 原生底部 tab（改用侧边栏导航）----
+// ⚠️ 必须写在**全局样式**里：之前写在 AppShell/index.module.scss 里，选择器被 CSS Modules
+// 哈希成 .index-module__weui-tabbar___xxxx，永远匹配不到 Taro 真正渲染的 .weui-tabbar，
+// 导致桌面端底部仍挂着一条 tab 栏（实测截图确认）。
+// 同时解除 tabbar 面板对页面高度的裁剪（面板默认 height: calc(100vh - tab栏) 且 overflow: hidden）。
+@media (min-width: 1024PX) {
+  .weui-tabbar,
+  .taro-tabbar__tabbar {
+    display: none !important;
+  }
+
+  .taro-tabbar__container,
+  .taro-tabbar__panel {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .taro-tabbar__panel .app-root,
+  .taro-tabbar__panel .taro_page {
+    height: auto;
+    min-height: 0;
+  }
 }
 /* #endif */

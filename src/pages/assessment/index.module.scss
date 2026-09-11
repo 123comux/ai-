@@ -1,357 +1,467 @@
+// 能力测评（暗色）：开始页 / 答题页 / 自我介绍页 / 结果报告
 @use '@/styles/variables.scss' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 $page-padding $spacing-xl;
   background: $gradient-page;
-  padding: $spacing-lg;
+  background-attachment: fixed;
 }
 
 .navBar {
-  padding: 20rpx 0;
-  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+  height: 88rpx;
 }
 
 .navBack {
-  font-size: $font-size-md;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  font-size: $font-size-sm;
+  color: $ink-muted;
+  cursor: pointer;
+
+  &:hover {
+    color: $ink;
+  }
 }
 
+// ---------------- 开始 / 错误 / 自我介绍 ----------------
 .startContent {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 120rpx;
+  gap: $spacing-md;
+  padding: $spacing-xl 0;
+  text-align: center;
 }
 
+.loadingText,
+.errorText,
+.errorInline {
+  font-size: $font-size-sm;
+  color: $ink-subtle;
+}
+
+.errorText,
+.errorInline {
+  color: $color-error;
+}
+
+// 原来的 🧠/✨ emoji 换成强调色渐变方块（跨端一致）
 .startIcon {
-  font-size: 120rpx;
-  margin-bottom: $spacing-lg;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 28rpx;
+  background: $gradient-ai;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.25), $shadow-accent;
 }
 
 .startTitle {
-  font-size: $font-size-xxl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-md;
+  font-size: 44rpx;
+  font-weight: $font-weight-semibold;
+  letter-spacing: -0.8rpx;
+  color: $ink;
+  text-wrap: balance;
 }
 
 .startDesc {
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-  text-align: center;
-  line-height: $line-height-loose;
-  padding: 0 $spacing-lg;
-  margin-bottom: $spacing-xl;
+  max-width: 30em;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $ink-muted;
 }
 
 .startInfo {
   display: flex;
-  align-items: center;
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  padding: $spacing-lg $spacing-xl;
-  box-shadow: $shadow-card;
-  margin-bottom: $spacing-xl;
+  align-items: stretch;
+  margin-top: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .startInfoItem {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
+  gap: 4rpx;
 }
 
 .startInfoValue {
-  font-size: $font-size-xxl;
-  font-weight: $font-weight-bold;
-  color: $color-primary;
+  font-size: 40rpx;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  @include tabular;
 }
 
 .startInfoLabel {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-top: 4rpx;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
 }
 
 .startInfoDivider {
-  width: 1px;
-  height: 48rpx;
-  background: $color-divider;
+  width: 1rpx;
+  margin: 0 $spacing-lg;
+  background: $hairline;
 }
 
-.startButton {
-  width: 100%;
-  max-width: $max-content-width;
-  height: $button-height-lg;
-  background: $gradient-primary;
-  border-radius: $radius-button;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:active {
-    opacity: 0.9;
-    transform: scale(0.98);
-  }
-}
-
-.startButtonText {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-medium;
-  color: $color-text-white;
-}
-
+// ---------------- 答题 ----------------
 .progressBar {
-  width: 100%;
   height: 8rpx;
-  background: $color-bg-hover;
+  margin: $spacing-md 0 $spacing-sm;
   border-radius: $radius-round;
-  margin-bottom: $spacing-sm;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  background: $gradient-primary;
   border-radius: $radius-round;
-  transition: width $transition-base;
+  background: $gradient-primary;
+  transition: width $dur-slow $ease-out;
 }
 
 .progressText {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  margin-bottom: $spacing-lg;
-  text-align: center;
+  display: block;
+  margin-bottom: $spacing-md;
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+  @include tabular;
 }
 
 .questionCard {
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  padding: $spacing-xl;
-  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  padding: $spacing-xl $spacing-lg;
+  border-radius: 18rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
 }
 
 .questionTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-xl;
-  display: block;
-  line-height: $line-height-loose;
+  font-size: 36rpx;
+  font-weight: $font-weight-medium;
+  line-height: 1.45;
+  color: $ink;
 }
 
 .options {
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
+  gap: $spacing-sm;
 }
 
 .option {
-  padding: $spacing-md $spacing-lg;
-  background: $color-bg-page;
-  border-radius: $radius-md;
-  border: 1px solid $color-border;
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, border-color $dur-fast $ease-out, background-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:hover {
+    border-color: $accent-line;
+    background: $accent-soft;
+    transform: translateX(3rpx);
+  }
 
   &:active {
-    background: $color-primary;
-    border-color: $color-primary;
+    transform: translateX(0) scale(0.995);
   }
 }
 
 .optionText {
+  flex: 1;
+  min-width: 0;
   font-size: $font-size-md;
-  color: $color-text-primary;
+  line-height: $line-height-normal;
+  color: $ink;
+  text-align: left;
 }
 
+// ---------------- 自我介绍 ----------------
+.describeBox {
+  width: 100%;
+  padding: $spacing-sm;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
+}
+
+.describeInput {
+  width: 100%;
+  min-height: 260rpx;
+  padding: $spacing-md;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.03);
+  color: $ink;
+  font-size: $font-size-md;
+  line-height: $line-height-normal;
+
+  &::placeholder {
+    color: $ink-faint;
+  }
+}
+
+// ---------------- 按钮组 ----------------
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+  margin-top: $spacing-md;
+}
+
+.startButton,
+.primaryButton,
+.secondaryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  cursor: pointer;
+  transition: transform $dur-fast $ease-out, filter $dur-fast $ease-out, background-color $dur-fast $ease-out;
+  @include focus-ring;
+
+  &:active {
+    transform: translateY(1rpx) scale(0.985);
+  }
+}
+
+.startButton,
+.primaryButton {
+  background: $gradient-primary;
+  box-shadow: $shadow-accent;
+
+  &:hover {
+    filter: brightness(1.07);
+  }
+}
+
+.startButtonText,
+.primaryButtonText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: #ffffff;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid $hairline-strong;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+.secondaryButtonText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $ink-muted;
+}
+
+// ---------------- 结果报告 ----------------
 .resultHeader {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: $spacing-xl 0;
+  gap: $spacing-sm;
+  padding: $spacing-xl 0 $spacing-lg;
 }
 
 .resultTitle {
-  font-size: $font-size-xxl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-lg;
+  font-size: $font-size-sm;
+  letter-spacing: 1.4rpx;
+  color: $color-primary-light;
 }
 
 .scoreCircle {
-  width: 200rpx;
-  height: 200rpx;
-  border-radius: $radius-round;
-  background: $gradient-primary;
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 6rpx;
+  width: 220rpx;
+  height: 220rpx;
   justify-content: center;
-  gap: 4rpx;
-  margin-bottom: $spacing-md;
+  flex-direction: row;
+  border-radius: 50%;
+  border: 1rpx solid $accent-line;
+  background: radial-gradient(circle at 50% 30%, rgba(94, 106, 210, 0.28), rgba(94, 106, 210, 0.04) 70%), $surface-1;
+  box-shadow: $shadow-accent;
 }
 
 .scoreValue {
-  font-size: 72rpx;
-  font-weight: $font-weight-bold;
-  color: $color-text-white;
+  font-size: 88rpx;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
+  letter-spacing: -2rpx;
+  color: $ink;
+  @include tabular;
 }
 
 .scoreUnit {
   font-size: $font-size-md;
-  color: rgba(255, 255, 255, 0.8);
+  color: $ink-subtle;
 }
 
 .levelText {
-  font-size: $font-size-md;
-  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  color: $ink-muted;
 }
 
 .section {
-  margin-bottom: $spacing-lg;
+  margin-top: $spacing-xl;
 }
 
 .sectionTitle {
+  display: block;
+  margin-bottom: $spacing-md;
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-md;
-  display: block;
+  color: $ink;
+  letter-spacing: -0.2rpx;
 }
 
 .tagItem {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  margin-bottom: $spacing-sm;
-}
+  padding: $spacing-md $spacing-lg;
+  border-radius: 14rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
 
-.tagIcon {
-  font-size: 28rpx;
+  & + & {
+    margin-top: $spacing-sm;
+  }
 }
 
 .tagText {
+  flex: 1;
+  min-width: 0;
   font-size: $font-size-md;
-  color: $color-text-secondary;
-}
-
-.recommendCard {
-  background: $color-ai-bg;
-  border-radius: $radius-md;
-  padding: $spacing-lg;
-  border: 1px solid rgba(124, 58, 237, 0.2);
-}
-
-.recommendText {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-ai;
-  display: block;
-  margin-bottom: $spacing-sm;
-}
-
-.recommendDesc {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
-}
-
-.buttonGroup {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-  margin-top: 40rpx;
-  padding-bottom: $spacing-xl;
-}
-
-.primaryButton {
-  width: 100%;
-  height: $button-height-md;
-  background: $gradient-primary;
-  border-radius: $radius-button;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:active {
-    opacity: 0.9;
-    transform: scale(0.98);
-  }
-}
-
-.primaryButtonText {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-medium;
-  color: $color-text-white;
-}
-
-.secondaryButton {
-  width: 100%;
-  height: $button-height-md;
-  background: $color-bg-card;
-  border-radius: $radius-button;
-  border: 1px solid $color-border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:active {
-    opacity: 0.9;
-  }
-}
-
-.secondaryButtonText {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-medium;
-  color: $color-text-secondary;
-}
-
-.errorText {
-  text-align: center;
-  padding: 100rpx 0;
-  font-size: $font-size-md;
-  color: $color-error;
-  display: block;
-}
-
-.loadingText {
-  text-align: center;
-  padding: 100rpx 0;
-  font-size: $font-size-md;
-  color: $color-text-tertiary;
-  display: block;
+  color: $ink;
 }
 
 .emptyText {
   font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  display: block;
-  padding: $spacing-sm 0;
+  color: $ink-subtle;
 }
 
-// ====== 自我描述步骤 ======
-.describeBox {
-  width: 100%;
-  max-width: $max-content-width;
-  background: $color-bg-card;
-  border-radius: $radius-lg;
+.recommendCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
   padding: $spacing-lg;
-  box-shadow: $shadow-card;
-  margin-bottom: $spacing-sm;
-  box-sizing: border-box;
+  border-radius: 16rpx;
+  border: 1rpx solid $accent-line;
+  background: linear-gradient(180deg, rgba(94, 106, 210, 0.16), rgba(94, 106, 210, 0.03) 60%), $surface-1;
 }
 
-.describeInput {
-  width: 100%;
-  height: 140rpx;
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  line-height: $line-height-loose;
-  text-align: left;
+.recommendText {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $ink;
+  letter-spacing: -0.4rpx;
 }
 
-.errorInline {
-  font-size: $font-size-sm;
-  color: $color-error;
-  margin-bottom: $spacing-sm;
-  display: block;
-  text-align: center;
+.recommendDesc {
+  font-size: $font-size-xs;
+  color: $ink-subtle;
+}
+
+// ============================================================
+// 桌面端：答题卡与报告收成居中一列
+// ============================================================
+@media (min-width: 1024PX) {
+  .page {
+    padding: 0;
+    max-width: 860PX;
+  }
+
+  .navBar {
+    display: none;
+  }
+
+  .startContent {
+    padding: 56PX 0 40PX;
+  }
+
+  .startTitle {
+    font-size: 34PX;
+  }
+
+  .startInfo {
+    min-width: 420PX;
+    padding: 18PX 28PX;
+  }
+
+  .startInfoValue {
+    font-size: 28PX;
+  }
+
+  .questionCard {
+    padding: 32PX 28PX;
+    border-radius: 16PX;
+  }
+
+  .questionTitle {
+    font-size: 22PX;
+  }
+
+  .option {
+    padding: 18PX 20PX;
+  }
+
+  .optionText {
+    font-size: 15PX;
+  }
+
+  .buttonGroup {
+    flex-direction: row;
+    gap: 12PX;
+  }
+
+  .startButton,
+  .primaryButton,
+  .secondaryButton {
+    width: auto;
+    min-width: 180PX;
+    height: 44PX;
+    padding: 0 26PX;
+  }
+
+  .describeInput {
+    min-height: 180PX;
+  }
+
+  .resultHeader {
+    padding: 40PX 0 28PX;
+  }
+
+  .scoreCircle {
+    width: 180PX;
+    height: 180PX;
+  }
+
+  .scoreValue {
+    font-size: 64PX;
+  }
+
+  // 报告在桌面端两列排布（优势/待提升并排）
+  .section {
+    margin-top: 32PX;
+  }
+
+  .tagItem {
+    padding: 14PX 18PX;
+  }
 }

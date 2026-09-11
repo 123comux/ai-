@@ -1,16 +1,31 @@
+// 能力雷达图（暗色）：容器只负责尺寸与居中，配色由 index.tsx 里的 canvas/svg 绘制参数决定
 @use '@/styles/variables.scss' as *;
 
 .chart {
-  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 500rpx;
-  height: 500rpx;
+  width: 100%;
+  padding: $spacing-md;
+  border-radius: 16rpx;
+  border: 1rpx solid $hairline;
+  background: $surface-1;
 }
 
 .canvas {
-  width: 500rpx;
-  height: 500rpx;
-  display: block;
+  width: 100%;
+  max-width: 560rpx;
+  height: 560rpx;
+}
+
+@media (min-width: 1024PX) {
+  .chart {
+    border-radius: 14PX;
+    padding: 16PX;
+  }
+
+  .canvas {
+    max-width: 380PX;
+    height: 380PX;
+  }
 }

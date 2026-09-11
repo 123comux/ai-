@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useLearningStore } from '@/store/useLearningStore';
@@ -163,7 +163,7 @@ const AssessmentPage: React.FC = () => {
           <Text className={styles.navBack} onClick={() => setStep('doing')}>← 上一题</Text>
         </View>
         <View className={styles.startContent}>
-          <Text className={styles.startIcon}>✨</Text>
+          <View className={styles.startIcon} />
           <Text className={styles.startTitle}>介绍一下你自己</Text>
           <Text className={styles.startDesc}>
             可选。简单描述你的背景或学习目标（如「我熟悉 Python，想学大模型开发」），
@@ -209,7 +209,7 @@ const AssessmentPage: React.FC = () => {
           <Text className={styles.sectionTitle}>优势领域</Text>
           {result.strengths.length > 0 ? result.strengths.map((s, i) => (
             <View key={i} className={styles.tagItem}>
-              <Text className={styles.tagIcon}>✅</Text>
+              
               <Text className={styles.tagText}>{s}</Text>
             </View>
           )) : <Text className={styles.emptyText}>暂无显著优势</Text>}
@@ -219,7 +219,7 @@ const AssessmentPage: React.FC = () => {
           <Text className={styles.sectionTitle}>待提升领域</Text>
           {result.weaknesses.length > 0 ? result.weaknesses.map((w, i) => (
             <View key={i} className={styles.tagItem}>
-              <Text className={styles.tagIcon}>💪</Text>
+              
               <Text className={styles.tagText}>{w}</Text>
             </View>
           )) : <Text className={styles.emptyText}>暂无薄弱环节</Text>}
@@ -251,7 +251,7 @@ const AssessmentPage: React.FC = () => {
         <Text className={styles.navBack}>← 返回</Text>
       </View>
       <View className={styles.startContent}>
-        <Text className={styles.startIcon}>🧠</Text>
+        <View className={styles.startIcon} />
         <Text className={styles.startTitle}>AI 能力测评</Text>
         <Text className={styles.startDesc}>
           完成 20 道题目，覆盖编程、数学、机器学习、深度学习、大模型、项目经验六大维度，

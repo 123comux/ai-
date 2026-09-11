@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import { View, Canvas } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import type { AbilityDimension } from '@/types/index';
@@ -44,7 +44,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
         return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
       };
 
-      ctx.setStrokeStyle('#e5e6eb');
+      ctx.setStrokeStyle('rgba(255,255,255,0.12)');
       ctx.setLineWidth(2);
       for (let level = 0.25; level <= 1; level += 0.25) {
         ctx.beginPath();
@@ -71,9 +71,9 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
         else ctx.lineTo(p.x, p.y);
       });
       ctx.closePath();
-      ctx.setFillStyle('rgba(22, 93, 255, 0.15)');
+      ctx.setFillStyle('rgba(94, 106, 210, 0.22)');
       ctx.fill();
-      ctx.setStrokeStyle('#165dff');
+      ctx.setStrokeStyle('#7c88e8');
       ctx.setLineWidth(3);
       ctx.stroke();
       dimensions.forEach((dim, i) => {
@@ -81,10 +81,10 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
         const p = getPoint(i, ratio);
         ctx.beginPath();
         ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        ctx.setFillStyle('#165dff');
+        ctx.setFillStyle('#7c88e8');
         ctx.fill();
       });
-      ctx.setFillStyle('#4e5969');
+      ctx.setFillStyle('#8a8f98');
       ctx.setTextAlign('center');
       ctx.setTextBaseline('middle');
       ctx.setFontSize(14);
@@ -129,29 +129,29 @@ const RadarChart: React.FC<RadarChartProps> = ({ dimensions, size = 500 }) => {
               key={gi}
               points={points.map((p) => `${p.x},${p.y}`).join(' ')}
               fill="none"
-              stroke="#e5e6eb"
+              stroke="rgba(255,255,255,0.12)"
               strokeWidth="2"
             />
           ))}
           {dimensions.map((_, i) => {
             const p = getPoint(i, 1, 1);
             return (
-              <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="#e5e6eb" strokeWidth="2" />
+              <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
             );
           })}
           <polygon
             points={dataPoints.map((p) => `${p.x},${p.y}`).join(' ')}
-            fill="rgba(22, 93, 255, 0.15)"
-            stroke="#165dff"
+            fill="rgba(94, 106, 210, 0.22)"
+            stroke="#7c88e8"
             strokeWidth="3"
           />
           {dataPoints.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="6" fill="#165dff" />
+            <circle key={i} cx={p.x} cy={p.y} r="6" fill="#7c88e8" />
           ))}
           {dimensions.map((dim, i) => {
             const p = getPoint(i, 1.18, 1);
             return (
-              <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" fill="#4e5969" fontSize="28" fontWeight="500">
+              <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" fill="#8a8f98" fontSize="28" fontWeight="500">
                 {dim.label}
               </text>
             );
